@@ -17,7 +17,7 @@ export const SETTINGS_LINKS: Record<string, SettingsLink[]> = {
   ...LB_SETTINGS,
   ...CREATE_SETTINGS,
   dash: [
-    { icon: "⚙️", label: "Features", tab: "features", note: "turn whole areas of Name TBC on or off — Meals, Trips, Moments, the Task manager and more — so the dashboard only shows what you actually use" },
+    { icon: "⚙️", label: "Features", tab: "features", note: "turn whole areas of ActivityLane on or off — Meals, Trips, Moments, the Task manager and more — so the dashboard only shows what you actually use" },
   ],
   meals: [{ icon: "🍽", label: "Meals", tab: "meals", note: "Cut-off times, who sees each menu, and whether swaps need approval" }],
   customers: [

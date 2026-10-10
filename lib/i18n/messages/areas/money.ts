@@ -1,6 +1,6 @@
 // Translations for the `money.` area. Keyed by locale; every locale holds the SAME
 // flat keys (no "money." prefix). {placeholders}, emoji, currency symbols, numbers
-// and UK proper nouns (Name TBC, Stripe, VAT, HQ, £) are shared across languages.
+// and UK proper nouns (ActivityLane, Stripe, VAT, HQ, £) are shared across languages.
 // Authored by the i18n sweep for SubscriptionApp + SplitFeesApp.
 const money: Record<string, Record<string, string>> = {
   en: {

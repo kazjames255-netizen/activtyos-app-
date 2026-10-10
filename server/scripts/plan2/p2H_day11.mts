@@ -159,7 +159,7 @@ try {
     const tid = thread.json?.id;
     const reply = await api(H, "POST", `/api/platform/support/${tid}/messages`, { body: "HQ replying" });
     const bellsAfter = (await db.collection("notifications").where("tenantId", "==", TA).where("audience", "==", "tenant").get()).docs;
-    const bellOk = bellsAfter.some((d) => (d.data().title as string)?.includes("Reply from ActivityOS"));
+    const bellOk = bellsAfter.some((d) => (d.data().title as string)?.includes("Reply from ActivityLane"));
     const asOwner = await api(OA, "GET", "/api/platform/support/"); // 403 — provider has no route to this HQ-only router; just proves the isolation
     const resolve = await api(H, "PUT", `/api/platform/support/${tid}`, { status: "resolved" });
     const insights = await api(H, "GET", "/api/platform/support/insights");

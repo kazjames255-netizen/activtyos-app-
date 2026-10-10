@@ -41,7 +41,7 @@ export function serialize(nodes, ctr = { n: 0 }) {
   }
   return out;
 }
-export const BRAND_LITERAL = (fs.readFileSync(new URL('../../public/v2/i18n.js', import.meta.url), 'utf8').match(/var HTML_BRAND = '([^']+)'/) || [])[1] || 'Activly';
+export const BRAND_LITERAL = (fs.readFileSync(new URL('../../public/v2/i18n.js', import.meta.url), 'utf8').match(/var HTML_BRAND = '([^']+)'/) || [])[1] || 'ActivityLane';
 export const norm = (s) => s.replace(/[ \t\r\n\f]+/g, ' ').trim().split(BRAND_LITERAL).join('{brand}');
 
 function h(s) { let x = 5381; for (const c of s) x = ((x * 33) ^ c.codePointAt(0)) >>> 0; return x.toString(36).slice(0, 4); }
@@ -49,7 +49,7 @@ function slug(v) {
   const w = v.replace(/<\/?\d+\/?>|<br>/g, ' ').toLowerCase().normalize('NFKD').replace(/[^a-z0-9 ]+/g, ' ').trim().split(/\s+/).filter(Boolean).slice(0, 4);
   return (w.join('-') || 'x');
 }
-const NOTRANS = /^(\{brand\}|Activ|ly|Activly|[A-Z]{1,2}|TFC|English|Polski|Rom\u00e2n\u0103|Portugu\u00eas|Espa\u00f1ol|Fran\u00e7ais|Cymraeg|\u09ac\u09be\u0982\u09b2\u09be|\u0a2a\u0a70\u0a1c\u0a3e\u0a2c\u0a40|\u0627\u0644\u0639\u0631\u0628\u064a\u0629|\u0627\u0631\u062f\u0648)$/;
+const NOTRANS = /^(\{brand\}|Activ|ly|ActivityLane|[A-Z]{1,2}|TFC|English|Polski|Rom\u00e2n\u0103|Portugu\u00eas|Espa\u00f1ol|Fran\u00e7ais|Cymraeg|\u09ac\u09be\u0982\u09b2\u09be|\u0a2a\u0a70\u0a1c\u0a3e\u0a2c\u0a40|\u0627\u0644\u0639\u0631\u0628\u064a\u0629|\u0627\u0631\u062f\u0648)$/;
 const initials = (v) => NOTRANS.test(v.replace(/<\/?\d+\/?>/g, ''));
 
 // Collect translatable units of one page. Returns {units:[{value, el, run?, ...}], attrs:[{el,name,value}]}

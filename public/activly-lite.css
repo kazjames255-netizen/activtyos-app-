@@ -1,4 +1,4 @@
-/* ===== Activly LITE FX — secondary pages only (~40% of the home page) =====
+/* ===== ActivityLane LITE FX — secondary pages only (~40% of the home page) =====
    Distinct, gentler signature: cursor-follow glow + soft scroll-reveal + card hover-lift.
    No WebGL aurora, no 3D orbit, no floating feature swarm (those stay unique to the home page). */
 
@@ -18,3 +18,7 @@
 /* gentle card hover-lift + accent (no tilt / no continuous motion) */
 .litefx .fcard,.litefx .savecard,.litefx .pcard,.litefx .save-banner,.litefx .wk-img{transition:transform .25s cubic-bezier(.2,.7,.2,1),box-shadow .25s,border-color .25s}
 .litefx .fcard:hover,.litefx .savecard:hover,.litefx .pcard:hover,.litefx .wk-img:hover{transform:translateY(-6px);box-shadow:0 28px 54px -26px rgba(0,0,0,.78);border-color:rgba(255,61,127,.42)}
+
+/* ActivityLane mark: the logo square is the SVG itself (public/brand/mark.svg) */
+.logo{background:none!important;box-shadow:none!important;border-radius:0}
+.logo img{width:36px;height:36px;display:block}

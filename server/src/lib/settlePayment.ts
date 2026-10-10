@@ -47,7 +47,7 @@ export interface SettleBy {
 }
 
 /** The `payments` record for a Stripe PaymentIntent, or null if we never
- *  created one (a charge made outside ActivityOS). */
+ *  created one (a charge made outside ActivityLane). */
 export async function paymentForIntent(intentId: string): Promise<{ id: string; rec: PaymentRec } | null> {
   const snap = await db.collection("payments").where("paymentIntentId", "==", intentId).limit(1).get();
   if (snap.empty) return null;

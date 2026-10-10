@@ -196,7 +196,7 @@ test.describe("email compliance & send engine (API)", () => {
 
     const identity = await apiFetch<SenderIdentity>("/api/emails/sender", token);
     // THIS run's provider name (global.setup seeds settings.providerName with
-    // it), never the platform's — a bare "not ActivityOS" would pass on any
+    // it), never the platform's — a bare "not ActivityLane" would pass on any
     // tenant and prove nothing.
     expect(identity.fromName).toBe(tenantName);
     expect(identity.fromAddress).toContain("@");

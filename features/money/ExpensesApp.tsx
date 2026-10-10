@@ -189,7 +189,7 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const lastMonthKey = monthKeyOf(new Date(now.getFullYear(), now.getMonth() - 1, 1));
   const thisYear = String(now.getFullYear());
 
-  // The operator's own Name TBC plan fee, folded in as virtual monthly rows
+  // The operator's own ActivityLane plan fee, folded in as virtual monthly rows
   // (one per month since they subscribed) when the toggle is on. Never written
   // to the ledger — they always reflect the live plan and can't go stale.
   const subPrice = sub?.current.details.price ?? 0;
@@ -401,7 +401,7 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
       {/* Staff expense claims waiting for a manager (approve → Money out). */}
       <StaffClaimsPanel onChanged={refresh} />
 
-      {/* Name TBC subscription include toggle */}
+      {/* ActivityLane subscription include toggle */}
       {sub && (
         <Card className="mb-3.5 flex flex-wrap items-center justify-between gap-3 p-3.5">
           <div className="flex items-center gap-2.5">

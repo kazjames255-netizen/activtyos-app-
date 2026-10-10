@@ -130,7 +130,7 @@ export function BrowseApp() {
   // The providers this parent belongs to. Phase 1 is single-provider: a parent
   // sees only their own provider's activities, never a cross-provider
   // marketplace. That opens up in Phase 2 behind a per-provider opt-in toggle
-  // in the Name TBC area (see handoff §X) — until then this scopes the feed.
+  // in the ActivityLane area (see handoff §X) — until then this scopes the feed.
   const [providers, setProviders] = useState<{ tenantId: string; name: string }[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Captured once per mount — the server enforces opensAt regardless.

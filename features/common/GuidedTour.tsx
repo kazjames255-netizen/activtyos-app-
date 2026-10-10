@@ -10,7 +10,7 @@ import { NARRATOR_CSS, narratorScene, settingsScene, type SettingsLink } from ".
 // A reusable, self-driving, narrated "watch me use it" walkthrough. Feed it a
 // config (title + intro/done lines + a list of steps, each with a pre-filled
 // mock body of HTML and a one-line narration) and it plays a guided tour:
-// shiny Name TBC splash → step-by-step frames with a moving cursor and a
+// shiny ActivityLane splash → step-by-step frames with a moving cursor and a
 // British voice → done. Play / Pause / ⏮ / ⏭ / Sound + voice picker.
 //
 // Step bodies use the shared "atom" classes below and should already be filled

@@ -93,12 +93,12 @@ export async function ensureLeadVideoUrl(leadId: string): Promise<string | null>
   return url;
 }
 
-/** The ActivityOS mark as an inline (CID) attachment. Embedded rather than
+/** The ActivityLane mark as an inline (CID) attachment. Embedded rather than
  *  hot-linked so it renders in every client and regardless of environment —
  *  Gmail/Outlook strip SVG and data-URIs and can't reach a loopback/dev URL. Any
  *  email that shows the mark must include this in its attachments. */
 export function aosLogoAttachment(): MailAttachment {
-  return { filename: "activityos.png", content: Buffer.from(AOS_MARK_PNG_B64, "base64"), contentType: "image/png", cid: "aos-mark" };
+  return { filename: "activitylane.png", content: Buffer.from(AOS_MARK_PNG_B64, "base64"), contentType: "image/png", cid: "aos-mark" };
 }
 
 // Booking email templates. Plain, inline-styled HTML — per-provider sending
@@ -130,7 +130,7 @@ function sendGated(
     .catch((e) => console.error(`[mail] gate check failed for "${subject}":`, (e as Error).message));
 }
 
-/** Inline attachments a customer booking email needs: ActivityOS mark for the
+/** Inline attachments a customer booking email needs: ActivityLane mark for the
  *  "powered by" footer, plus the provider's own logo when they have one. */
 function brandAttachments(brand: { logo?: MailAttachment }): MailAttachment[] {
   return [aosLogoAttachment(), ...(brand.logo ? [brand.logo] : [])];
@@ -158,7 +158,7 @@ function sendAs(
 
 /** Customer-facing branding: the PROVIDER's own logo (if they've uploaded one)
  *  as an inline cid attachment, else just their name. Customer emails carry the
- *  provider's identity — ActivityOS only appears as "powered by" in the footer. */
+ *  provider's identity — ActivityLane only appears as "powered by" in the footer. */
 async function customerBrand(
   tenantId: string | undefined,
   providerName: string,
@@ -534,15 +534,15 @@ export function emailSignUpInvite(p: {
       p.to,
       `${p.providerName} invited you to sign up to their booking platform`,
       html,
-      // ONLY the provider's own logo — never the ActivityOS mark (an unreferenced
-      // aos-mark attachment shows as a stray "ActivityOS logo" chip in Gmail).
+      // ONLY the provider's own logo — never the ActivityLane mark (an unreferenced
+      // aos-mark attachment shows as a stray "ActivityLane logo" chip in Gmail).
       { attachments: brand.logo ? [brand.logo] : [] },
     );
   })().catch((e) => console.error("[mail] sign-up invite build failed:", (e as Error).message));
 }
 
 /** New provider welcome — sent once, right after a company/freelancer signup
- *  creates its tenant (registerRole.ts). Introduces ActivityOS and the first
+ *  creates its tenant (registerRole.ts). Introduces ActivityLane and the first
  *  couple of things worth doing, with a straight link into their new
  *  dashboard. Account-access mail like the sign-up invite: ungated by the
  *  Setup → Email "automatic emails" toggles (those are for booking/payment
@@ -1051,7 +1051,7 @@ export function emailPaymentReceived(b: Booking, providerName: string, opts: { l
 
 // ── The provider's "new booking" email ────────────────────────────────────
 // A richly-presented, email-client-safe (tables + inline styles) notification
-// for the provider's team: the ActivityOS brand at the top, the listing's
+// for the provider's team: the ActivityLane brand at the top, the listing's
 // photo + name, every attendee with their age, allergies, medical and SEND /
 // additional-needs notes, a payment breakdown, and a button that opens the
 // exact booking. Any EHCP plans ride along as real attachments (added by the

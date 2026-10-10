@@ -16,14 +16,14 @@ import { recordSubscriptionEvent } from "../lib/subscriptionEvents";
 // tenant and reports it; actually charging for it is a later milestone. Kept
 // deliberately small and honest about that.
 export const subscription = Router();
-// The ActivityOS platform subscription is a TENANT-level concern owned by the head
+// The ActivityLane platform subscription is a TENANT-level concern owned by the head
 // office (company) — a franchise must not view or change it.
 const canManage = (role: Role) => role === "company" || role === "freelancer";
 
 // Mirrors the public pricing page (activityos.uk/pricing). A flat monthly fee
 // per tier; annual billing bills 10 months (i.e. saves 2). Company is priced by
 // team-size band. Card processing is the operator's own provider — this fee is
-// what they pay ActivityOS.
+// what they pay ActivityLane.
 // The DEFAULT catalogue — the seed. The live catalogue is whatever the platform
 // admin has saved in `platform/pricing` (editable in the HQ area); changing it
 // there auto-applies to NEW signups (prices, limits AND the descriptions they

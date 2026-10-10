@@ -308,7 +308,7 @@ test("embed.js: the frame origin comes from the script's src (dev vs prod), neve
   assert.ok(r.frames[0].src!.startsWith("http://localhost:3000/book/"));
 });
 
-test("embed.js: the height message listener only trusts the ActivityOS origin and its own frame", () => {
+test("embed.js: the height message listener only trusts the ActivityLane origin and its own frame", () => {
   const src = readFileSync(new URL("../public/embed.js", import.meta.url), "utf8");
   assert.ok(/e\.origin !== origin/.test(src) && /e\.source === frame\.contentWindow/.test(src));
   assert.ok(!/postMessage\([^)]*"\*"/.test(src), "embed.js never posts with a wildcard target origin");

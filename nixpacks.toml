@@ -1,4 +1,4 @@
-# Nixpacks config for the ActivityOS API on Railway.
+# Nixpacks config for the ActivityLane API on Railway.
 #
 # The API (server/) imports pure, dependency-free shared modules from
 # ../../../features and ../../../lib, so Railway must build from the REPO ROOT

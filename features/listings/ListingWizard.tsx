@@ -2052,7 +2052,7 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
                 const pick = onlineVenueChoice(local.venues, uid());
                 const id = pick.id;
                 if (pick.create) patchLocal((st) => ({ ...st, venues: [...st.venues, { id, name: "Online", address: "", kind: "online" }] }));
-                // Online: how families join is a real, saved choice from the start (ActivityOS room unless the provider picks their own link).
+                // Online: how families join is a real, saved choice from the start (ActivityLane room unless the provider picks their own link).
                 upd({ deliveryMode: "venue", venueId: id, coverageArea: null, videoMode: d.videoMode ?? "platform" });
               } else {
                 upd(deliveryPatch(mode, local.venues, d.venueId, !!d.coverageArea));

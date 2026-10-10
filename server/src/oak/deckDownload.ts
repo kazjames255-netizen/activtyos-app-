@@ -38,7 +38,7 @@ export async function downloadDeck(id: string, opts: { force?: boolean } = {}): 
     if (since < gap()) await sleep(gap() - since);
     last = Date.now();
     try {
-      const res = await fetch(url, { redirect: "follow", headers: { "User-Agent": "ActivityOS-oak-import/1.0" } });
+      const res = await fetch(url, { redirect: "follow", headers: { "User-Agent": "ActivityLane-oak-import/1.0" } });
       if (res.ok) {
         const b = Buffer.from(await res.arrayBuffer());
         if (!isZip(b)) throw new DeckUnavailable("not a pptx (sign-in page?)");

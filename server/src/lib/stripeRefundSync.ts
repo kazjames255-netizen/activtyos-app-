@@ -151,7 +151,7 @@ async function applyStripeRefundInner(refundIn: Stripe.Refund, account: string |
   const intentId = await intentOf(refund, account);
   if (!intentId) { console.log(`[stripe-refund] ${refund.id}: no PaymentIntent — ignored`); return "ignored"; }
   const found = await chargeRecordFor(intentId);
-  if (!found) { console.log(`[stripe-refund] ${refund.id} on ${intentId}: not a payment ActivityOS recorded — ignored`); return "unknown"; }
+  if (!found) { console.log(`[stripe-refund] ${refund.id} on ${intentId}: not a payment ActivityLane recorded — ignored`); return "unknown"; }
   const { id: payId, rec } = found;
   // A refund must come from the account the money was taken on.
   if ((account ?? null) !== (rec.stripeAccount ?? null)) {

@@ -176,7 +176,7 @@ export function effectiveRefundDate(original: string | undefined | null, current
 /**
  * What the policy says should come back.
  *
- * A recommendation, never an action — Name TBC doesn't move money, and the
+ * A recommendation, never an action — ActivityLane doesn't move money, and the
  * provider can always override. But it should never be the provider's job to
  * work out that 61 hours is more than 48.
  *

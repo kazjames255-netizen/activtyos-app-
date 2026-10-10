@@ -1,4 +1,4 @@
-// KS3 English — Reading Comprehension (Years 7–9). Original passages written for ActivityOS; aligned to the DfE KS3 English programme of study (OGL v3.0).
+// KS3 English — Reading Comprehension (Years 7–9). Original passages written for ActivityLane; aligned to the DfE KS3 English programme of study (OGL v3.0).
 import type { CTopic } from "../types";
 import { qb, cards } from "./_b";
 

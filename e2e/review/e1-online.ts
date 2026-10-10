@@ -1,4 +1,4 @@
-// QA agent E1: ActivityOS-room (Daily) online sessions end to end on an ISOLATED stack (web :3011 -> API :4011), throwaway accounts only.
+// QA agent E1: ActivityLane-room (Daily) online sessions end to end on an ISOLATED stack (web :3011 -> API :4011), throwaway accounts only.
 // Run: E2E_BASE_URL=http://localhost:3011 NEXT_PUBLIC_API_URL=http://localhost:4011 server/node_modules/.bin/tsx e2e/review/e1-online.ts <phase>
 //   phase "a": setup + everything that can run BEFORE the join window opens (early states, bank vs card, publish rules)
 //   phase "b": run after the window has opened (host start, family join, attendance, end, today screen, UI shots)
@@ -61,14 +61,14 @@ const stripeKey = (fs.readFileSync(path.join(ROOT, "server/.env"), "utf8").match
     const today = ymd(now), runTo = ymd(new Date(now.getTime() + 20 * 24 * 3600_000));
     const days = [0, 1, 2, 3, 4, 5, 6];
     const mk = (title: string, extra: Record<string, unknown>) => call(prov.idToken, "POST", "/api/listings", { title, venueId: "online-v", runFrom: today, runTo, blockMode: "custom", days, maxAttendees: "16", capacityScope: "day", showSpaces: true, ageFrom: "5", ageTo: "12", blockId: bundle.id, passes: [{ name: "Single session", price: 0.3, days: 1 }], bookingType: "auto", status: "live", visibility: "public", deliveryMode: "venue", ...extra });
-    const L1r = await mk("E1 Online Maths (ActivityOS room)", { videoMode: "platform" });
+    const L1r = await mk("E1 Online Maths (ActivityLane room)", { videoMode: "platform" });
     const L1 = L1r.json as { id: string };
-    T("1a. publish an online listing with hosting = ActivityOS room", L1r.status < 300 && !!L1?.id, `${L1r.status}`);
+    T("1a. publish an online listing with hosting = ActivityLane room", L1r.status < 300 && !!L1?.id, `${L1r.status}`);
     const L1get = await call(prov.idToken, "GET", `/api/listings/${L1.id}`);
     T("1b. hosting choice is stored explicitly (videoMode = platform)", L1get.json?.videoMode === "platform", `videoMode=${L1get.json?.videoMode}`);
     const noMode = await mk("E1 Online (no hosting chosen)", {});
     const noModeGet = noMode.json?.id ? await call(prov.idToken, "GET", `/api/listings/${noMode.json.id}`) : null;
-    T("1c. a listing saved with NO hosting choice defaults to ActivityOS room explicitly", noMode.status < 300 && noModeGet?.json?.videoMode === "platform", `status ${noMode.status} videoMode=${noModeGet?.json?.videoMode}`);
+    T("1c. a listing saved with NO hosting choice defaults to ActivityLane room explicitly", noMode.status < 300 && noModeGet?.json?.videoMode === "platform", `status ${noMode.status} videoMode=${noModeGet?.json?.videoMode}`);
     const ownBad = await mk("E1 Own link, no link", { videoMode: "own", ownLink: "" });
     T("1d. publish refused for own-link mode with no link", ownBad.status >= 400, `${ownBad.status} ${JSON.stringify(ownBad.json).slice(0, 140)}`);
     const ownHttp = await mk("E1 Own link, http only", { videoMode: "own", ownLink: "http://example.org/x" });
@@ -312,7 +312,7 @@ const stripeKey = (fs.readFileSync(path.join(ROOT, "server/.env"), "utf8").match
     await hp.getByText(/^Step 1 of 13/).waitFor({ timeout: 60_000 });
     await hp.getByRole("button", { name: /^Next/ }).click(); await hp.waitForTimeout(2500);
     const wz = (await hp.locator("body").innerText()).replace(/\n/g, " | ");
-    T("17e. listing wizard shows the 'video rooms are not switched on' note under ActivityOS room", /not switched on/i.test(wz), wz.includes("ActivityOS room") ? "ActivityOS room option present" : "no hosting section found");
+    T("17e. listing wizard shows the 'video rooms are not switched on' note under ActivityLane room", /not switched on/i.test(wz), wz.includes("ActivityLane room") ? "ActivityLane room option present" : "no hosting section found");
     await shot(hp, "wizard-hosting-no-video-key");
     await hctx.close();
     const pctx = await b.newContext({ viewport: { width: 390, height: 844 } });

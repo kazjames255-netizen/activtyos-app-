@@ -827,7 +827,7 @@ my.post("/bookings", async (req, res) => {
       return;
     }
     // Find-or-create is the server's guarantee against duplicate accounts:
-    // an email that already has an ActivityOS account gets THIS booking on
+    // an email that already has an ActivityLane account gets THIS booking on
     // that account, never a second one.
     try {
       familyUid = (await fbAuth.getUserByEmail(target.email)).uid;
@@ -894,7 +894,7 @@ my.post("/bookings", async (req, res) => {
     res.status(409).json({ error: "This listing isn't open for booking" });
     return;
   }
-  // A provider whose ActivityOS subscription is read-only (payment overdue
+  // A provider whose ActivityLane subscription is read-only (payment overdue
   // past the 14-day grace) or ended takes no NEW online bookings or waitlist
   // joins (s13-sub3, decided by Kaz 13 Sept). Existing bookings, cancelling
   // and the family's own records are untouched — only this checkout refuses.

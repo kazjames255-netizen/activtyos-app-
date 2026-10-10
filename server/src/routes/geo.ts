@@ -71,7 +71,7 @@ async function osNames(q: string): Promise<GeoHit[]> {
 async function nominatimUK(q: string): Promise<GeoHit[]> {
   const r = await fetch(
     `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=gb&limit=6&q=${encodeURIComponent(q)}`,
-    { headers: { Accept: "application/json", "User-Agent": "ActivityOS/1.0 (childrens activity platform)" }, signal: AbortSignal.timeout(GEO_TIMEOUT_MS) },
+    { headers: { Accept: "application/json", "User-Agent": "ActivityLane/1.0 (childrens activity platform)" }, signal: AbortSignal.timeout(GEO_TIMEOUT_MS) },
   );
   if (!r.ok) throw new Error(`Nominatim ${r.status}`);
   const raw = (await r.json()) as { display_name: string; lat: string; lon: string }[];
@@ -206,7 +206,7 @@ tiles.get("/:z/:x/:y", async (req, res) => {
     ? `https://api.os.uk/maps/raster/v1/zxy/Light_3857/${z}/${x}/${y}.png?key=${OS_KEY}`
     : `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
   try {
-    const upstream = await fetch(url, { headers: { "User-Agent": "ActivityOS/1.0" }, signal: AbortSignal.timeout(GEO_TIMEOUT_MS) });
+    const upstream = await fetch(url, { headers: { "User-Agent": "ActivityLane/1.0" }, signal: AbortSignal.timeout(GEO_TIMEOUT_MS) });
     if (!upstream.ok) {
       res.status(502).end();
       return;

@@ -14,7 +14,7 @@ import { EmbeddedOnboarding } from "./EmbeddedOnboarding";
 // ─────────────────────────────────────────────────────────────────────────
 // Finance — v1 is the payments slice: connect the tenant's own Stripe
 // account (Express onboarding — the money always lands with the provider,
-// never Name TBC) and the tenant's payment & refund records. Analytics,
+// never ActivityLane) and the tenant's payment & refund records. Analytics,
 // payouts and reconciliation come in later milestones; Kaz will restyle.
 // ─────────────────────────────────────────────────────────────────────────
 

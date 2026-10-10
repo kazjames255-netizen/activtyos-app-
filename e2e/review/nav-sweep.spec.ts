@@ -64,7 +64,7 @@ for (const portal of PORTALS) {
         test.setTimeout(3_600_000);
         const ctx = await browser.newContext({ storageState: statePath(ROLE[portal]), viewport: VPS[vp], colorScheme: theme });
         if (theme === "dark") {
-          // "Name TBC" is the app's dark surface theme; also nudge any per-surface theme key.
+          // "ActivityLane" is the app's dark surface theme; also nudge any per-surface theme key.
           await ctx.addInitScript(() => {
             const g = Storage.prototype.getItem;
             Storage.prototype.getItem = function (k: string) { return /theme/i.test(k) && !/lang/i.test(k) ? "classic" : g.call(this, k); };

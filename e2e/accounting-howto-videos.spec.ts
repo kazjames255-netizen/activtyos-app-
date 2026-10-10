@@ -7,10 +7,10 @@ import { loadAccounts, ROOT, API_URL } from "./helpers/env";
 import { fbSignIn, TEST_PASSWORD } from "./helpers/accounts";
 
 // Records the three operator how-to videos (Xero, QuickBooks, Sage setup preview) against the REAL Payroll > Integrations UI of the standing
-// e2e company account. Xero = 'ActivityOS Test' org, QuickBooks = Intuit SANDBOX (posting authorised there ONLY); every journal is voided/deleted,
+// e2e company account. Xero = 'ActivityLane Test' org, QuickBooks = Intuit SANDBOX (posting authorised there ONLY); every journal is voided/deleted,
 // the throwaway pay run is deleted and the account mapping is restored. Provider login/consent pages are never opened for real (stubbed, and
-// nothing is typed): they are explained on title cards. Run only when RECORD_VIDEOS=1; output goes to OUT (default ~/Downloads/ActivityOS accounting videos).
-const OUT = process.env.VIDEO_OUT || path.join(os.homedir(), "Downloads/ActivityOS accounting videos");
+// nothing is typed): they are explained on title cards. Run only when RECORD_VIDEOS=1; output goes to OUT (default ~/Downloads/ActivityLane accounting videos).
+const OUT = process.env.VIDEO_OUT || path.join(os.homedir(), "Downloads/ActivityLane accounting videos");
 const server = path.join(ROOT, "server");
 const tsx = (helper: string, ...args: string[]) => execFileSync("npx", ["tsx", path.join(ROOT, "e2e/helpers", helper), ...args], { cwd: server, stdio: "pipe" }).toString();
 const patchDoc = (c: string, id: string, patch: Record<string, unknown>) => tsx("docPatch.ts", c, id, JSON.stringify(patch));
@@ -92,13 +92,13 @@ async function session(browser: import("@playwright/test").Browser, email: strin
 type P = { id: "xero" | "quickbooks"; name: string; file: string; consent: string[]; spokenConsent: string; where: string[]; spokenDone: string; pick: [RegExp, RegExp][] };   // [preferred name, required account type] per bucket, in the order the six selects appear
 const PROVIDERS: P[] = [
   { id: "xero", name: "Xero", file: "xero.mp4",
-    consent: ["1. Sign in to Xero with your own Xero login.", "2. Choose which organisation to connect.", "3. Xero lists what ActivityOS may do, then you press Allow access:", "&nbsp;&nbsp;&nbsp;&bull; create manual journals   &bull; read your chart of accounts   &bull; stay connected (offline access)", "ActivityOS never sees your Xero password."],
-    spokenConsent: "A Xero window opens. Sign in with your own Xero login, choose the organisation, and press Allow access. Xero shows exactly what ActivityOS may do: create manual journals, read your chart of accounts, and stay connected. ActivityOS never sees your password.",
-    where: ["In Xero: Accounting, then Advanced, then Manual journals.", "The journal is narrated &ldquo;ActivityOS payroll&rdquo; with the pay period."], spokenDone: "Done. In Xero, open Accounting, Advanced, Manual journals, and the wages journal is there, labelled with the pay period.",
+    consent: ["1. Sign in to Xero with your own Xero login.", "2. Choose which organisation to connect.", "3. Xero lists what ActivityLane may do, then you press Allow access:", "&nbsp;&nbsp;&nbsp;&bull; create manual journals   &bull; read your chart of accounts   &bull; stay connected (offline access)", "ActivityLane never sees your Xero password."],
+    spokenConsent: "A Xero window opens. Sign in with your own Xero login, choose the organisation, and press Allow access. Xero shows exactly what ActivityLane may do: create manual journals, read your chart of accounts, and stay connected. ActivityLane never sees your password.",
+    where: ["In Xero: Accounting, then Advanced, then Manual journals.", "The journal is narrated &ldquo;ActivityLane payroll&rdquo; with the pay period."], spokenDone: "Done. In Xero, open Accounting, Advanced, Manual journals, and the wages journal is there, labelled with the pay period.",
     pick: [[/Salaries|Wages/, /\(EXPENSE\)$/], [/National Insurance/, /\(EXPENSE\)$/], [/Pension/, /\(EXPENSE\)$/], [/PAYE|Payroll Tax|Tax/, /\(LIABILITY\)$/], [/Pension|Superannuation/, /\(LIABILITY\)$/], [/Wages Payable|Payable/, /\(LIABILITY\)$/]] },
   { id: "quickbooks", name: "QuickBooks Online", file: "quickbooks.mp4",
-    consent: ["1. Sign in to Intuit with your own QuickBooks login.", "2. Choose the company file to connect.", "3. Review the permission and press Connect:", "&nbsp;&nbsp;&nbsp;&bull; QuickBooks Online accounting (create journal entries, read accounts)", "ActivityOS never sees your Intuit password."],
-    spokenConsent: "An Intuit window opens. Sign in with your own QuickBooks login, choose the company, and press Connect. Intuit shows the one permission ActivityOS needs: accounting access, to create journal entries and read your accounts. ActivityOS never sees your password.",
+    consent: ["1. Sign in to Intuit with your own QuickBooks login.", "2. Choose the company file to connect.", "3. Review the permission and press Connect:", "&nbsp;&nbsp;&nbsp;&bull; QuickBooks Online accounting (create journal entries, read accounts)", "ActivityLane never sees your Intuit password."],
+    spokenConsent: "An Intuit window opens. Sign in with your own QuickBooks login, choose the company, and press Connect. Intuit shows the one permission ActivityLane needs: accounting access, to create journal entries and read your accounts. ActivityLane never sees your password.",
     where: ["In QuickBooks: Transactions, then Chart of accounts, or Reports, then Journal.", "The journal number starts AOS-PAYROLL and carries the pay month."], spokenDone: "Done. In QuickBooks, the journal entry appears with a number starting A O S payroll, dated on the pay day.",
     pick: [[/Payroll|Wages|Labor/, /\(Expense\)$/], [/Payroll Tax|Tax/, /\(Expense\)$/], [/Insurance|Pension/, /\(Expense\)$/], [/Payroll|Tax|Payable/, /\(Other Current Liability\)$/], [/Pension|Payable/, /\(Other Current Liability\)$/], [/Checking/, /\(Bank\)$/]] },
 ];
@@ -111,7 +111,7 @@ for (const prov of PROVIDERS) {
     const tok = (await fbSignIn(co.email)).idToken;
     const conns = (await call("GET", "/api/accounting/connections", tok)).body;
     test.skip(!conns?.[prov.id]?.connected, `${prov.name} is not connected for the e2e company account`);
-    if (prov.id === "xero") expect(conns.xero.label, "SAFETY: only ever post to the 'ActivityOS Test' Xero org").toBe("ActivityOS Test");
+    if (prov.id === "xero") expect(conns.xero.label, "SAFETY: only ever post to the 'ActivityLane Test' Xero org").toBe("ActivityLane Test");
     else expect(String(conns.quickbooks.label), "SAFETY: only the Intuit sandbox company").toContain("9341458202792641");
 
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), `aos-vid-${prov.id}-`));
@@ -136,7 +136,7 @@ for (const prov of PROVIDERS) {
       await page.goto("/company/payroll");
       await expect(page.getByRole("button", { name: /Integrations/ })).toBeVisible({ timeout: 60_000 });
       rec.start();
-      await rec.card(`Connect ${prov.name} and post your payroll`, ["ActivityOS how-to: about 90 seconds", "Connect once, map six accounts, approve a pay run, post the journal."], `How to connect ${prov.name} to ActivityOS and post your payroll journal.`, { tag: "HOW-TO" });
+      await rec.card(`Connect ${prov.name} and post your payroll`, ["ActivityLane how-to: about 90 seconds", "Connect once, map six accounts, approve a pay run, post the journal."], `How to connect ${prov.name} to ActivityLane and post your payroll journal.`, { tag: "HOW-TO" });
       await rec.hideCard();
       await rec.cap("Open Payroll from the sidebar.", { step: "Step 1" });
       await page.getByRole("button", { name: /Integrations/ }).click();
@@ -155,7 +155,7 @@ for (const prov of PROVIDERS) {
       await page.getByRole("button", { name: /Integrations/ }).click();
       const card2 = page.locator('[data-ui="card"]').filter({ has: page.getByText(prov.name, { exact: true }) }).last();
       await expect(card2.getByText(/^Connected/)).toBeVisible({ timeout: 30_000 });
-      await rec.cap("When you are sent back to ActivityOS the card says Connected, with the name of your organisation.", { step: "Step 4", hl: card2.getByText(/^Connected/) });
+      await rec.cap("When you are sent back to ActivityLane the card says Connected, with the name of your organisation.", { step: "Step 4", hl: card2.getByText(/^Connected/) });
       // mapping
       await expect(card2.getByText("Account mapping")).toBeVisible();
       const sels = ["grossWages", "employerNi", "employerPension", "payeNicLiability", "pensionPayable", "netWagesBank"];
@@ -247,7 +247,7 @@ test("record Sage setup-preview video", async ({ browser }) => {
     await expect(page.getByRole("button", { name: /Integrations/ })).toBeVisible({ timeout: 60_000 });
     rec.start();
     const TAG = "SETUP PREVIEW";
-    await rec.card("Sage Accounting (UK): setup preview", ["Connecting Sage from ActivityOS", "Preview only: no Sage business is linked to this demo account yet, so posting is not shown live."], "Sage Accounting, setup preview. This shows how you will connect Sage. No Sage business is linked to this demo account yet, so the final posting step is described rather than shown.", { tag: TAG, min: 7000 });
+    await rec.card("Sage Accounting (UK): setup preview", ["Connecting Sage from ActivityLane", "Preview only: no Sage business is linked to this demo account yet, so posting is not shown live."], "Sage Accounting, setup preview. This shows how you will connect Sage. No Sage business is linked to this demo account yet, so the final posting step is described rather than shown.", { tag: TAG, min: 7000 });
     await rec.hideCard();
     await rec.cap("Setup preview. Open Payroll, then the Integrations tab.", { step: TAG });
     await page.getByRole("button", { name: /Integrations/ }).click();
@@ -258,7 +258,7 @@ test("record Sage setup-preview video", async ({ browser }) => {
     await card.getByRole("button", { name: "Connect" }).click();
     await rec.cap("Press Connect. A Sage window opens, and the button shows Connecting while you finish there.", { step: TAG, hl: card, min: 3000 });
     (await popupP).close().catch(() => {});
-    await rec.card("Sage sign-in and consent", ["1. Sign in with your Sage ID.", "2. Choose the Sage Accounting business to connect.", "3. Press Continue to allow ActivityOS to create journals and read your ledger accounts.", "ActivityOS never sees your Sage password."], "A Sage window opens. Sign in with your Sage I D, choose the business, and continue to allow access. ActivityOS never sees your password.", { tag: `${TAG} - ON SAGE'S SITE`, min: 6000 });
+    await rec.card("Sage sign-in and consent", ["1. Sign in with your Sage ID.", "2. Choose the Sage Accounting business to connect.", "3. Press Continue to allow ActivityLane to create journals and read your ledger accounts.", "ActivityLane never sees your Sage password."], "A Sage window opens. Sign in with your Sage I D, choose the business, and continue to allow access. ActivityLane never sees your password.", { tag: `${TAG} - ON SAGE'S SITE`, min: 6000 });
     await rec.card("After connecting: the same three steps as Xero", ["Map the six accounts: Gross wages, Employer NI, Employer pension, PAYE/NIC liability, Pension payable, Net wages.", "A second person approves the pay run.", "Press Post to Sage: the wages journal is created in your ledger."], "Once Sage is connected the steps are the same as for Xero. Map the six accounts, have a second person approve the pay run, then press Post to Sage.", { tag: TAG, min: 6000 });
     await rec.card("Still to do before this goes live", ["A Sage Accounting (UK) business to connect and test against.", "Then we will re-record this video with the real journal."], "Before this goes live we need a Sage Accounting business to connect and test against. We will then re-record this video with the real journal.", { tag: TAG, min: 6500 });
     const v = page.video()!;

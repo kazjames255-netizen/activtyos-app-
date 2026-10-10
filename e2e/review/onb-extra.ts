@@ -17,9 +17,9 @@ const BIZ = "Riverside Activity Camps";
 // Make every capture brand-neutral and free of test identities.
 const SCRUB = `(() => {
   const brand = (s) => s
-    .replace(/(^|[.!?]\\s+)(ActivityOS|Activly)\\b/g, (m, a) => a + "The platform")
-    .replace(/\\b([Yy])our (ActivityOS|Activly) plan/g, (m, y) => y + "our plan")
-    .replace(/\\b(ActivityOS|Activly)\\b/g, "the platform")
+    .replace(/(^|[.!?]\\s+)(ActivityLane|ActivityLane)\\b/g, (m, a) => a + "The platform")
+    .replace(/\\b([Yy])our (ActivityLane|ActivityLane) plan/g, (m, y) => y + "our plan")
+    .replace(/\\b(ActivityLane|ActivityLane)\\b/g, "the platform")
     .replace(/E2e [A-Za-z0-9]+ [A-Za-z0-9]+/g, "Sam Taylor")
     .replace(/[\\w.+-]+@activityos-test\\.com/g, "sam@riverside-camps.co.uk");
   const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
@@ -28,7 +28,7 @@ const SCRUB = `(() => {
   document.querySelectorAll("input").forEach((i) => { if (/activityos-test/.test(i.value)) i.value = "sam@riverside-camps.co.uk"; });
   document.querySelectorAll("div,a,span").forEach((el) => {
     const t = (el.textContent || "").replace(/\\s+/g, "");
-    if (/^(Activly|Activity)$/i.test(t) && el.children.length <= 3) el.style.visibility = "hidden";
+    if (/^(ActivityLane|Activity)$/i.test(t) && el.children.length <= 3) el.style.visibility = "hidden";
   });
   document.querySelectorAll("div").forEach((el) => { const tx = (el.textContent || "").trim(); if (/^POWERED BY/i.test(tx) && tx.length < 140) el.style.visibility = "hidden"; });
   document.querySelectorAll("div").forEach((el) => { if ((el.textContent || "").trim().indexOf("Card payments are being set up") === 0 && el.children.length === 0) el.style.display = "none"; });

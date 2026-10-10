@@ -1,5 +1,5 @@
 // English GCSE — Language Analysis (Years 10–11). Original content aligned to the DfE GCSE English Language subject content
-// (exam-board neutral). All extracts are ORIGINAL, written for ActivityOS.
+// (exam-board neutral). All extracts are ORIGINAL, written for ActivityLane.
 import type { CTopic } from "../types";
 import { qb, cards } from "./_h";
 

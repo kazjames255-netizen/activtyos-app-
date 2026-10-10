@@ -15,7 +15,7 @@ const SHOTS = process.env.V2_SHOTS;
 const ORIG = fs.existsSync(path.join(V2, "_orig"));
 const dict = (l: string): Record<string, string> => JSON.parse(fs.readFileSync(path.join(V2, "i18n", `${l}.json`), "utf8"));
 const EN = dict("en");
-const brand = (s: string) => s.split("{brand}").join("Activly");
+const brand = (s: string) => s.split("{brand}").join("ActivityLane");
 const plain = (s: string) => brand(s).replace(/<br\s*\/?>/g, " ").replace(/<\/?\d+\/?>/g, "").replace(/&lt;/g, "<").replace(/\s+/g, " ").trim();
 // strings that legitimately stay identical in every language (brand/proper nouns, acronyms, numbers)
 
@@ -33,7 +33,7 @@ async function open(page: Page, p: string, lang: string | null, w = 1440) {
 async function leftovers(page: Page, l: string) {
   const d = dict(l);
   return page.evaluate(({ d, EN }) => {
-    const norm = (s: string) => s.replace(/<br\s*\/?>/g, " ").replace(/<\/?\d+\/?>/g, "").replace(/&lt;/g, "<").replace(/\s+/g, " ").trim().split("{brand}").join("Activly");
+    const norm = (s: string) => s.replace(/<br\s*\/?>/g, " ").replace(/<\/?\d+\/?>/g, "").replace(/&lt;/g, "<").replace(/\s+/g, " ").trim().split("{brand}").join("ActivityLane");
     const out: string[] = []; let hooked = 0, missing: string[] = [];
     document.querySelectorAll("[data-i18n]").forEach((el) => {
       const k = el.getAttribute("data-i18n")!; hooked++;
@@ -66,7 +66,7 @@ async function unhooked(page: Page) {
       const el = n.parentElement!; if (!el || /^(SCRIPT|STYLE|NOSCRIPT|TEXTAREA)$/.test(el.tagName)) continue;
       if (el.closest("[data-i18n],.lang-sw,#aosLegalNote,canvas,svg defs")) continue;
       if (el.closest("option[lang]")) continue;
-      if (/^(Activ|ly|Activly|TFC|[A-Z]{1,3}|English|Polski|Română|Português|Español|Français|Cymraeg|العربية|اردو|বাংলা|ਪੰਜਾਬੀ)$/.test(t)) continue; // brand/logo, initials, native language names
+      if (/^(Activ|ly|ActivityLane|TFC|[A-Z]{1,3}|English|Polski|Română|Português|Español|Français|Cymraeg|العربية|اردو|বাংলা|ਪੰਜਾਬੀ)$/.test(t)) continue; // brand/logo, initials, native language names
       const r = el.getBoundingClientRect(); const cs = getComputedStyle(el);
       if (cs.display === "none" || cs.visibility === "hidden") continue;
       if (!r.width && !r.height) continue;

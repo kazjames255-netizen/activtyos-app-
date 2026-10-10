@@ -111,13 +111,13 @@ function draftFor(x) {
     whatWeDo,
     detail || null,
     ``,
-    `I'm reaching out from ActivityOS — we build booking, registers and payments software for activity and childcare providers. Not trying to oversell it: if it's not useful to you right now, no worries at all.`,
+    `I'm reaching out from ActivityLane — we build booking, registers and payments software for activity and childcare providers. Not trying to oversell it: if it's not useful to you right now, no worries at all.`,
     ``,
     `If you ever want a look, you can book a short demo here, no obligation: ${DEMO_URL}`,
     ``,
     `Either way, best of luck with ${name}.`,
     ``,
-    `The ActivityOS team`,
+    `The ActivityLane team`,
   ].filter((l) => l !== null).join("\n");
 
   return { subject, body };

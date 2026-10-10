@@ -107,7 +107,7 @@ interface PrintArgs {
   dayList: DayInfo[];
   groups: string[];
   FAC: string[];
-  /** The operator's own name — headers the document instead of "Name TBC". */
+  /** The operator's own name — headers the document instead of "ActivityLane". */
   brandName?: string;
 }
 
@@ -163,7 +163,7 @@ interface DownloadArgs {
 /**
  * Saves the full week as a self-contained, branded .html file the operator can
  * keep, email or open anywhere — the nice HTML view, but as a real file, headed
- * with the company name rather than "Name TBC".
+ * with the company name rather than "ActivityLane".
  */
 export function downloadTimetableHtml({ name, plan, dayList, groups, FAC, brandName }: DownloadArgs) {
   const brand = brandName || tn("p8set.prDefaultBrand");

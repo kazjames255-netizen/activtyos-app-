@@ -1,4 +1,4 @@
-/* Name TBC LITE FX — loaded only on secondary pages (not the home page).
+/* ActivityLane LITE FX — loaded only on secondary pages (not the home page).
    Cursor-follow glow + gentle scroll-reveal + card hover-lift. Self-contained, no deps. */
 (function(){
   document.body.classList.add('litefx');

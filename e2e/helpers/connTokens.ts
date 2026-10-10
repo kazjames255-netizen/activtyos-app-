@@ -1,5 +1,5 @@
 // e2e helper: temporarily BREAK a stored accounting connection's tokens (to prove the "expired/revoked" failure path), and restore them exactly.
-// Never prints token values. Refuses unless it is the standing test connection (Xero label 'ActivityOS Test' / QBO sandbox realm).
+// Never prints token values. Refuses unless it is the standing test connection (Xero label 'ActivityLane Test' / QBO sandbox realm).
 //   npx tsx ../e2e/helpers/connTokens.ts <tenantId> <xero|quickbooks> break|stale|restore|status     (run from server/)
 // break   : saves the real tokens under `e2eBackup` on the same doc, then sets an expired access token + a garbage refresh token.
 // stale   : like break, but keeps the REAL refresh token and gives a garbage access token that looks unexpired (forces the 401 -> forced-refresh self-heal path).
@@ -12,7 +12,7 @@ const [tenantId, provider, cmd] = process.argv.slice(2);
   const ref = db.collection("accountingConnections").doc(`${tenantId}__${provider}`);
   const snap = await ref.get();
   if (!snap.exists) throw new Error("no such connection");
-  if (provider === "xero" && snap.get("label") !== "ActivityOS Test") throw new Error("refusing: xero org label is not 'ActivityOS Test'");
+  if (provider === "xero" && snap.get("label") !== "ActivityLane Test") throw new Error("refusing: xero org label is not 'ActivityLane Test'");
   if (provider === "quickbooks" && String(snap.get("realmId")) !== "9341458202792641") throw new Error("refusing: not the QBO sandbox realm");
   const out = (o: unknown) => process.stdout.write(`@@JSON@@${JSON.stringify(o)}@@END@@\n`);
   const backup = snap.get("e2eBackup");

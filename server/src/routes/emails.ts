@@ -604,8 +604,8 @@ async function resolveLeadReply(input: InboundInput): Promise<string | null> {
 /** Strips the quoted original message a reply carries along with it — most
  * clients paste it in whether or not there were real line breaks preserved
  * by the time it reaches us as plain text (confirmed live: a genuine reply
- * arrived as one unbroken line, "Nice On Fri, 18 Sept… ActivityOS
- * <no-reply@…> wrote: > ActivityOS > Here's your answer…", the whole quoted
+ * arrived as one unbroken line, "Nice On Fri, 18 Sept… ActivityLane
+ * <no-reply@…> wrote: > ActivityLane > Here's your answer…", the whole quoted
  * thread flattened in with it), so a line-anchored quote stripper alone
  * isn't enough. Truncates at the first recognisable quote marker, checked
  * in order: an inline "On <date> … wrote:" header (Gmail/Apple Mail, needs

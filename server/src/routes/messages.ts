@@ -861,8 +861,8 @@ messages.delete("/templates/:id", async (req, res) => {
   res.json({ ok: true });
 });
 
-// ─── ActivityOS support channel (operator/parent ↔ platform HQ) ─────────────
-// UNIFIED with the HQ Support inbox: a "Message ActivityOS" note (or a customer
+// ─── ActivityLane support channel (operator/parent ↔ platform HQ) ─────────────
+// UNIFIED with the HQ Support inbox: a "Message ActivityLane" note (or a customer
 // "Report a problem") is ONE ongoing thread in `supportThreads` — the very
 // collection the HQ inbox + notification bell read — so HQ sees every message
 // and replies flow straight back into this chat. See platformSupport.ts.

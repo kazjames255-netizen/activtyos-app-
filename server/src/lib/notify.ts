@@ -157,7 +157,7 @@ const escapeHtml = (s: string) =>
 
 /** The provider's own logo as an inline (cid:provider-logo) attachment, loaded
  *  the same way the booking emails do (settings.billing.logoUrl → images doc).
- *  Family-facing mail wears the provider's brand, never ActivityOS's. */
+ *  Family-facing mail wears the provider's brand, never ActivityLane's. */
 async function tenantLogo(tenantId: string): Promise<MailAttachment | undefined> {
   try {
     const lib = await db.collection("libraries").doc(tenantId).get();
@@ -172,9 +172,9 @@ async function tenantLogo(tenantId: string): Promise<MailAttachment | undefined>
 }
 
 /** `branded` = a family-facing email: show the provider's logo (or name) and
- *  drop the ActivityOS chrome to a small "powered by" line — the family's
+ *  drop the ActivityLane chrome to a small "powered by" line — the family's
  *  relationship is with the provider, not us. Operator mail keeps the
- *  "· via ActivityOS" chrome (they ARE the ActivityOS customer). */
+ *  "· via ActivityLane" chrome (they ARE the ActivityLane customer). */
 export function layout(
   heading: string,
   body: string,
@@ -383,7 +383,7 @@ export async function notify(input0: NotifyInput): Promise<void> {
     // A fully-composed email brings its own header/layout/button; we only
     // resolve its {{VIEW_URL}} into the absolute, portal-correct deep link.
     // Otherwise wrap the (plain or rich) body in the standard layout — carrying
-    // the PROVIDER's own logo for family-facing mail (never ActivityOS's).
+    // the PROVIDER's own logo for family-facing mail (never ActivityLane's).
     const logo = parentEmail ? await tenantLogo(input.tenantId) : undefined;
     const link = emailHref ? (emailHref.startsWith("http") ? emailHref : `${webUrl}${emailHref}`) : "";
     const html = input.emailFullHtml

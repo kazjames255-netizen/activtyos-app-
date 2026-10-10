@@ -39,7 +39,7 @@ export interface OnboardField {
 const NATIONALITIES = ["British", "Irish", "Polish", "Romanian", "Indian", "Pakistani", "Bangladeshi", "Nigerian", "Ghanaian", "Kenyan", "South African", "Portuguese", "Spanish", "Italian", "French", "German", "Lithuanian", "Latvian", "Bulgarian", "Filipino", "American", "Canadian", "Australian", "Other"];
 
 // Standard childcare disqualification self-declaration wording (authored for
-// Name TBC; aligns with the Childcare (Disqualification) Regulations / EYFS).
+// ActivityLane; aligns with the Childcare (Disqualification) Regulations / EYFS).
 export const DISQUAL_DECLARATION = `DISQUALIFICATION SELF-DECLARATION
 
 I confirm that, to the best of my knowledge, I am not disqualified from working with children under the Childcare (Disqualification) and Childcare (Early Years Provision Free of Charge) (Extended Entitlement) Regulations 2018 or any related legislation.

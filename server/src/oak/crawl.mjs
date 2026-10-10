@@ -27,7 +27,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function get(url, tries = 5) {
   for (let t = 1; t <= tries; t++) {
     try {
-      const r = await fetch(url, { headers: { "user-agent": "ActivityOS-oak-import/1.0 (OGL v3.0 content, throttled)" } });
+      const r = await fetch(url, { headers: { "user-agent": "ActivityLane-oak-import/1.0 (OGL v3.0 content, throttled)" } });
       if (r.status === 404) return null;
       if (r.ok) return await r.text();
       if (r.status === 429 || r.status >= 500) { await sleep(2000 * t * t); continue; }

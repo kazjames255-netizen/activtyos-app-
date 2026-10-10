@@ -566,7 +566,7 @@ listings.post("/", async (req, res) => {
 // could split a week into single days and out-discount the weekly pass. Rules already saved with another
 // method keep working (stored id + method unchanged); only NEW or CHANGED ones are refused.
 
-/** An ONLINE listing (its venue is the account's "online" place) always stores which way it is hosted: unset used to mean "ActivityOS room"
+/** An ONLINE listing (its venue is the account's "online" place) always stores which way it is hosted: unset used to mean "ActivityLane room"
  *  only by accident of the join code, so a listing saved with no choice looked unconfigured. Sets videoMode = "platform" when none was given. */
 async function defaultVideoMode(doc: Record<string, unknown>, tenantId: string, franchiseId: string | null, venueIdOverride?: string): Promise<void> {
   const venueId = venueIdOverride ?? (doc.venueId as string | undefined);

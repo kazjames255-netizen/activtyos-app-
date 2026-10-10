@@ -30,7 +30,7 @@ async function call(tok: string, method: string, url: string, b?: unknown) {
   check("H3 Billing page also rejects a short sort code", /6 digits/.test(await body(page)));
   await page.locator("#bp-sort").fill("20-57-44"); await page.getByRole("button", { name: "Save bank details" }).click(); await page.waitForTimeout(1800);
   check("H3b valid details save ('Saved')", /Saved/.test(await body(page)));
-  await page.getByRole("button", { name: /Your Activly plan|Your .* plan/ }).first().click(); await page.waitForTimeout(3000);
+  await page.getByRole("button", { name: /Your ActivityLane plan|Your .* plan/ }).first().click(); await page.waitForTimeout(3000);
   await shot(page, "H4-billing-plan");
   txt = await body(page);
   check("H4 Billing > Your plan tab renders", /plan/i.test(txt) && !/Something went wrong/.test(txt));

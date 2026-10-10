@@ -125,13 +125,13 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
   },
   "email": {
     "title": "Email",
-    "introLine": "This is your whole comms hub — a Gmail-style inbox and composer for writing to parents one-to-one, a marketing pipeline for branded campaigns to your live audiences, and the automatic emails Name TBC sends for you.",
-    "doneLine": "Write to parents from the Inbox, fire branded campaigns at your live audiences, let Name TBC send the routine emails for you, and read the numbers to see what's landing.",
+    "introLine": "This is your whole comms hub — a Gmail-style inbox and composer for writing to parents one-to-one, a marketing pipeline for branded campaigns to your live audiences, and the automatic emails ActivityLane sends for you.",
+    "doneLine": "Write to parents from the Inbox, fire branded campaigns at your live audiences, let ActivityLane send the routine emails for you, and read the numbers to see what's landing.",
     "steps": [
       {
         "label": "Sub-tabs",
         "stage": "Getting around",
-        "line": "Everything on this page lives under a row of eight tabs — the first two are your one-to-one mailbox and writing desk, the middle three run your bulk marketing, and the last three are the emails Name TBC sends automatically plus your settings.",
+        "line": "Everything on this page lives under a row of eight tabs — the first two are your one-to-one mailbox and writing desk, the middle three run your bulk marketing, and the last three are the emails ActivityLane sends automatically plus your settings.",
         "bodyHtml": "<div class=\"frm\"><div class=\"fl\">EMAIL SECTIONS</div><div class=\"chips\"><span class=\"ochip\">Inbox</span><span class=\"ochip\">Compose</span><span class=\"ochip\">Campaigns</span><span class=\"ochip\">Audiences</span><span class=\"ochip\">Templates</span><span class=\"ochip\">Automatic emails</span><span class=\"ochip\">Analytics</span><span class=\"ochip\">Settings</span></div><div class=\"hint\">Inbox opens by default — the active tab sits highlighted so you always know where you are.</div></div>"
       },
       {
@@ -167,8 +167,8 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Automatic emails",
         "stage": "Set and forget",
-        "line": "Beyond what you write, Name TBC quietly sends a batch on your behalf — booking confirmations, receipts, session reminders, late-collection alerts and review requests — and this tab is where you switch any of them off or change when the reminders go out.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"hint\">The emails Name TBC sends for you automatically — flip any off, or change when reminders go out.</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Bookings and approvals <span class=\"chip2\">Core</span></div><div class=\"chk\"><span class=\"chkbx\">✓</span>Payments and receipts</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Session reminders <span class=\"g\">· 48 hours before</span></div><div class=\"chk\"><span class=\"chkbx\">✓</span>Late-collection alerts</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Review requests</div></div>"
+        "line": "Beyond what you write, ActivityLane quietly sends a batch on your behalf — booking confirmations, receipts, session reminders, late-collection alerts and review requests — and this tab is where you switch any of them off or change when the reminders go out.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"hint\">The emails ActivityLane sends for you automatically — flip any off, or change when reminders go out.</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Bookings and approvals <span class=\"chip2\">Core</span></div><div class=\"chk\"><span class=\"chkbx\">✓</span>Payments and receipts</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Session reminders <span class=\"g\">· 48 hours before</span></div><div class=\"chk\"><span class=\"chkbx\">✓</span>Late-collection alerts</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Review requests</div></div>"
       },
       {
         "label": "Analytics",
@@ -561,7 +561,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Payouts",
         "stage": "Getting paid",
-        "line": "This is where you connect or manage your Stripe payout account, with your on-the-way versus in-the-bank split — just remember the amounts are Name TBC estimates until Stripe is fully connected.",
+        "line": "This is where you connect or manage your Stripe payout account, with your on-the-way versus in-the-bank split — just remember the amounts are ActivityLane estimates until Stripe is fully connected.",
         "bodyHtml": "<div class=\"frm\"><div class=\"chk\"><span class=\"chkbx\">✓</span>Payout account connected &nbsp;<span class=\"btn\">Manage payouts →</span></div><div class=\"row2\"><div><div class=\"fl\">🚚 ON THE WAY (EST.)</div><div class=\"field\">£1,240</div></div><div><div class=\"fl\">🏦 IN YOUR BANK (EST.)</div><div class=\"field\">£16,915</div></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>5 Aug 2026</b> <span class=\"g\">BK-10432, BK-10433 · succeeded</span><span class=\"tkp\">£96.00</span></div></div><div class=\"hint\">Est. fees £265 · Est. net (period) £18,155 — estimates only.</div></div>"
       },
       {
@@ -616,8 +616,8 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Categories & Suppliers",
         "stage": "Setup",
-        "line": "Keep the ledger tidy with reusable categories and a saved supplier address book — and, from the card above the tabs, flip the toggle so your own Name TBC plan fee gets counted as a monthly cost too.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Venue hire</b> <span class=\"g\">43% · 3 expenses · avg £180</span><span class=\"tkp\">£540</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Riverside Sports Hall</b> <span class=\"g\">bookings@riversidesports.co.uk · 07700 900123</span></div></div><span class=\"btn\">＋ Add supplier</span><div class=\"chk\"><span class=\"chkbx\">✓</span>Include my Name TBC subscription in expenses</div><div class=\"hint\">Name TBC Pro plan · £29/month since 12 Jan 2026 — counted as a monthly cost.</div></div>"
+        "line": "Keep the ledger tidy with reusable categories and a saved supplier address book — and, from the card above the tabs, flip the toggle so your own ActivityLane plan fee gets counted as a monthly cost too.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Venue hire</b> <span class=\"g\">43% · 3 expenses · avg £180</span><span class=\"tkp\">£540</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Riverside Sports Hall</b> <span class=\"g\">bookings@riversidesports.co.uk · 07700 900123</span></div></div><span class=\"btn\">＋ Add supplier</span><div class=\"chk\"><span class=\"chkbx\">✓</span>Include my ActivityLane subscription in expenses</div><div class=\"hint\">ActivityLane Pro plan · £29/month since 12 Jan 2026 — counted as a monthly cost.</div></div>"
       }
     ]
   },
@@ -1103,7 +1103,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
         "label": "Cancel and refund",
         "stage": "Refunds",
         "line": "When you cancel or refund, you choose full, partial or no refund. Card refunds go back to the parent's card from here; for bank, cash or voucher payments you send the money yourself and confirm it, and those same actions — approve, decline, promote from the waitlist or mark a booking paid — sit as buttons at the top of the booking, right above.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">REFUND THE PARENT?</div><div class=\"chips\"><span class=\"ochip\">Yes — full (£240.00)</span><span class=\"ochip\">Partial</span><span class=\"ochip\">No refund</span></div><div class=\"fl\">REFUND AMOUNT (£)</div><div class=\"field ph\">120.00</div><div class=\"hint\">Name TBC never moves money — action any refund in your own payment provider.</div><div class=\"row2\"><div class=\"btn amber\">Confirm cancellation</div><div class=\"btn ghost\">Keep booking</div></div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">REFUND THE PARENT?</div><div class=\"chips\"><span class=\"ochip\">Yes — full (£240.00)</span><span class=\"ochip\">Partial</span><span class=\"ochip\">No refund</span></div><div class=\"fl\">REFUND AMOUNT (£)</div><div class=\"field ph\">120.00</div><div class=\"hint\">ActivityLane never moves money — action any refund in your own payment provider.</div><div class=\"row2\"><div class=\"btn amber\">Confirm cancellation</div><div class=\"btn ghost\">Keep booking</div></div></div>"
       }
     ]
   },
@@ -1115,8 +1115,8 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "The hero and your actions",
         "stage": "Overview",
-        "line": "The banner at the top explains the idea: message one family or a whole listing at once, and any replies come back as normal one to one conversations. On the right sit your actions. Message customers starts a new send, Templates manages your saved messages, and Message Name TBC is there for support.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">MESSAGES</div><div class=\"field\">Message one family or a whole listing — replies come back as 1:1 chats</div><div class=\"chips\"><span class=\"ochip\">＋ Message customers</span><span class=\"ochip\">📝 Templates</span><span class=\"ochip\">✦ Message Name TBC</span></div></div>"
+        "line": "The banner at the top explains the idea: message one family or a whole listing at once, and any replies come back as normal one to one conversations. On the right sit your actions. Message customers starts a new send, Templates manages your saved messages, and Message ActivityLane is there for support.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">MESSAGES</div><div class=\"field\">Message one family or a whole listing — replies come back as 1:1 chats</div><div class=\"chips\"><span class=\"ochip\">＋ Message customers</span><span class=\"ochip\">📝 Templates</span><span class=\"ochip\">✦ Message ActivityLane</span></div></div>"
       },
       {
         "label": "Your conversation list",
@@ -1133,7 +1133,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Whole listing, reviewed",
         "stage": "Broadcast",
-        "line": "In Listings mode you pick one or more listings and Name TBC pulls in everyone booked onto them. Before you send, a review panel lists every family so you can un-tick anyone you want to leave out. The whole send then shows in your inbox as a single Sent to families row.",
+        "line": "In Listings mode you pick one or more listings and ActivityLane pulls in everyone booked onto them. Before you send, a review panel lists every family so you can un-tick anyone you want to leave out. The whole send then shows in your inbox as a single Sent to families row.",
         "bodyHtml": "<div class=\"frm\"><div class=\"fl\">GOING TO 23 OF 25 FAMILIES</div><div class=\"chk\"><span class=\"chkbx\">✓</span> Sarah Whitmore · Ava · sarah.w@gmail.com</div><div class=\"chk\"><span class=\"chkbx\">✓</span> Priya Sharma · Dev · priya.s@gmail.com</div><div class=\"hint\">Click any family to un-tick and leave them out of this send.</div></div>"
       },
       {
@@ -1164,7 +1164,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "What the week costs",
         "stage": "Wages",
-        "line": "A wages banner sits up top — the week's total at the plain hourly rate, and again including your predicted on-cost (employer NI, pension). It's recorded only; Name TBC never moves money. The on-cost percentage comes from the Settings tab.",
+        "line": "A wages banner sits up top — the week's total at the plain hourly rate, and again including your predicted on-cost (employer NI, pension). It's recorded only; ActivityLane never moves money. The on-cost percentage comes from the Settings tab.",
         "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">AT HOURLY RATE</div><div class=\"field\">£486.00</div></div><div><div class=\"fl\">INCL. 12.07% ON-COST</div><div class=\"field\">£544.67</div></div></div><div class=\"hint\">Predicted labour cost for the shifts in view — display only.</div></div>"
       },
       {
@@ -1463,7 +1463,7 @@ TOUR_CONFIGS.expenses.settings = [{"icon":"💷","label":"Money settings","tab":
 TOUR_CONFIGS.purchasing.settings = [{"icon":"💷","label":"Money settings","tab":"money","note":"income and invoice settings"}];
 TOUR_CONFIGS.reconciliation.settings = [{"icon":"🎟️","label":"Childcare vouchers","tab":"vouchers","note":"your voucher providers and references"}];
 TOUR_CONFIGS.bookings.settings = [{"icon":"💳","label":"Payments","tab":"bookings","note":"how you take payment"},{"icon":"↩️","label":"Cancellations and refunds","tab":"cancel","note":"your cancellation policy"}];
-TOUR_CONFIGS.email.settings = [{"icon":"🔔","label":"Notifications","tab":"notifications","note":"the automatic emails Name TBC sends"},{"icon":"🎨","label":"Branding","tab":"branding","note":"your logo and colours"}];
+TOUR_CONFIGS.email.settings = [{"icon":"🔔","label":"Notifications","tab":"notifications","note":"the automatic emails ActivityLane sends"},{"icon":"🎨","label":"Branding","tab":"branding","note":"your logo and colours"}];
 TOUR_CONFIGS.referrals.settings = [{"icon":"🎁","label":"Refer a friend","tab":"refer","note":"the referral reward and terms"}];
 
 // ── Recent Team-area pages ──────────────────────────────────────────────────

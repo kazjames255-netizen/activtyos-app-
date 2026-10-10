@@ -180,7 +180,7 @@ test.describe("email client", () => {
 });
 
 // Mailbox redirect: a provider adds ONE redirect rule in Outlook/Gmail pointing
-// at their ActivityOS address, and mail they receive appears in this Inbox.
+// at their ActivityLane address, and mail they receive appears in this Inbox.
 // Skips unless the stack has an INBOUND_EMAIL_DOMAIN — without one there is no
 // address to redirect to, and the setup panel correctly renders nothing.
 test.describe("mailbox redirect", () => {

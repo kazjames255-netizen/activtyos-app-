@@ -8,7 +8,7 @@ import { BRAND } from "./brand";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Stripe Billing helpers — the platform's OWN revenue (the plan fee a
-// provider pays ActivityOS), entirely separate from Stripe Connect in
+// provider pays ActivityLane), entirely separate from Stripe Connect in
 // payments.ts (parents paying providers). One Product; every subscription
 // gets its own inline Price at the amount snapshotted from the live
 // catalogue at start — which is what makes grandfathering trivial: a later

@@ -4,7 +4,7 @@ import path from "node:path";
 import { loadAccounts, ROOT, API_URL } from "./helpers/env";
 import { fbSignIn } from "./helpers/accounts";
 
-// LIVE Xero test: posts a payroll wages journal to the 'ActivityOS Test' Xero org (a free trial org, no real books), verifies it,
+// LIVE Xero test: posts a payroll wages journal to the 'ActivityLane Test' Xero org (a free trial org, no real books), verifies it,
 // then VOIDS it (Xero manual journals cannot be deleted once posted). Refuses to run unless the connection label is exactly that.
 // Setup used: the standing company account (Xero already connected — this spec never connects/disconnects it).
 
@@ -36,7 +36,7 @@ test("post an approved pay run to Xero: gates, mapping, balanced journal, idempo
 
   const conns = (await call("GET", "/api/accounting/connections", tok)).body;
   test.skip(!conns?.xero?.connected, "Xero is not connected for the e2e company account");
-  expect(conns.xero.label, "SAFETY: only ever post to the 'ActivityOS Test' Xero org").toBe("ActivityOS Test");
+  expect(conns.xero.label, "SAFETY: only ever post to the 'ActivityLane Test' Xero org").toBe("ActivityLane Test");
 
   const priorMapping = (await call("GET", "/api/accounting/mapping?provider=xero", tok)).body.mapping ?? {};
   let journalId = "";
@@ -89,7 +89,7 @@ test("post an approved pay run to Xero: gates, mapping, balanced journal, idempo
 
     // fetch back from Xero: narration, balanced, amounts
     const j = xero(co.tenantId!, "get", journalId);
-    expect(j.Narration).toBe(`ActivityOS payroll — ${period}`);
+    expect(j.Narration).toBe(`ActivityLane payroll — ${period}`);
     const amt = (desc: string) => j.JournalLines.find((l: any) => l.Description === desc).LineAmount as number;
     expect(amt("Gross wages")).toBe(1000);
     expect(amt("Employer NI")).toBe(130);

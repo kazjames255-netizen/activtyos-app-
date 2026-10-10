@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Build server/src/data/curriculum/nc2014.json from the owner's Google Sheet export
-("ActivityOS-lessons-vs-national-curriculum", tabs: Coverage check / Lessons mapped / Area x year).
+("ActivityLane-lessons-vs-national-curriculum", tabs: Coverage check / Lessons mapped / Area x year).
 Input: a JSON dump {lessons, coverage, areaYear} (see scratch/nc/nc.json). Usage: build_nc2014.py <nc.json> <out.json>
 Compact on purpose (server loads it once; ~0.9 MB): lessons are keyed by the Oak URL minus its host prefix."""
 import json, re, sys

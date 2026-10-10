@@ -76,8 +76,8 @@ export const GENERATED_STEPS: Record<string, LiveTourSteps> = {
   },
   "email": {
     "title": "Email",
-    "introLine": "Welcome to Email — your whole comms hub, from a Gmail-style inbox to branded marketing campaigns and the automatic emails Name TBC sends for you.",
-    "doneLine": "Write to parents from the Inbox, fire branded campaigns at your live audiences, let Name TBC handle the routine emails, and read the numbers to see what's landing.",
+    "introLine": "Welcome to Email — your whole comms hub, from a Gmail-style inbox to branded marketing campaigns and the automatic emails ActivityLane sends for you.",
+    "doneLine": "Write to parents from the Inbox, fire branded campaigns at your live audiences, let ActivityLane handle the routine emails, and read the numbers to see what's landing.",
     "steps": [
       {
         "find": "Inbox",
@@ -101,7 +101,7 @@ export const GENERATED_STEPS: Record<string, LiveTourSteps> = {
       },
       {
         "find": "Automatic emails",
-        "line": "Beyond what you write, Name TBC quietly sends booking confirmations, receipts, session reminders, late-collection alerts and review requests, and here you switch any off or change when they go out."
+        "line": "Beyond what you write, ActivityLane quietly sends booking confirmations, receipts, session reminders, late-collection alerts and review requests, and here you switch any off or change when they go out."
       },
       {
         "find": "Analytics",
@@ -457,8 +457,8 @@ export const GENERATED_STEPS: Record<string, LiveTourSteps> = {
         "line": "Keep the ledger tidy with reusable categories and a saved supplier address book, all managed right here."
       },
       {
-        "find": "Include my Name TBC subscription",
-        "line": "Flip this on and your own Name TBC plan fee gets counted as a monthly cost too, so nothing slips out of your totals."
+        "find": "Include my ActivityLane subscription",
+        "line": "Flip this on and your own ActivityLane plan fee gets counted as a monthly cost too, so nothing slips out of your totals."
       }
     ]
   },
@@ -508,7 +508,7 @@ export const GENERATED_STEPS: Record<string, LiveTourSteps> = {
       },
       {
         "find": "their@email.com",
-        "line": "Pop the person's email in here and Name TBC emails them the invite straight away, or leave it blank for a link you share by hand."
+        "line": "Pop the person's email in here and ActivityLane emails them the invite straight away, or leave it blank for a link you share by hand."
       },
       {
         "find": "Invite staff",

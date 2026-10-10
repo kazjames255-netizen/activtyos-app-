@@ -5,7 +5,7 @@ import { fromDomain } from "./mailer";
 //
 // The envelope address stays the PLATFORM's: one authenticated domain, one
 // SPF/DKIM record, nothing for a provider to set up. What varies per tenant is
-//   • the From display name  — families see "Sunshine Camps", not "ActivityOS"
+//   • the From display name  — families see "Sunshine Camps", not "ActivityLane"
 //   • Reply-To               — a reply reaches the provider, not a no-reply box
 // which is exactly the pair a mailbox is allowed to vary without owning the
 // domain (Gmail SMTP included: it pins the address, never the display name).
@@ -97,7 +97,7 @@ export async function tenantSlug(
 
 // ── Inbound (mailbox redirect) ────────────────────────────────────────────
 // A provider adds ONE redirect rule in Outlook/Gmail pointing at their
-// ActivityOS address; their parent mail then appears in the in-app Inbox.
+// ActivityLane address; their parent mail then appears in the in-app Inbox.
 // This is a SEPARATE domain from sending: its MX records point at the
 // inbound-parse provider, whereas the sending domain's don't.
 const INBOUND_DOMAIN = (process.env.INBOUND_EMAIL_DOMAIN ?? "").trim().toLowerCase();

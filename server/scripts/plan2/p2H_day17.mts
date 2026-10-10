@@ -186,17 +186,17 @@ try {
 
   await step("p2-d17-e1", async () => {
     const { r, actor, newLines } = await signupFresh("company", "P2H17 Fresh Co", "Robin");
-    const welcomeLine = newLines.find((l) => l.includes("Welcome to ActivityOS"));
+    const welcomeLine = newLines.find((l) => l.includes("Welcome to ActivityLane"));
     const rightRecipient = !!welcomeLine && welcomeLine.includes(actor.email);
-    const rightSubject = !!welcomeLine && welcomeLine.includes("Welcome to ActivityOS — let's get you set up");
+    const rightSubject = !!welcomeLine && welcomeLine.includes("Welcome to ActivityLane — let's get you set up");
     const ok = r.status === 201 && !!welcomeLine && rightRecipient && rightSubject;
-    results["p2-d17-e1"] = { verdict: ok ? "pass" : "fail", method: "api", actual: `POST /api/register-role {role:'company'} → ${r.status} tenantId=${r.json?.tenantId}; [mail] line seen: ${welcomeLine ?? "NONE"}; recipient matches signup email (${actor.email}): ${rightRecipient}; subject matches "Welcome to ActivityOS — let's get you set up": ${rightSubject}`, notes: "MAIL_LIVE is off so the send is SUPPRESSED, but the attempt (and its subject/recipient) is what's being confirmed here, same evidence pattern as p2-hv9." };
+    results["p2-d17-e1"] = { verdict: ok ? "pass" : "fail", method: "api", actual: `POST /api/register-role {role:'company'} → ${r.status} tenantId=${r.json?.tenantId}; [mail] line seen: ${welcomeLine ?? "NONE"}; recipient matches signup email (${actor.email}): ${rightRecipient}; subject matches "Welcome to ActivityLane — let's get you set up": ${rightSubject}`, notes: "MAIL_LIVE is off so the send is SUPPRESSED, but the attempt (and its subject/recipient) is what's being confirmed here, same evidence pattern as p2-hv9." };
     if (r.json?.tenantId) await db.collection("tenants").doc(r.json.tenantId).update({ _p2h: "d17cleanup" });
   });
 
   await step("p2-d17-e2", async () => {
     const { r, actor, newLines } = await signupFresh("freelancer", "P2H17 Fresh Freelancer", "Jamie");
-    const welcomeLine = newLines.find((l) => l.includes("Welcome to ActivityOS"));
+    const welcomeLine = newLines.find((l) => l.includes("Welcome to ActivityLane"));
     const rightRecipient = !!welcomeLine && welcomeLine.includes(actor.email);
     const ok = r.status === 201 && !!welcomeLine && rightRecipient;
     results["p2-d17-e2"] = { verdict: ok ? "pass" : "fail", method: "api", actual: `POST /api/register-role {role:'freelancer'} → ${r.status} tenantId=${r.json?.tenantId}; [mail] line seen: ${welcomeLine ?? "NONE"}; recipient matches (${actor.email}): ${rightRecipient}`, notes: "MAIL_LIVE off → SUPPRESSED, attempt confirmed via the [mail] log line." };
@@ -210,7 +210,7 @@ try {
     const before = mailLog.length;
     const again = await api(actor, "POST", "/api/register-role", { role: "company", businessName: "P2H17 Double Signup Co Take2" });
     await new Promise((res2) => setTimeout(res2, 300));
-    const secondWelcome = mailLog.slice(before).some((l) => l.includes("Welcome to ActivityOS"));
+    const secondWelcome = mailLog.slice(before).some((l) => l.includes("Welcome to ActivityLane"));
     const ok = again.status === 409 && !secondWelcome;
     results["p2-d17-e3"] = { verdict: ok ? "pass" : "fail", method: "api", actual: `re-POST /api/register-role on an already-chosen account → ${again.status} ${err(again)}; a second welcome email attempt fired: ${secondWelcome}` };
   });
