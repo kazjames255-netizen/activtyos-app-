@@ -279,7 +279,7 @@ async function checkPhotos(req: Request, tenantId: string, data: { photoUrl?: st
   const urls = [...(data.photoUrl ? [data.photoUrl] : []), ...(data.attachments ?? [])];
   if (!urls.length) return null;
   const found = urls.map(imageId);
-  if (found.some((i) => !i)) return "Attachments must be photos uploaded through ActivityOS.";
+  if (found.some((i) => !i)) return "Attachments must be photos uploaded through ActivityLane.";
   const mine = await privateImagesOf(tenantId, found as string[]);
   if (found.some((i) => !mine.has(i!))) return "That photo isn't one of your uploads. Upload it again and attach the new one.";
   const own = (u: string) => `${req.protocol}://${req.get("host")}/api/images/${imageId(u)}`;
