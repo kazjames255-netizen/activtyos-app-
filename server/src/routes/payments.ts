@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { refKeys } from "../lib/bookingRef";
 import { z } from "zod";
 import { db } from "../firebase";
 import { canWrite, operatorScope, type Role, managerScope } from "../middleware/role";
@@ -394,7 +395,7 @@ payments.post("/checkout", async (req, res) => {
   // names, and refuse an ambiguous number rather than charging the wrong one.
   const snaps = await Promise.all(
     parsed.data.refs.map((ref) =>
-      db.collection("bookings").where("email", "==", email).where("ref", "==", ref).get(),
+      db.collection("bookings").where("email", "==", email).where("ref", "in", refKeys(ref)).get(),
     ),
   );
   const picked = snaps.map((x) => (parsed.data.tenantId ? x.docs.filter((d) => d.get("tenantId") === parsed.data.tenantId) : x.docs));

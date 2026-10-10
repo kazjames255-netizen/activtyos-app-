@@ -31,13 +31,17 @@ export const ALLERGEN_SYNONYMS: Record<string, string[]> = {
   sulphites: ["sulphite", "sulfite", "sulphur", "sulfur"],
 };
 
+// A provider types a dish's allergens freely ("Dairy", "egg", "wheat"): fold the common spellings onto the 14 names above.
+const DISH_ALIAS: Record<string, string> = { dairy: "milk", egg: "eggs", nut: "nuts", "tree nuts": "nuts", "tree nut": "nuts", peanut: "peanuts", soy: "soya", soybeans: "soya", wheat: "gluten", shellfish: "crustaceans", crustacean: "crustaceans", mollusc: "molluscs", sulphite: "sulphites", sulfites: "sulphites", sulphur: "sulphites" };
+export const normaliseDishAllergen = (a: string): string => { const k = a.trim().toLowerCase(); return DISH_ALIAS[k] ?? k; };
+
 /** Which of a dish's allergens the child's free-text allergies may cover. */
 export function allergenHits(allergyText: string | undefined, dishAllergens: Iterable<string> | undefined): string[] {
   const t = (allergyText ?? "").toLowerCase();
   if (!t.trim() || !dishAllergens) return [];
   const hits: string[] = [];
   for (const a of dishAllergens) {
-    const key = a.toLowerCase();
+    const key = normaliseDishAllergen(a);
     if ((ALLERGEN_SYNONYMS[key] ?? [key]).some((term) => t.includes(term))) hits.push(a);
   }
   return hits;

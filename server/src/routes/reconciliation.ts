@@ -1,4 +1,5 @@
 import { isTfcMethod } from "../lib/payMethods";
+import { refKeys } from "../lib/bookingRef";
 import { Router } from "express";
 import { db } from "../firebase";
 import { managerScope, canWrite, type Role } from "../middleware/role";
@@ -447,7 +448,7 @@ reconciliation.post("/:ref/bank-match", async (req, res) => {
   const byId = db.collection("bookings").doc(bookingDocId(tenantId, req.params.ref));
   let ref = byId;
   if (!(await byId.get()).exists) {
-    const q = await db.collection("bookings").where("tenantId", "==", tenantId).where("ref", "==", req.params.ref).limit(1).get();
+    const q = await db.collection("bookings").where("tenantId", "==", tenantId).where("ref", "in", refKeys(req.params.ref)).limit(1).get();
     if (!q.empty) ref = q.docs[0].ref;
   }
   try {

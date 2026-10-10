@@ -7,6 +7,7 @@ import { bareImageUrl, signImageUrl } from "../lib/signing";
 import { franchiseChildIds, isFranchise } from "../lib/franchiseScope";
 import { franchiseForChild, loadSettings } from "../lib/tenantLibrary";
 import { childVisibleTo } from "../lib/childAccess";
+import { otherChildWarning } from "../lib/incidentNames";
 import { bookingInSite, siteRecordFilter, staffSiteScope } from "../lib/siteScope";
 import type { Role } from "../middleware/role";
 import { notify, parentEmailForChild } from "../lib/notify";
@@ -378,7 +379,9 @@ incidents.post("/", async (req, res) => {
     createdAt: new Date().toISOString(),
   };
   const ref = await col.add(doc);
-  res.status(201).json(signPhotos({ id: ref.id, ...doc }));
+  // Staff-side guard: a write-up that names another child of the session is flagged (never blocked).
+  const warning = await otherChildWarning(scope.tenantId, doc).catch(() => null);
+  res.status(201).json({ ...signPhotos({ id: ref.id, ...doc }), ...(warning ? { warning } : {}) });
 
   // Alert the safeguarding lead(s) named in Setup (bell + a details-free email);
   // a staff allegation also the account holder, one about a lead ONLY the
@@ -400,14 +403,12 @@ incidents.post("/", async (req, res) => {
       to: { kind: "parent", email },
       category: doc.kind === "accident" ? "accident" : "incident",
       title: `${anWord(word)} was recorded for ${doc.childName}`,
-      body: `${doc.description}${doc.treatment ? ` Treatment: ${doc.treatment}.` : ""}`,
+      // Bells and emails never carry the staff free text (it can name another child): a neutral line, the details are in the app.
+      body: `Open the app to see what happened and what was done.`,
       subject: `${doc.childName}: ${word} recorded on ${doc.date}`,
       emailHtml:
         `<p>${anWord(word)} involving <b>${esc(doc.childName)}</b> was recorded on <b>${when}</b>.</p>` +
-        `<p>${esc(doc.description)}</p>` +
-        (doc.injury ? `<p><b>Injury:</b> ${esc(doc.injury)}${doc.bodyPart ? ` (${esc(doc.bodyPart)})` : ""}</p>` : "") +
-        (doc.treatment ? `<p><b>Treatment given:</b> ${esc(doc.treatment)}${doc.firstAider ? ` — by ${esc(doc.firstAider)}` : ""}</p>` : "") +
-        (doc.actionTaken ? `<p><b>Action taken:</b> ${esc(doc.actionTaken)}</p>` : ""),
+        `<p>Open the app to see what happened and what was done.</p>`,
       href: "/custdash/accidents",
       ref: ref.id,
     });
@@ -489,7 +490,8 @@ incidents.put("/:id", async (req, res) => {
   );
   await own.snap.ref.set({ ...parsed.data, updatedAt: new Date().toISOString() }, { merge: true });
   const after = await own.snap.ref.get();
-  res.json(signPhotos({ id: after.id, ...after.data() }));
+  const editWarning = await otherChildWarning(String(after.get("tenantId")), { ...(after.data() ?? {}) }).catch(() => null);
+  res.json({ ...signPhotos({ id: after.id, ...after.data() }), ...(editWarning ? { warning: editWarning } : {}) });
 
   // Staff choose per edit whether the family is alerted or the record is just
   // quietly corrected on their profile — the stamp updates either way.
@@ -509,11 +511,11 @@ incidents.put("/:id", async (req, res) => {
       to: { kind: "parent", email },
       category: kind === "accident" ? "accident" : "incident",
       title: `${anWord(word)} record for ${rec.childName} was updated`,
-      body: String(rec.description ?? ""),
+      body: "Open the app to see what changed.",
       subject: `${rec.childName}: ${word} record updated`,
       emailHtml:
         `<p>The ${word} record for <b>${esc(rec.childName)}</b> from <b>${esc(rec.date)}</b> has been updated by the provider.</p>` +
-        `<p>${esc(rec.description)}</p>`,
+        `<p>Open the app to see what changed.</p>`,
       href: "/custdash/accidents",
       ref: after.id,
     });
@@ -533,9 +535,14 @@ incidents.post("/:id/acknowledge", async (req, res) => {
   if (!childId) { res.status(404).json({ error: "Record not found" }); return; }
   const child = await db.collection("children").doc(childId).get();
   if (!child.exists || child.data()!.parentUid !== req.user!.uid || !parentMaySee(snap.data()!)) { res.status(404).json({ error: "Record not found" }); return; }
-  const firstAck = !snap.data()!.acknowledgedAt;
   const who = req.user?.name ?? req.user?.email ?? "Parent";
-  await snap.ref.set({ acknowledgedAt: new Date().toISOString(), acknowledgedBy: who }, { merge: true });
+  // Claim the first acknowledgement in a transaction: two simultaneous clicks both read "not acknowledged yet" and each told staff.
+  const firstAck = await db.runTransaction(async (tx) => {
+    const cur = await tx.get(snap.ref);
+    const first = !cur.get("acknowledgedAt");
+    tx.set(snap.ref, { acknowledgedAt: first ? new Date().toISOString() : cur.get("acknowledgedAt"), acknowledgedBy: first ? who : cur.get("acknowledgedBy") ?? who }, { merge: true });
+    return first;
+  });
   res.json({ ok: true });
 
   // Tell the team the family has seen it — once. Re-acknowledging refreshes

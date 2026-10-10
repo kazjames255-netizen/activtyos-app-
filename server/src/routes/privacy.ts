@@ -5,6 +5,7 @@ import { familyBooking } from "../lib/familyView";
 import { exportChildLearning } from "../lib/hubPrivacy";
 import { ukTodayPlus } from "../lib/ukDate";
 import { decryptSensitive } from "./onboarding";
+import { exportMessage, exportMoment, exportPayment, exportThread, scrubFamilyExport } from "../lib/familyExport";
 
 // Data & privacy (shared, every portal) — the user's GDPR surface: see what's
 // held, download it, and request deletion. Deletion is a RECORDED REQUEST, not
@@ -136,12 +137,12 @@ async function gather(req: import("express").Request) {
     register.sort((a, b) => String(a.date).localeCompare(String(b.date)));
     out.children = kids.docs.map(strip);
     out.bookings = bookings.docs.map((d) => familyBooking(strip(d) as never)); // the family's own view of its bookings (no internal refund bookkeeping)
-    out.payments = payments.docs.map(strip);
+    out.payments = payments.docs.map((d) => exportPayment(strip(d) as never));
     out.mealOrders = orders.docs.map(strip);
     out.medications = meds.map(strip);
     out.medicationDoses = doses.map(strip);
     out.register = register;
-    out.moments = moments.map(strip);
+    out.moments = moments.map((d) => exportMoment(strip(d) as never, kidSet, uid));
     // Accidents and incidents about their child. A confidential safeguarding
     // concern is withheld from a self-serve export (disclosure can put a child
     // at risk — it's a decision for the provider's DSL, not an automatic
@@ -160,8 +161,8 @@ async function gather(req: import("express").Request) {
       return { tripId: d.id, tenantId: t.tenantId, destination: t.destination, date: t.date, children: (t.attendees ?? []).filter((a) => a.childId && kidSet.has(a.childId)) };
     });
     out.uploadedFiles = files.docs.map((d) => { const f = d.data() as { name?: string; contentType?: string; bytes?: number; createdAt?: string }; return { id: d.id, name: f.name, contentType: f.contentType, bytes: f.bytes, createdAt: f.createdAt }; });
-    out.messageThreads = threads.docs.map(strip);
-    out.messages = messages.map(strip);
+    out.messageThreads = threads.docs.map((d) => exportThread(strip(d) as never));
+    out.messages = messages.map((d) => exportMessage(strip(d) as never));
     out.memberships = memberships.docs.map(strip);
     out.wallet = wallets.docs.map(strip);
     out.walletEntries = walletEntries.docs.map(strip);
@@ -175,6 +176,8 @@ async function gather(req: import("express").Request) {
     out.emailPreferences = prefs?.exists ? prefs.data() : null;
     // Learning Hub: enrolments, homework hand-ins + marks, flashcard progress, quiz attempts, mastery, lesson attendance.
     Object.assign(out, await exportChildLearning(uid, childIds));
+    // Backstop over EVERYTHING above: provider-internal keys and staff sign-in emails never leave in a family's download.
+    return scrubFamilyExport(out, email);
   }
   return out;
 }

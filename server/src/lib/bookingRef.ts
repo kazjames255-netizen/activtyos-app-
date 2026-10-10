@@ -6,6 +6,17 @@ export function prefixFromName(name?: string | null): string {
   return letters.length >= 3 ? letters.slice(0, 3) : "APF";
 }
 
+/** A booking number typed or pasted by a person: trim, strip inner spaces, upper-case ("  ami-1 " -> "AMI-1"). */
+export function normRef(ref: unknown): string {
+  return String(ref ?? "").replace(/\s+/g, "").toUpperCase();
+}
+
+/** Every spelling worth querying for a `ref` (normalised, plus the raw trimmed one in case an old/imported booking kept odd casing). At most 2, for `where("ref", "in", ...)`. */
+export function refKeys(ref: unknown): string[] {
+  const raw = String(ref ?? "").trim();
+  return [...new Set([normRef(ref), raw].filter(Boolean))];
+}
+
 const cache = new Map<string, { p: string; at: number }>();
 
 /** The prefix for a tenant's new bookings (cached for ten minutes; a failed lookup just falls back to "APF" and never blocks a booking). */

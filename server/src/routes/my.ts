@@ -1,4 +1,5 @@
 import { mergeGroupKey } from "../lib/bookingMergeKey";
+import { refKeys } from "../lib/bookingRef";
 import { isFranchise } from "../lib/franchiseScope";
 import { stopOpenPayments } from "../lib/checkoutIntent";
 import { ageCapGroup } from "../lib/childAge";
@@ -343,7 +344,7 @@ my.get("/bank-details", async (req, res) => {
   const email = tokenEmail(req);
   const ref = typeof req.query.ref === "string" ? req.query.ref : "";
   if (!email || !ref) { res.json({ bank: null }); return; }
-  const snap = await bookingsCol.where("email", "==", email).where("ref", "==", ref).limit(1).get();
+  const snap = await bookingsCol.where("email", "==", email).where("ref", "in", refKeys(ref)).limit(1).get();
   if (snap.empty) { res.json({ bank: null }); return; }
   const b = fromDoc(snap.docs[0].data() as BookingDoc);
   const owed = Math.max(0, (b.amount ?? 0) - (b.amountPaid ?? 0));
@@ -1303,8 +1304,11 @@ my.post("/bookings", async (req, res) => {
   // child who already holds a place on that exact day of that block. A
   // different TIMING on the same day (a morning and an afternoon session) is a
   // different session, so it's allowed.
+  // The "already holds a place" check runs INSIDE the booking transaction (dupCheck below), not here: two identical posts sent at the
+  // same instant (a double-click) both passed a check made outside it. The transaction also writes the tenant's booking counter, so
+  // concurrent bookings for one provider are serialised and the second one re-reads the first one's booking.
+  const want: { name: string; childId?: string; blockId: string; day: string; timing: string }[] = [];
   {
-    const want: { name: string; childId?: string; blockId: string; day: string; timing: string }[] = [];
     const seen = new Set<string>();
     for (const p of priced) {
       const rc = resolveChild(p.item);
@@ -1318,8 +1322,10 @@ my.post("/bookings", async (req, res) => {
           want.push({ name: rc.name, childId: rc.childId, blockId: seg.blockId, day: d, timing });
         }
     }
+  }
+  const dupBlockIds = [...new Set(want.map((w) => w.blockId))];
+  const dupCheck = (onBlocks: FirebaseFirestore.QuerySnapshot[]) => {
     const famEmail = familyEmail.trim().toLowerCase();
-    const onBlocks = await Promise.all([...new Set(want.map((w) => w.blockId))].map((id) => bookingsCol.where("blockId", "==", id).get()));
     for (const snap of onBlocks)
       for (const d of snap.docs) {
         const b = fromDoc(d.data() as BookingDoc);
@@ -1334,10 +1340,10 @@ my.post("/bookings", async (req, res) => {
           // place and double-book them. (Queued bookings aren't "expected" on the register, so they are matched here by their days.)
           const queuedOn = isQueuedOn(b.status, b.days, w.day);
           const hit = registerRows(b, w.day).some((r) => (r.expected || queuedOn) && (w.childId && r.childId ? r.childId === w.childId : sameFamily && r.name.trim().toLowerCase() === w.name.trim().toLowerCase()));
-          if (hit) { res.status(409).json({ error: queuedOn ? `${w.name || "This child"} is already on the waiting list for ${prettyDay(w.day)} (booking ${b.ref}).` : `${w.name || "This child"} already has a place on ${prettyDay(w.day)} (booking ${b.ref}).` }); return; }
+          if (hit) throw new HttpError(409, queuedOn ? `${w.name || "This child"} is already on the waiting list for ${prettyDay(w.day)} (booking ${b.ref}).` : `${w.name || "This child"} already has a place on ${prettyDay(w.day)} (booking ${b.ref}).`);
         }
       }
-  }
+  };
 
   // (A freelancer "minimum gap between sessions" clash check used to run here. Removed: a provider can run several sessions and bookings at once; it must never block a booking.)
 
@@ -1512,6 +1518,8 @@ my.post("/bookings", async (req, res) => {
       const redemption = codesToConsume.length ? await redeemCodesInTx(tx, listing.tenantId, codesToConsume, familyEmail) : null;
       if (redemption && !redemption.ok) throw new HttpError(409, redemption.reason);
       if (!tenantSnap.exists) throw new HttpError(400, "Listing's provider no longer exists");
+      // One child, one place per session: read under the transaction (see dupCheck) so parallel identical posts yield one booking.
+      dupCheck(await Promise.all(dupBlockIds.map((id) => tx.get(bookingsCol.where("blockId", "==", id)))));
       const blockById = new Map<string, BlockDoc>();
       for (const snap of blockSnaps) {
         if (!snap.exists) throw new HttpError(400, "Unknown block");
@@ -2242,7 +2250,7 @@ const amendSchema = z.object({
  */
 async function myBookingByRef(req: import("express").Request<{ ref?: string }>, email: string, ref: string): Promise<{ snap: FirebaseFirestore.QueryDocumentSnapshot } | { status: number; error: string }> {
   const tenantId = String((req.query.tenantId as string | undefined) ?? (req.body as { tenantId?: string } | undefined)?.tenantId ?? "").trim();
-  const matches = await bookingsCol.where("email", "==", email).where("ref", "==", ref).get();
+  const matches = await bookingsCol.where("email", "==", email).where("ref", "in", refKeys(ref)).get();
   let docs = matches.docs;
   if (tenantId) docs = docs.filter((d) => d.get("tenantId") === tenantId);
   if (!docs.length) return { status: 404, error: "Booking not found" };
@@ -2451,7 +2459,7 @@ async function ownOfferedBooking(email: string, ref: string, req?: import("expre
   if (req) { const found = await myBookingByRef(req, email, ref); return "error" in found ? null : found.snap.ref; }
   const matches = await bookingsCol
     .where("email", "==", email)
-    .where("ref", "==", ref)
+    .where("ref", "in", refKeys(ref))
     .limit(1)
     .get();
   return matches.empty ? null : matches.docs[0].ref;
