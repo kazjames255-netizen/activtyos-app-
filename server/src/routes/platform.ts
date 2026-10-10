@@ -35,25 +35,33 @@ platform.get("/accounts", async (req, res) => {
   const limit = Math.min(100, Math.max(1, Number.isFinite(asked) && asked > 0 ? Math.floor(asked) : 50));
   const cursor = typeof req.query.cursor === "string" ? req.query.cursor.slice(0, 400) : "";
   type U = { role?: string; tenantId?: string; franchiseId?: string; email?: string; name?: string; franchiseName?: string; franchiseArea?: string };
+  // A cursor is "<id>" (no search) or "<email>\u0001<id>" (search). Anything else is a 400, never a 500.
+  const ID = /^[A-Za-z0-9_-]{1,128}$/;
+  let cursorEmail = "", cursorId = "";
+  if (cursor) {
+    if (q) { [cursorEmail, cursorId] = cursor.split("\u0001"); if (!cursorEmail || cursorEmail.length > 200 || !ID.test(cursorId ?? "")) { res.status(400).json({ error: "Bad cursor", code: "bad_cursor" }); return; } }
+    else if (!ID.test(cursor)) { res.status(400).json({ error: "Bad cursor", code: "bad_cursor" }); return; }
+  }
   const picked: { id: string; u: U; email: string }[] = [];
   let more = false;
+  let exhausted = false;
   let last: FirebaseFirestore.QueryDocumentSnapshot | null = null;
-  // Some rows are skipped (HQ accounts, rows with no email), so read in small batches until the page is full or the list ends (bounded).
-  for (let batch = 0; batch < 6 && picked.length <= limit; batch++) {
+  // Some rows are skipped (HQ accounts, rows with no email), so keep reading batches until the page is full or the list ends. The scan is capped
+  // (20 batches); if the cap is hit first the response still carries a cursor from where the scan stopped, so paging simply continues (never a silent stop).
+  const MAX_BATCHES = 20;
+  for (let batch = 0; batch < MAX_BATCHES && picked.length <= limit; batch++) {
     let query: FirebaseFirestore.Query = q
       ? db.collection("users").where("email", ">=", q).where("email", "<=", `${q}\uf8ff`).orderBy("email").orderBy(FieldPath.documentId())
       : db.collection("users").orderBy(FieldPath.documentId());
     if (last) query = q ? query.startAfter(last.get("email"), last.id) : query.startAfter(last.id);
-    else if (cursor) {
-      if (q) { const [e, id] = cursor.split("\u0001"); query = query.startAfter(e, id ?? ""); } else query = query.startAfter(cursor);
-    }
+    else if (cursor) query = q ? query.startAfter(cursorEmail, cursorId) : query.startAfter(cursor);
     const snap = await query.limit(limit + 1).get();
     for (const d of snap.docs) {
       const u = d.data() as U;
       if (u.email && u.role !== "platform") picked.push({ id: d.id, u, email: u.email });
     }
     last = snap.docs[snap.docs.length - 1] ?? null;
-    if (snap.size < limit + 1) break;
+    if (snap.size < limit + 1) { exhausted = true; break; }
   }
   if (picked.length > limit) more = true;
   const page = picked.slice(0, limit);
@@ -68,7 +76,10 @@ platform.get("/accounts", async (req, res) => {
     return { uid: id, email: u.email ?? "", name: u.name ?? "", role, label, provider: role === "parent" ? "" : (tName ?? ""), portal: portalForRole(role) };
   });
   const tail = page[page.length - 1];
-  const nextCursor = more && tail ? (q ? `${tail.email}\u0001${tail.id}` : tail.id) : null;
+  // Email search matches the start of the stored email, lower-cased: Firebase Auth lower-cases login emails, so only very old rows could differ.
+  let nextCursor: string | null = null;
+  if (more && tail) nextCursor = q ? `${tail.email}\u0001${tail.id}` : tail.id;
+  else if (!exhausted && last && picked.length <= limit) nextCursor = q ? `${last.get("email")}\u0001${last.id}` : last.id; // cap hit with a short page: continue from the scan
   await platformAuditBestEffort(req, "accounts_lookup", { q, returned: accounts.length, paged: !!cursor });
   res.json({ accounts, nextCursor });
 });

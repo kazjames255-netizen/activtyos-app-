@@ -439,6 +439,27 @@ describe("X28/X29/X31: deletion requests, bookings, accounts", () => {
     const n2 = await page(`limit=3&cursor=${encodeURIComponent(n1.json.nextCursor)}`);
     assert.equal(n1.json.accounts.length, 3); assert.ok(n1.json.nextCursor);
     assert.ok(n2.json.accounts.every((a: any) => !n1.json.accounts.some((b: any) => b.uid === a.uid)), "the second page is different accounts");
+    // Malformed cursors are a 400, never a 500.
+    for (const bad of ["a/b", "x".repeat(300), "\u0001", "..", "a b"]) assert.equal((await page(`cursor=${encodeURIComponent(bad)}`)).status, 400, JSON.stringify(bad));
+    for (const bad of ["no-separator", "\u0001id", "email@x\u0001", "email@x\u0001a/b"]) assert.equal((await page(`q=${q}&cursor=${encodeURIComponent(bad)}`)).status, 400, JSON.stringify(bad));
+    // 120 HQ rows in a row (skipped from the list) must not silently end it: a short page still carries a cursor and paging carries on to the next real account.
+    const pad = db.batch();
+    for (let i = 0; i < 120; i++) pad.set(db.collection("users").doc(`0hqpad-${u}-${String(i).padStart(3, "0")}`), { email: `pad${i}-${u}@emu.test`, role: "platform", name: "pad" });
+    pad.set(db.collection("users").doc(`0hqpad-${u}-zzz-real`), { email: `padreal-${u}@emu.test`, role: "parent", name: "after the pad" });
+    await pad.commit();
+    const start = `0hqpad-${u}`;
+    const first = await page(`limit=2&cursor=${encodeURIComponent(start)}`);
+    assert.equal(first.status, 200);
+    assert.deepEqual(first.json.accounts, [], "all HQ rows: nothing to show yet");
+    assert.ok(first.json.nextCursor, "but the response says where to carry on");
+    let cur: string | null = first.json.nextCursor;
+    let found = false;
+    for (let i = 0; i < 10 && cur && !found; i++) {
+      const pg = await page(`limit=2&cursor=${encodeURIComponent(cur)}`);
+      found = pg.json.accounts.some((a: any) => a.email === `padreal-${u}@emu.test`);
+      cur = pg.json.nextCursor;
+    }
+    assert.ok(found, "paging reached the account after the HQ rows");
     const none = await page(`q=no-such-person-${u}`);
     assert.deepEqual(none.json.accounts, []);
     const def = await page("");
@@ -446,7 +467,7 @@ describe("X28/X29/X31: deletion requests, bookings, accounts", () => {
     assert.ok((await page("limit=100000")).json.accounts.length <= 100, "the limit is capped");
     assert.ok(!def.json.accounts.some((a: any) => a.role === "platform"), "no HQ accounts in the list");
     const logged = (await rowsFor("platformAudit", "byUid", h.uid)).filter((x) => x.kind === "accounts_lookup");
-    assert.equal(logged.length, 8);
+    assert.ok(logged.length >= 8);
     assert.ok(logged.some((x) => x.q === q && x.returned === 2));
     assert.equal((await callB("GET", "/api/platform/accounts", owner.token)).status, 403);
   });
