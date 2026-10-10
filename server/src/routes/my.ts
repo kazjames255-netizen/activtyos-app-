@@ -1,4 +1,5 @@
 import { mergeGroupKey } from "../lib/bookingMergeKey";
+import { isFranchise } from "../lib/franchiseScope";
 import { stopOpenPayments } from "../lib/checkoutIntent";
 import { ageCapGroup } from "../lib/childAge";
 import { randomUUID } from "node:crypto";
@@ -794,6 +795,17 @@ my.post("/bookings", async (req, res) => {
     if (!canWrite(authCtx.role) || !authCtx.tenantId) {
       res.status(403).json({ error: "Booking for a family requires an operator account" });
       return;
+    }
+    // Scope guard FIRST, before any customer lookup or account creation: a refusal must create nothing (no Auth user, no users doc).
+    // A franchise books on behalf of families ONLY on its own listings: a head-office or sibling listing would create a booking stamped to that
+    // listing's owner, which the franchise then could not see (same ownership rule as POST /api/bookings). Franchise STAFF are read-only
+    // (canWrite above refuses them), so in practice this is hit by role "franchise"; isFranchise also covers staff for safety.
+    if (isFranchise(authCtx)) {
+      const scopeListing = await db.collection("listings").doc(input.listingId).get();
+      if (scopeListing.exists && ((scopeListing.data() as { franchiseId?: string | null }).franchiseId ?? null) !== authCtx.franchiseId) {
+        res.status(403).json({ error: "You can only book on your own listings. This listing belongs to head office or another franchise." });
+        return;
+      }
     }
     let target = { name: onBehalf.name ?? "", email: onBehalf.email ?? "", phone: onBehalf.phone ?? "" };
     if (onBehalf.customerId) {
