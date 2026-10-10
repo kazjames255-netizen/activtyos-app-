@@ -53,6 +53,10 @@ function applyCancelState(b: Booking) {
   const allCancelled = kids.length > 0 && kids.every((k) => k.cancelled);
   if (allCancelled) b.status = "Cancelled";
   const r = refundedTotal(b);
+  // "Refunded" means the payment went back. A cancelled day lowers `amount`, so comparing the refund to the NEW amount called a booking with a day
+  // still standing and paid "Refunded". While a day stands and money is still held for it, it is "Partially refunded" (Reconciliation treats that as settled).
+  const gross = (b.amount ?? 0) + Math.max(0, (b.walletApplied ?? 0) - (b.walletRelieved ?? 0));
+  if (r > 0 && !allCancelled && refundableSoFar(b) >= gross - 0.005 && refundableSoFar(b) > 0.005) { b.pay = "Partially refunded"; return; }
   if (r > 0 && r >= b.amount - 0.001) b.pay = "Refunded";
   else if (r > 0) b.pay = "Partially refunded";
 }
