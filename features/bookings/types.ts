@@ -358,6 +358,8 @@ export interface AddonRequestTarget {
   label: string;
   name?: string;
   days?: string[];
+  /** A whole one-off extra: the one date it is for (when the booking has one), so a sentence can say "on Wed 1 Sep". Display only. */
+  when?: string[];
   price: number;
 }
 export interface AddonRequest {
@@ -371,6 +373,8 @@ export interface AddonRequest {
   /** Change only: the answers wanted, by question label ("size" -> "L"), and the readable new label. */
   to?: Record<string, string>;
   toLabel?: string;
+  /** Change only: the choices the extra had when asked (size: "xl"), so a sentence can say "from xl to m". Older requests: read from `label`. */
+  from?: Record<string, string>;
   note?: string;
   /** CANCEL only: every extra (and the days of it) this ONE request covers. Absent on requests made before bulk requests: then `key` is the
    *  one whole extra. See requestTargets() in features/bookings/addonRequests.ts. */

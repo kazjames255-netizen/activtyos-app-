@@ -7,13 +7,21 @@ import { Button } from "@/components/ui";
 import { useBookingsStore } from "./store";
 import { money, refundableSoFar } from "./helpers";
 import { pendingAddonRequests, requestTargets } from "./addonRequests";
+import { newRequestWording, renderFull } from "./addonWording";
 import { formatDay } from "@/lib/i18n/format";
 import type { AddonRequest, Booking } from "./types";
 
 // The provider's side of a family's REQUEST to change or cancel one extra (size, colour, a meal...). Never automatic and separate from cancelling
 // the booking: the provider approves or declines each one, and chooses what happens to the money. Nothing moves until they choose.
 
-const first = (n: string) => n.trim().split(/\s+/)[0] || "Child";
+/** What the request asks, as one plain sentence in the viewer's language ("Child B asked to change tshirty size from xl to m (booking APF-1)."). */
+function useAsk(booking: Booking, r: AddonRequest): string {
+  const t = useT();
+  return renderFull(t, newRequestWording(r, { ref: booking.ref }).body, (d) => formatDay(d, { weekday: "short", day: "numeric", month: "short" }));
+}
+function ReadOnlyAsk({ booking, r }: { booking: Booking; r: AddonRequest }) {
+  return <>{useAsk(booking, r)}</>;
+}
 
 function RequestCard({ booking, r }: { booking: Booking; r: AddonRequest }) {
   const t = useT();
@@ -28,6 +36,7 @@ function RequestCard({ booking, r }: { booking: Booking; r: AddonRequest }) {
   const targets = cancel ? requestTargets(r) : [];
   const bulk = targets.length > 1;
   const dayText = (d: string) => formatDay(d, { weekday: "short", day: "numeric", month: "short" });
+  const ask = useAsk(booking, r);
   const [declining, setDeclining] = useState(false);
   const [reason, setReason] = useState("");
   const opts: [string, string][] = cancel
@@ -37,22 +46,16 @@ function RequestCard({ booking, r }: { booking: Booking; r: AddonRequest }) {
       : [["refund", t("p8lst.arvRefund", { amt: money(amt) })], ["wallet", t("p8lst.arvWallet", { amt: money(amt) })], ["waive", t("p8lst.arvWaive")]];
   return (
     <div className="rounded-xl border border-[var(--violet)] bg-[var(--violet-soft)] px-3.5 py-3" data-testid="addon-request">
-      <div className="text-[13.5px] font-extrabold text-[var(--violet)]">
-        {cancel
-          ? bulk ? t("p8lst.arvAsksCancelBulk", { who: first(r.child) })
-            : targets[0].days?.length ? t("p8lst.arvAsksCancelDays", { who: first(r.child), item: targets[0].label })
-              : t("p8lst.arvAsksCancel", { who: first(r.child), item: r.label })
-          : t("p8lst.arvAsksChange", { who: first(r.child), from: r.label, to: r.toLabel ?? "" })}
-      </div>
+      <div className="text-[13.5px] font-extrabold text-[var(--violet)]" data-testid="addon-request-sentence">{ask}</div>
       {cancel && (bulk || targets[0].days?.length) ? (
         <ul className="mt-1.5 space-y-1 text-[12.5px] text-[var(--ink-2)]" data-testid="addon-request-targets">
           {targets.map((x) => (
             <li key={x.key}>
-              <b>{x.label}</b> <span className="text-[var(--ink-3)]">· {first(x.child)} · {money(x.price)}</span>
+              <b>{x.label}</b> <span className="text-[var(--ink-3)]">· {x.child.trim()}{paid ? ` · ${money(x.price)}` : ""}</span>
               {x.days?.length ? <div className="text-[12px] text-[var(--ink-3)]">{t("p8lst.arDaysList", { days: x.days.map(dayText).join(", ") })}</div> : null}
             </li>
           ))}
-          {bulk && <li className="font-extrabold text-[var(--ink)]">{t("p8lst.arvTotal", { amt: money(r.price) })}</li>}
+          {bulk && paid && <li className="font-extrabold text-[var(--ink)]">{t("p8lst.arvTotal", { amt: money(r.price) })}</li>}
         </ul>
       ) : null}
       {r.note && <div className="mt-1 text-[12.5px] text-[var(--ink-2)]">{t("p8lst.arvNote", { note: r.note })}</div>}
@@ -99,9 +102,7 @@ export function AddonRequestsPanel({ booking }: { booking: Booking }) {
         <div className="text-[12px] font-extrabold uppercase tracking-wide text-[#6b3fb3]">🎁 {t("p8lst.arvTitle")} · {pending.length}</div>
         {pending.map((r) => (
           <div key={r.id} className="rounded-xl border border-[#d9c7f2] bg-[#faf6ff] px-3.5 py-3" data-testid="addon-request">
-            <div className="text-[13.5px] font-extrabold text-[#4c2a85]">
-              {r.kind === "cancel" ? t("p8lst.arvAsksCancel", { who: first(r.child), item: r.label }) : t("p8lst.arvAsksChange", { who: first(r.child), from: r.label, to: r.toLabel ?? "" })}
-            </div>
+            <div className="text-[13.5px] font-extrabold text-[#4c2a85]"><ReadOnlyAsk booking={booking} r={r} /></div>
             {r.note && <div className="mt-1 text-[12.5px] text-[var(--ink-2)]">{t("p8lst.arvNote", { note: r.note })}</div>}
           </div>
         ))}
