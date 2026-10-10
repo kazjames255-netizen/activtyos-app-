@@ -238,6 +238,11 @@ export interface Booking {
   cashHeld?: number;
   /** Set once a release took days off a PART-paid booking's price: later releases keep following the price (refund only what is paid beyond it), even after the status flips to Partially refunded. */
   priceFollowsRelease?: boolean;
+  /** Money the provider RECORDED by hand (Record payment), by how it came in. Used with the booking's own method to name the offline refund method
+   *  (features/bookings/refundMethod.ts). Absent on older bookings: then the booking's method names it. */
+  paidVia?: Partial<Record<"bank" | "cash" | "voucher", number>>;
+  /** Sent to a FAMILY only (server/src/lib/familyView.ts): how the money they paid offline will come back, so the cancel panel names it. */
+  refundMethod?: import("./refundMethod").RefundMethodInfo;
   /** Running total of approved cancellation refunds (server-stamped) — so a
    *  later cancel can't refund money that already went back. */
   refundedApproved?: number;
@@ -347,6 +352,8 @@ export interface RefundEntry {
   via: "wallet" | "card" | "offline";
   /** approved = recorded, still to send (offline only); sent = money has moved / the provider confirmed. */
   status: "approved" | "sent";
+  /** An offline entry: what each way of paying gets back (bank transfer / cash / voucher), stamped when it was approved. */
+  parts?: { kind: "bank" | "cash" | "voucher"; amount: number }[];
   approvedAt: string;
   sentAt?: string;
   note?: string;

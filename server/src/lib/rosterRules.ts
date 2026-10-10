@@ -71,7 +71,7 @@ export const STAFF_BOOKING_SHOWN = [
 export const STAFF_BOOKING_HIDDEN = [
   "voucherScheme", "voucherSendBy", "voucherReceiveBy", "paymentRef", "payRefs", "cardPaid", "tfcAmount", "tfcRemainderVia", "tfcPayment", "reconNotes", "receivedAfterCancel",
   "nudges", "lastNudgedAt", "cardFailed", "paymentIntentId", "invoiceResends", "invoiceSentAt", "stripeAccount", "cardHold", "checkoutId", "pay", "method", "amount", "amountPaid",
-  "priceOverride", "listPrice", "discountOff", "discountNames", "earlyBirdScope", "walletApplied", "money", "walletRelieved", "cashHeld", "priceFollowsRelease", "refundedApproved", "walletRefunded",
+  "priceOverride", "listPrice", "discountOff", "discountNames", "earlyBirdScope", "walletApplied", "money", "walletRelieved", "cashHeld", "paidVia", "refundMethod", "priceFollowsRelease", "refundedApproved", "walletRefunded",
   "refundEntries", "refundAwaiting", "lastRefundSent", "discountCode", "mealItems", "recon", "reconciledBy", "evid", "refundLog", "amendFeesCharged",
   "_cancelling", "_refundType", "_chgKi", "_chgDt",
 ] as const;
