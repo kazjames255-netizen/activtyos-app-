@@ -51,7 +51,11 @@ test("sign-off needs: details, finished risk assessment, ratio, a lead and a fir
   assert.match(signoffProblems({ ...ok, raSigned: false }).join(), /risk assessment/);
   assert.match(signoffProblems({ ...ok, hazards: [{ h: "Road", done: false, residual: "L" }] }).join(), /risk assessment/);
   assert.match(signoffProblems({ ...ok, hazards: [] }).join(), /risk assessment/);
-  assert.match(signoffProblems({ ...ok, roster: [{ n: "Tina", r: "Helper", fa: true }] }).join(), /trip lead/);
+  assert.match(signoffProblems({ ...ok, roster: [{ n: "Someone", r: "Trip lead", fa: true }] }).join(), /named trip lead must be on/, "matched by NAME, not by a role word");
+  assert.match(signoffProblems({ ...ok, roster: [{ n: "Someone", r: "Not the team leader", fa: true }] }).join(), /named trip lead must be on/);
+  assert.deepEqual(signoffProblems({ ...ok, roster: [{ n: " tina ", r: "Coach", fa: true }] }), [], "the named lead on the roster is the lead, whatever the role text");
+  assert.match(signoffProblems({ ...ok, roster: [], staff: ["Tina"] }).join(), /roster is empty/, "a bare staff list is not a roster");
+  assert.match(signoffProblems({ ...ok, offsiteRatio: undefined, roster: [] }).join(), /roster is empty/, "no ratio and no roster = zero staff");
   assert.match(signoffProblems({ ...ok, roster: [{ n: "Tina", r: "Trip lead" }] }).join(), /first-aider/);
   assert.match(signoffProblems({ ...ok, attendees: [kid("A", "declined")] }).join(), /no child is going/);
   assert.match(signoffProblems({ ...ok, attendees: Array.from({ length: 9 }, (_, i) => kid(`K${i}`, "granted")) }).join(), /ratio/);
@@ -89,6 +93,9 @@ test("sign-off covers who is going and who looks after them: a changed answer, c
   assert.notEqual(materialSnapshot({ ...base, departTime: "10:00" }), same);
   assert.notEqual(materialSnapshot({ ...base, roster: [] }), same);
   assert.notEqual(materialSnapshot({ ...base, offsiteRatio: 10 }), same);
+  assert.notEqual(materialSnapshot({ ...base, raSigned: true }), same, "un-signing / signing the risk assessment changes what was signed off");
+  assert.notEqual(materialSnapshot({ ...base, hazards: [{ h: "Road", done: true, residual: "L" }] }), same);
+  assert.notEqual(materialSnapshot({ ...base, hazards: [{ h: "Road", done: true, residual: "L" }] }), materialSnapshot({ ...base, hazards: [] }));
 });
 
 test("plain staff see a medical FLAG, never the medical text or a parent's email; leads see everything", () => {

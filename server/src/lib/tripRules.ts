@@ -48,11 +48,15 @@ export function signoffProblems(t: RuleTrip): string[] {
   if (!t.destination?.trim() || !t.date || !t.lead?.trim() || !t.transport?.trim()) out.push("the trip needs a destination, date, trip lead and transport");
   const hz = t.hazards ?? [];
   if (!(hz.length > 0 && hz.every((h) => h.done && h.residual) && t.raSigned)) out.push("the risk assessment must be completed and signed");
-  const r = ratioProblem(t);
-  if (r) out.push(r.replace(/\.$/, "").replace(/^N/, "n"));
+  // The roster is the staff who are actually on the trip: it must exist, meet the ratio (at least one person when no ratio is set), hold the NAMED
+  // trip lead (matched by name, never by a role word) and a first-aider.
   const roster = t.roster ?? [];
-  if (roster.length > 0 || t.offsiteRatio) {
-    if (!roster.some((s) => /lead/i.test(s.r ?? ""))) out.push("the staff roster needs a trip lead");
+  if (roster.length === 0) out.push("the staff roster is empty: add the trip lead and the staff going");
+  else {
+    const r = ratioProblem({ ...t, staff: undefined });
+    if (r) out.push(r.replace(/\.$/, "").replace(/^N/, "n"));
+    const lead = (t.lead ?? "").trim().toLowerCase();
+    if (!lead || !roster.some((s) => s.n.trim().toLowerCase() === lead)) out.push("the named trip lead must be on the staff roster");
     if (!roster.some((s) => s.fa)) out.push("the staff roster needs a first-aider");
   }
   if (going(t.attendees ?? []).length === 0) out.push("no child is going yet");
@@ -75,6 +79,7 @@ export function materialSnapshot(t: RuleTrip): string {
   return JSON.stringify({
     d: norm(t.destination), a: norm(t.address), date: norm(t.date), dep: norm(t.departTime), ret: norm(t.returnTime), tr: norm(t.transport),
     lead: norm(t.lead), ratio: t.offsiteRatio ?? null,
+    ra: !!t.raSigned, hz: (t.hazards ?? []).map((h) => [norm(h.h), !!h.done, norm(h.residual)]),
     roster: (t.roster ?? []).map((s) => [norm(s.n), norm(s.r), !!s.fa]).sort(),
     staff: (t.staff ?? []).map(norm).sort(),
     kids: (t.attendees ?? []).map((a) => [norm(a.n).toLowerCase(), a.childId ?? "", consentOf(a)]).sort(),
