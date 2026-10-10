@@ -11,6 +11,7 @@ import { publicLibrarySettings } from "../lib/publicLibrary";
 import { cardReady } from "../lib/cardReady";
 import { brandSettingsError } from "../lib/listingRules";
 import { librarySnap } from "../lib/tenantLibrary";
+import { isCapLevel } from "../../../lib/accessMap";
 
 type Venue = { id: string; name?: string; address?: string; city?: string; kind?: string; lat?: number; lng?: number };
 
@@ -103,6 +104,19 @@ library.get("/", async (req, res) => {
   res.json(data ? { ...data, publicName } : data);
 });
 
+/** Every cap level in settings.roles must be exactly "none" | "view" | "edit" (an unknown one used to be stored and read as full access). */
+function roleCapsError(roles: unknown): string | null {
+  if (roles === undefined || roles === null) return null;
+  if (!Array.isArray(roles)) return "Roles must be a list";
+  for (const r of roles) {
+    const caps = (r as { caps?: unknown } | null)?.caps;
+    if (caps === undefined || caps === null) continue;
+    if (typeof caps !== "object" || Array.isArray(caps)) return "A role's permissions must be an object";
+    for (const [area, lvl] of Object.entries(caps)) if (!isCapLevel(lvl)) return `Permission for "${area}" must be none, view or edit`;
+  }
+  return null;
+}
+
 // PUT /api/library — replace the whole library (operators only).
 library.put("/", async (req, res) => {
   const auth = req.auth!;
@@ -155,6 +169,8 @@ library.put("/", async (req, res) => {
   // Everything else in `settings` remains operator content with no behaviour.
   if ("settings" in body) {
     const s = (doc.settings ?? {}) as Record<string, unknown>;
+    const capErr = roleCapsError(s.roles);
+    if (capErr) { res.status(400).json({ error: capErr }); return; }
     const brandErr = brandSettingsError(s);
     if (brandErr) { res.status(400).json({ error: brandErr }); return; }
     if ("childcare" in s) {

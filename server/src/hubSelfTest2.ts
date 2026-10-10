@@ -83,13 +83,15 @@ t("due first (most overdue first), then new; future ones only counted", () => {
 });
 
 console.log("live-lesson join window");
-t("opens 10 min before the start, closes 30 min after the end", () => {
+t("opensAt is 10 min before the start; the lesson can be entered until 30 min after the end", () => {
   const w = joinWindow("2026-03-10T15:00:00.000Z", 60);
   assert.equal(w.opensAt.toISOString(), "2026-03-10T14:50:00.000Z");
   assert.equal(w.endsAt.toISOString(), "2026-03-10T16:00:00.000Z");
   assert.equal(w.closesAt.toISOString(), "2026-03-10T16:30:00.000Z");
   const at = (iso: string) => windowState(new Date(iso), w);
-  assert.equal(at("2026-03-10T14:49:59.000Z"), "early");
+  // windowState no longer returns "early" (see lib/hubVideo.ts: a scheduled lesson can be entered any time before it closes); opensAt is only when a family may enter before the tutor starts.
+  assert.equal(at("2026-03-10T14:49:59.000Z"), "open");
+  assert.equal(at("2026-03-10T09:00:00.000Z"), "open");
   assert.equal(at("2026-03-10T14:50:00.000Z"), "open");
   assert.equal(at("2026-03-10T15:30:00.000Z"), "open");
   assert.equal(at("2026-03-10T16:30:00.000Z"), "open");

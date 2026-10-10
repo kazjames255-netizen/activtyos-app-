@@ -795,9 +795,9 @@ function Page1() {
 
       <Stage n="8d" color={C.listing} title="Teaching Hub: who sees a child's learning" tag="Children's data"
         facts={[
-          { k: "Staff see the whole business for now", v: "Any staff role set to View or Edit on the Teaching Hub sees every child's scores, doubts and homework in that business (a franchise's staff, only that franchise). There is no 'only my students' option yet. Set a role to None to hide it. If the platform cannot check a role's permissions, the screen is refused until it can." },
+          { k: "Staff see the whole business for now", v: "Any staff role set to View or Edit on the Teaching Hub sees every child's scores, doubts and homework in that business (a franchise's staff, only that franchise). There is no 'only my students' option yet. Set a role to None to hide it. Staff with no role, a deleted role or an unreadable setting see nothing." },
           { k: "Families see their own child only", v: "A parent sees only their own child's results. On a shared lesson whiteboard they see the tutor's work and their own child's drawings, never another child's. A tutor saving a board that someone else saved first is told to reload; nothing is overwritten." },
-          { k: "How long learning data is kept", v: "While the child is enrolled, and for 12 months after the enrolment ends. It is erased at once if the parent deletes the child. There is no automatic clean-up yet: that is a follow-up job, so today the 12 months is a rule we apply by hand." },
+          { k: "How long learning data is kept", v: "While the child is enrolled, and for 12 months after the enrolment ends. Erased at once, with game and quiz progress, if the parent deletes the child; the data download includes it. No automatic clean-up yet." },
           { k: "Limits and live lessons", v: "A child can start a quiz 30 times an hour, and draft saves are capped. Until a video key is added on the server, live lessons show 'Live lessons are not switched on yet' and the tutor shares another way to join." },
         ]} />
 

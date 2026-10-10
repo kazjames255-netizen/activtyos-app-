@@ -8,18 +8,18 @@
 
 /** The brand: name forms, possessive, credit line, licence credit, and links to the publisher's domains. */
 export const BRAND_RE = /\boak\s+national\b|\boak\s+academy\b|oaknational|thenational\.academy|\boak['’]s\b|\boak\s+(?:lessons?|pupils?|teachers?|resources?|classroom|team|curriculum|decks?|slides?|worksheets?|quizzes|quiz|videos?|content|platform|website|national)\b|\bhow to use oak\b|open government licen[cs]e|\bOGL\b/i;
-/** A bare "oak" word that is plainly the tree/wood, not the brand. */
-const TREES = "holly|ash|beech|elm|birch|pine|willow|maple|sycamore|hazel|hawthorn|chestnut|conifer|poplar|lime|yew|rowan|larch|fir|cedar|spruce|leaves|leaf|lobed|spiky|acorns?|trees?|woodland|forest|bark|canopy";
-const BOTANICAL_RE = new RegExp(`\\b(?:${TREES})\\b.{0,60}\\boaks?\\b|\\boaks?\\b.{0,60}\\b(?:${TREES})\\b`, "i");
-const BOTANICAL_OLD = /\b(?:an?|the|of|from|old|english|red|white|holm|cork|sessile|pedunculate|turkey|mighty|great|tall|big|young|strong|solid|carved|wooden)\s+oaks?\b|\boaks?\s+(?:tree|trees|leaf|leaves|wood|woods|woodland|forest|table|door|barrel|beam|beams|apple|apples|gall|galls|acorn|acorns|saplings?|seedlings?|furniture|floor|chest|panel|panels|timber)\b|\bacorns?\b.*\boak|\boak\b.*\bacorn/i;
 const ANY_OAK = /\boak\b/i;
 
 /** True when the text mentions the brand (or a bare "oak" that isn't clearly the tree). */
 export function mentionsOak(s: string): boolean {
   if (!ANY_OAK.test(s) && !BRAND_RE.test(s)) return false;
   if (BRAND_RE.test(s)) return true;
-  return !(BOTANICAL_RE.test(s) || BOTANICAL_OLD.test(s));
+  // A bare "Oak" is NOT the publisher: it is a child's name ("Oak"), a class ("Oak Class"), a provider ("Oak Lane Tutors"),
+  // or a tree. Only the publisher's real names / links / phrases (BRAND_RE) and an explicit credit ("made by Oak.") count.
+  return CREDIT_RE.test(s);
 }
+/** A credit line that names the publisher as just "Oak" (and nothing after it but punctuation). */
+const CREDIT_RE = /\b(?:created|made|produced|powered|provided|supplied|adapted|taken|sourced)\s+(?:by|from)\s+oak\s*(?:[.,;:!)\]]|$)|\b(?:source|credit|courtesy of|thanks to|content from|lessons? from)\s*:?\s+oak\s*(?:[.,;:!)\]]|$)/i;
 
 /** Strings that are identifiers / URLs / storage paths rather than prose: not user-visible copy, left alone (counted separately). */
 export const isInternalString = (s: string) => !/\s/.test(s) && /[-_/.:]/.test(s) && /^[\w\-./:%?=&#~+@]{4,}$/.test(s) && s.toLowerCase() !== "oak";
@@ -130,6 +130,7 @@ function dropAttribution(x: unknown): unknown {
     const o: Record<string, unknown> = {};
     for (const [k, y] of Object.entries(x)) {
       if ((k === "attribution" || k === "licence") && typeof y === "string" && (BRAND_RE.test(y) || /OGL/.test(y))) continue;
+      if (typeof y === "string" && /(?:thenational\.academy|oaknational)/i.test(y) && /^(?:url|href|link|sourceUrl)$/i.test(k)) continue; // provenance links (source.url) never leave the API either
       o[k] = dropAttribution(y);
     }
     return o;

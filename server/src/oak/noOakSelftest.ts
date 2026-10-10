@@ -7,7 +7,11 @@ ok(scrubText("Oak's lesson structure has 3 parts. Count to ten.") === "Count to 
 ok(scrubText("A maths lesson by Oak National Academy licensed under Open Government Licence (OGL)") === "", "credit");
 ok(scrubText("See [the lesson](https://teachers.thenational.academy/lessons/x) now") === "See the lesson now", "link");
 ok(!mentionsOak("An oak tree has acorns"), "botanical ok");
-ok(mentionsOak("Oak"), "bare Oak flagged");
+// A bare "Oak" is a child / class / provider name or a tree, NOT the publisher (10 Oct follow-up); real publisher names and credits still are.
+for (const n of ["Oak", "Oak Class", "Oak Lane Tutors", "Oakley", "Oakwood Primary", "oak tree", "Your child Oak joined Oak Class at Oak Lane Tutors."]) ok(!mentionsOak(n), `not the publisher: ${n}`);
+for (const n of ["Oak National Academy", "Oak Academy", "oaknational.academy", "Oak's slides", "Oak lessons", "Made by Oak.", "Source: Oak", "https://teachers.thenational.academy/x"]) ok(mentionsOak(n), `is the publisher: ${n}`);
+ok(scrubText("Oak Class starts at 9. Oak Lane Tutors say hello.") === "Oak Class starts at 9. Oak Lane Tutors say hello.", "names kept");
+ok(!JSON.stringify(scrubPayload({ lesson: { source: { provider: "oak", url: "https://www.thenational.academy/teachers/lessons/x" } } })).includes("thenational"), "source.url dropped");
 ok(scrubText("Oak lessons are structured around learning cycles.") === "", "guidance");
 const d = { title: "T", source: { provider: "oak", url: "https://teachers.thenational.academy/x" }, id: "oak-abc-def", lesson: { keywords: ["a", "Oak National Academy"], deckSlides: [{ blocks: [{ els: [{ k: "text", paras: [{ runs: [{ t: "How to use Oak lessons" }] }] }] }] }, { blocks: [{ els: [{ k: "text", paras: [{ runs: [{ t: "Fractions" }] }] }] }] }] } };
 const r = scrubDeep(d); const v = r.value as typeof d;
