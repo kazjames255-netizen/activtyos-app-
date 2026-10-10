@@ -3,8 +3,8 @@ import { db } from "../firebase";
 import { owedNow } from "../../../features/bookings/helpers";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 // Money (revenue, collected, royalty) comes from the SAME helper as Split fees and the Franchise payouts screen, so they cannot disagree.
-import { bookingMoney, computeFromLite, franchiseOf, liteOf, royaltyFee, ukDay, type LiteMoney } from "../lib/franchisePayouts";
-import { settingsOf } from "../lib/franchisePayoutsData";
+import { bookingMoney, computeFromLite, franchiseOf, royaltyFee, ukDay } from "../lib/franchisePayouts";
+import { loadLite, settingsOf } from "../lib/franchisePayoutsData";
 import { ukMonth } from "../lib/ukDate";
 
 // Head-office network overview — the franchisor's command centre. Aggregates the
@@ -200,7 +200,6 @@ hoOverview.get("/overview", async (req, res) => {
 
   // child id/name → franchiseId, so incidents (child-scoped) attribute to a franchise.
   const childFr = new Map<string, string | null>();
-  const lite: LiteMoney[] = [];
 
   for (const doc of bookingsSnap.docs) {
     const raw = doc.data() as BookingDoc & { franchiseId?: string; listingId?: string; childId?: string; kids?: { name?: string; childId?: string }[] };
@@ -217,7 +216,6 @@ hoOverview.get("/overview", async (req, res) => {
     // Money received and kept (net of refunds): the same figure Split fees and Franchise payouts use.
     const amount = mon.total;
     if (mon.counts) {
-      const l = liteOf({ b, fid }); if (l) lite.push(l);
       bucket.revenue = round2(bucket.revenue + amount);
       bucket.collected = round2(bucket.collected + amount);
       bucket.bookings += 1;
@@ -273,6 +271,7 @@ hoOverview.get("/overview", async (req, res) => {
     if (fid && franchises.has(fid)) franchises.get(fid)!.openIncidents += 1;
   }
 
+  const lite = await loadLite(tenantId); // the same cached money events Split fees and Franchise payouts use
   const payouts = computeFromLite(lite, { history: splitSettings.history, fallbackRate: splitSettings.rate }, franchises.keys());
   const royaltyOf = (fid: string) => { const r = payouts.franchises.get(fid); return r ? royaltyFee(r, splitSettings.basis, splitSettings.perBookingFee) : 0; };
 

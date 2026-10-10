@@ -4,7 +4,8 @@
 import { db } from "../firebase";
 import { fromDoc, type BookingDoc } from "./bookingDoc";
 import { cached } from "./kitCache";
-import { cleanHistory, DEFAULT_RATE, franchiseOf, liteOf, type LiteMoney, type RateStep } from "./franchisePayouts";
+import { isMoneyIn } from "../../../features/bookings/helpers";
+import { cleanHistory, DEFAULT_RATE, eventRows, franchiseOf, ukDay, type LiteMoney, type PayEvent, type RateStep } from "./franchisePayouts";
 
 export const PAYOUT_CACHE_MS = 60_000;
 
@@ -25,23 +26,36 @@ export async function loadSettings(tenantId: string): Promise<SplitSettings> {
   return settingsOf(t.exists ? (t.data() as Record<string, unknown>) : undefined);
 }
 
-/** Every booking of the tenant that holds money, boiled down. Cached 60 seconds per tenant. */
-export function loadLite(tenantId: string): Promise<LiteMoney[]> {
-  return cached(`fpay:${tenantId}`, PAYOUT_CACHE_MS, async () => {
-    const [bookingsSnap, listingsSnap] = await Promise.all([
-      db.collection("bookings").where("tenantId", "==", tenantId).get(),
-      db.collection("listings").where("tenantId", "==", tenantId).get(),
-    ]);
-    const listingFr = new Map<string, string | undefined>();
-    for (const d of listingsSnap.docs) listingFr.set(d.id, (d.data() as { franchiseId?: string }).franchiseId);
-    const out: LiteMoney[] = [];
-    for (const d of bookingsSnap.docs) {
-      const raw = d.data() as BookingDoc & { franchiseId?: string; listingId?: string };
-      const l = liteOf({ b: fromDoc(raw), fid: franchiseOf(raw, listingFr) });
-      if (l) out.push(l);
-    }
-    return out;
-  });
+async function readLite(tenantId: string): Promise<LiteMoney[]> {
+  const [bookingsSnap, listingsSnap, paySnap] = await Promise.all([
+    db.collection("bookings").where("tenantId", "==", tenantId).get(),
+    db.collection("listings").where("tenantId", "==", tenantId).get(),
+    db.collection("payments").where("tenantId", "==", tenantId).get(),
+  ]);
+  const listingFr = new Map<string, string | undefined>();
+  for (const d of listingsSnap.docs) listingFr.set(d.id, (d.data() as { franchiseId?: string }).franchiseId);
+  // The payments ledger dates the money: a card payment by paidAt (when it paid), an offline one by the date it was recorded as received.
+  const paysByRef = new Map<string, PayEvent[]>();
+  for (const d of paySnap.docs) {
+    const p = d.data() as { refs?: string[]; amount?: number; type?: string; status?: string; paidAt?: string; createdAt?: string };
+    if (!isMoneyIn(p) || !p.refs?.length || !(Number(p.amount) > 0)) continue;
+    const day = ukDay(p.paidAt ?? p.createdAt);
+    for (const r of p.refs) (paysByRef.get(r) ?? paysByRef.set(r, []).get(r)!).push({ day, amount: Number(p.amount) / p.refs.length });
+  }
+  const out: LiteMoney[] = [];
+  for (const d of bookingsSnap.docs) {
+    const raw = d.data() as BookingDoc & { franchiseId?: string; listingId?: string };
+    const b = fromDoc(raw);
+    const changed = d.updateTime ? ukDay(d.updateTime.toDate().toISOString()) : null;
+    out.push(...eventRows({ b, fid: franchiseOf(raw, listingFr), pays: paysByRef.get(b.ref), fallbackDay: ukDay(b.createdAt) ?? changed }));
+  }
+  return out;
+}
+
+/** Every money event of the tenant, boiled down. Cached 60 seconds per tenant (any write, webhook or sweep clears it); `fresh` always reads again. */
+export function loadLite(tenantId: string, opts: { fresh?: boolean } = {}): Promise<LiteMoney[]> {
+  if (opts.fresh) return readLite(tenantId);
+  return cached(`fpay:${tenantId}`, PAYOUT_CACHE_MS, () => readLite(tenantId));
 }
 
 /** franchiseId -> display name, from the franchise accounts. */
@@ -55,4 +69,24 @@ export async function franchiseNames(tenantId: string): Promise<Map<string, stri
     m.set(u.franchiseId ?? d.id, label);
   }
   return m;
+}
+
+/** A listing whose bookings already sit in a SETTLED period of its franchise cannot be handed to another franchise: that would silently change a closed
+ *  settlement. Returns the message to show, or null when it is fine. A booking's money is never dated before the day it was made, so a listing
+ *  whose earliest money booking is after the last settled day is safe. */
+export async function reassignBlockedBySettlement(tenantId: string, listingId: string, oldFranchiseId: string): Promise<string | null> {
+  const settled = await db.collection("franchiseSettlements").where("tenantId", "==", tenantId).where("franchiseId", "==", oldFranchiseId).get();
+  if (settled.empty) return null;
+  const lastTo = settled.docs.map((d) => String(d.get("to"))).sort().pop()!;
+  const blockIds = (await db.collection("blocks").where("tenantId", "==", tenantId).where("listingId", "==", listingId).get()).docs.map((d) => d.id);
+  const docs = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>();
+  for (const d of (await db.collection("bookings").where("tenantId", "==", tenantId).where("listingId", "==", listingId).get()).docs) docs.set(d.id, d);
+  for (let i = 0; i < blockIds.length; i += 30)
+    for (const d of (await db.collection("bookings").where("tenantId", "==", tenantId).where("blockId", "in", blockIds.slice(i, i + 30)).get()).docs) docs.set(d.id, d);
+  const hit = [...docs.values()].some((d) => {
+    const b = fromDoc(d.data() as BookingDoc);
+    const day = ukDay(b.createdAt) ?? (d.updateTime ? ukDay(d.updateTime.toDate().toISOString()) : null);
+    return eventRows({ b, fid: oldFranchiseId, fallbackDay: day }).length > 0 && (!day || day <= lastTo);
+  });
+  return hit ? `This listing has bookings in a payout period that is already settled (up to ${lastTo}). Moving it to another franchise would change a settled payout, so it cannot be moved.` : null;
 }

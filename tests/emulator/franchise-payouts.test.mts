@@ -64,7 +64,7 @@ describe("Franchise payouts: head office view", () => {
     assert.deepEqual([a.card, a.direct, a.hoKeepsCard, a.franchiseCard, a.hoShareDirect, a.net, a.bookings, a.name], [900, 200, 90, 810, 20, 790, 3, "Alpha Camps"]);
     assert.deepEqual([b.card, b.direct, b.hoKeepsCard, b.franchiseCard, b.net, b.bookings], [140, 0, 14, 126, 126, 2]);
     assert.equal(r.json.direct.total, 50);
-    assert.match(r.json.basis, /booking was made/i);
+    assert.match(r.json.basis, /received/i);
     assert.match(r.json.basis, /fee is not deducted/i);
   });
   it("October (the 00:30 BST booking) is only franchise A's 100 card -> keeps 10, gets 90", async () => {
@@ -232,7 +232,7 @@ describe("Reads", () => {
       assert.ok(afterFirst >= 9 && afterFirst <= 12, `first load read ${afterFirst} docs (9 bookings + 1 listing)`);
       for (let i = 0; i < 5; i++) await loadLite(P.tenantId);
       assert.equal(docs, afterFirst, "five more loads read nothing");
-      assert.equal(first.length, 7); // the unpaid and pending bookings are boiled away
+      assert.equal(first.length, 8); // the unpaid and pending bookings are boiled away
     } finally { proto.get = realGet; }
   });
 });

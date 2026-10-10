@@ -18,8 +18,8 @@ interface Row {
   settlement: Settlement | null; overlapping?: boolean;
 }
 interface Range { period: string; from: string; to: string; month: string | null; today: string }
-interface HoPayload { range: Range; rate: number; settings: { basis: "revenue" | "perBooking"; rate: number; perBookingFee: number }; rows: Row[]; settlements: Settlement[]; canSettle: boolean }
-interface MinePayload { range: Range; rate: number; row: Row; settlements: Settlement[] }
+interface HoPayload { range: Range; blocked?: "perBooking"; upcoming?: { from: string; rate: number }[]; rate: number; settings: { basis: "revenue" | "perBooking"; rate: number; perBookingFee: number }; rows: Row[]; settlements: Settlement[]; canSettle: boolean }
+interface MinePayload { range: Range; blocked?: "perBooking"; rate: number; row: Row | null; settlements: Settlement[] }
 
 const monthKey = (iso: string) => iso.slice(0, 7);
 const monthName = (m: string) => uiDate(new Date(`${m}-01T00:00:00Z`), { month: "long", year: "numeric", timeZone: "UTC" });
@@ -78,7 +78,7 @@ function PayoutCard({ row, range, canSettle, onSettled, name }: { row: Row; rang
   const pct = row.rate == null ? t("fpay.mixedRates") : `${row.rate}%`;
   const rateNum = row.rate == null ? "" : String(row.rate);
   const net = row.net > 0 ? t("fpay.netPays", { amount: money(row.net) }) : row.net < 0 ? t("fpay.netOwes", { amount: money(-row.net) }) : t("fpay.netEven");
-  const ended = range.to <= range.today;
+  const ended = range.to < range.today;
   const s = row.settlement;
   async function settle() {
     if (!window.confirm(t("fpay.confirmSettle"))) return;
@@ -168,6 +168,24 @@ export function FranchisePayoutsPanel() {
   if (error) return <div role="alert" className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
   if (!data) return <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">{t("fpay.loading")}</div>;
   const rateChanged = rate !== "" && Number(rate) !== data.rate;
+  async function usePercentage() {
+    setSaving(true);
+    try {
+      await api("/api/splitfees/settings", { method: "PUT", body: JSON.stringify({ basis: "revenue", rate: data!.settings.rate, perBookingFee: data!.settings.perBookingFee }) });
+      refresh();
+    } catch (e) { setError(e instanceof Error ? e.message : t("fpay.loadFailed")); } finally { setSaving(false); }
+  }
+  if (data.blocked === "perBooking") {
+    return (
+      <section aria-labelledby="fpay-title" className="mb-8">
+        <h2 id="fpay-title" className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("fpay.title")}</h2>
+        <Card className="mt-2 flex flex-wrap items-center gap-3 p-4">
+          <div role="status" className="text-[13.5px] font-bold">{t("fpay.perBookingBanner")}</div>
+          {data.canSettle && <Button variant="primary" disabled={saving} onClick={usePercentage}>{t("fpay.switchToPercent")}</Button>}
+        </Card>
+      </section>
+    );
+  }
   return (
     <section aria-labelledby="fpay-title" className="mb-8">
       <h2 id="fpay-title" className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("fpay.title")}</h2>
@@ -182,6 +200,7 @@ export function FranchisePayoutsPanel() {
           </div>
           <Button variant="primary" disabled={saving || !rateChanged} onClick={saveRate}>{t("fpay.save")}</Button>
           {saved && <span role="status" className="text-[12px] font-bold text-[var(--green,#0f9d58)]">{t("fpay.saved")}</span>}
+          {(data.upcoming ?? []).map((u) => <div key={u.from} className="basis-full text-[11.5px] font-bold text-[var(--ink-2)]">{u.rate}% {t("fpay.fromDate", { date: u.from })}</div>)}
           <div className="basis-full text-[11.5px] text-[var(--ink-3)]">{t("fpay.rateNote")}</div>
         </Card>
       )}
@@ -209,6 +228,7 @@ export function FranchiseStatement() {
   }, [w.query, t]);
   if (error) return <div role="alert" className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
   if (!data) return <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">{t("fpay.loading")}</div>;
+  if (data.blocked || !data.row) return null;
   return (
     <section aria-labelledby="fpay-mine" className="mb-6">
       <h2 id="fpay-mine" className="mb-2 text-[18px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("fpay.yourStatement")}</h2>

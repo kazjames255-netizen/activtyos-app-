@@ -161,6 +161,8 @@ app.get("/internal/read-stats", (req, res) => {
   if (req.query.reset === "1") resetReadStats();
   res.json(readStats(Number(req.query.top) || 50));
 });
+// Any successful write empties the short-lived money / Add-on orders caches (mounted BEFORE the webhooks: a Stripe refund or payment is a write too).
+app.use(kitCacheInvalidator);
 // Stripe Billing webhook — must see the RAW body for signature verification,
 // so it mounts before the JSON parser (its router does its own raw parsing).
 app.use("/api/stripe/webhook", stripeWebhook);
@@ -172,8 +174,6 @@ app.use("/api/emails/inbound/resend", emailsResendInbound);
 // Firestore caps a document at 1MB, so anything past this can't be stored
 // anyway and gets a clear error rather than a size failure.
 app.use(express.json({ limit: "2mb" }));
-// Any successful write empties the Add-on orders summaries cache, so the month tally can never disagree with the per-day list after a cancel.
-app.use(kitCacheInvalidator);
 // Families (and anyone signed out) never receive a booking's checkoutId, on any route: decided per response, once the caller's role is known.
 app.use(stripCheckoutIdForFamilies);
 // gzip every JSON / text response ≥ 1 KB (res.send / res.json only — the SSE stream and images are left alone).

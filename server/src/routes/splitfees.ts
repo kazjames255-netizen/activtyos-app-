@@ -4,8 +4,9 @@ import { db } from "../firebase";
 import { actorName } from "../lib/actorName";
 import { isRealDay, ukMonth, ukToday } from "../lib/ukDate";
 import {
-  computeFromLite, monthBounds, royaltyFee, round2, withRateChange, type PayoutRow,
+  computeFromLite, monthBounds, rateOn, royaltyFee, round2, withRateChange, type PayoutRow,
 } from "../lib/franchisePayouts";
+import type { RateStep as cleanHistoryT0 } from "../lib/franchisePayouts";
 import { franchiseNames, loadLite, loadSettings, settingsOf } from "../lib/franchisePayoutsData";
 
 // Split fees (Money) - the franchisor's royalty report, and the Franchise payouts screen (what head office and each franchise owe each other).
@@ -135,7 +136,8 @@ splitfees.get("/settings", async (req, res) => {
   const auth = req.auth!;
   if (auth.role !== "company" || !auth.tenantId) { res.status(403).json({ error: "Requires a company (franchisor) account" }); return; }
   const s = await loadSettings(auth.tenantId);
-  res.json({ settings: { basis: s.basis, rate: s.rate, perBookingFee: s.perBookingFee }, history: s.history });
+  const rv = ratesView(s.history, s.rate);
+  res.json({ settings: { basis: s.basis, rate: rv.rate, perBookingFee: s.perBookingFee }, history: s.history, upcoming: rv.upcoming });
 });
 
 // PUT /api/splitfees/settings - the royalty basis + rate (company only). A changed rate starts on `effectiveFrom` (default today, never in the
@@ -151,7 +153,8 @@ splitfees.put("/settings", async (req, res) => {
   const ref = db.collection("tenants").doc(auth.tenantId);
   const out = await db.runTransaction(async (tx) => {
     const cur = await loadSettingsTx(tx, ref);
-    const rateChanged = next.rate != null && next.rate !== cur.rate;
+    // Changed means: different from the rate that applies on the day the new one would start (a rate already scheduled counts too).
+    const rateChanged = next.rate != null && next.rate !== rateOn(cur.history, effectiveFrom ?? today, cur.rate);
     const history = rateChanged ? withRateChange(cur.history, cur.rate, next.rate!, effectiveFrom ?? today) : cur.history;
     const stored = { basis: next.basis, rate: next.rate ?? cur.rate, perBookingFee: next.perBookingFee ?? cur.perBookingFee, ...(history.length ? { history } : {}) };
     tx.set(ref, { splitFees: stored }, { merge: true });
@@ -167,7 +170,7 @@ async function loadSettingsTx(tx: FirebaseFirestore.Transaction, ref: FirebaseFi
 
 // ---- Franchise payouts ------------------------------------------------------------------------------------------------------------------
 
-const BASIS_NOTE = "Counted by the day each booking was made (UK time). Only money actually received counts, net of refunds; unpaid, pending and card-hold bookings do not. Stripe's card fee is not deducted - head office absorbs it.";
+const BASIS_NOTE = "Cash statement: money counts on the day it was received (UK time) and refunds on the day they were given, so a late payment or refund lands in the next period. Only money actually received counts; unpaid, pending and card-hold bookings do not. Stripe's card fee is not deducted - head office absorbs it.";
 
 interface Settlement {
   id: string; franchiseId: string; franchiseName: string; from: string; to: string;
@@ -184,6 +187,12 @@ async function settlementsFor(tenantId: string, fid?: string): Promise<Settlemen
   return snap.docs.map(settlementOf).sort((a, b) => (a.settledAt < b.settledAt ? 1 : -1));
 }
 
+/** The rate in force today, and any rate already scheduled to start later (shown as "from <date>"). */
+function ratesView(history: cleanHistoryT0[], fallback: number) {
+  const today = ukToday();
+  return { rate: rateOn(history, today, fallback), upcoming: history.filter((h) => h.from > today) };
+}
+
 /** The payout window: ?month=YYYY-MM, or ?from=&to=. Default: this UK month. */
 function payoutWindow(req: Request) {
   const w = parseWindow(req, "month");
@@ -197,6 +206,16 @@ splitfees.get("/payouts", async (req, res) => {
   if (!tenantId) return;
   const win = payoutWindow(req);
   const [settings, names, lite, settled] = await Promise.all([loadSettings(tenantId), franchiseNames(tenantId), loadLite(tenantId), settlementsFor(tenantId)]);
+  const rv = ratesView(settings.history, settings.rate);
+  // A tenant still on the legacy flat fee per booking: show NO payout amounts (never a number that disagrees with Split fees) until it picks a percentage.
+  if (settings.basis === "perBooking") {
+    res.json({
+      range: { period: win.period, from: win.from, to: win.to, month: win.month, today: ukToday() }, blocked: "perBooking",
+      rate: rv.rate, upcoming: rv.upcoming, settings: { basis: settings.basis, rate: settings.rate, perBookingFee: settings.perBookingFee },
+      basis: BASIS_NOTE, rows: [], direct: null, settlements: settled.slice(0, 200), canSettle: req.auth!.role === "company",
+    });
+    return;
+  }
   const result = computeFromLite(lite, { from: win.from, to: win.to, history: settings.history, fallbackRate: settings.rate }, names.keys());
   const rows = [...result.franchises.values()].map((r) => ({
     ...plainRow(r), name: names.get(r.franchiseId) ?? "Franchise",
@@ -205,7 +224,7 @@ splitfees.get("/payouts", async (req, res) => {
   })).sort((a, b) => a.name.localeCompare(b.name));
   res.json({
     range: { period: win.period, from: win.from, to: win.to, month: win.month, today: ukToday() },
-    rate: settings.rate, rateHistory: settings.history, settings: { basis: settings.basis, rate: settings.rate, perBookingFee: settings.perBookingFee },
+    rate: rv.rate, upcoming: rv.upcoming, rateHistory: settings.history, settings: { basis: settings.basis, rate: settings.rate, perBookingFee: settings.perBookingFee },
     basis: BASIS_NOTE,
     rows,
     direct: result.direct,
@@ -220,11 +239,15 @@ splitfees.get("/payouts/mine", async (req, res) => {
   if (auth.role !== "franchise" || !auth.tenantId || !auth.franchiseId) { res.status(403).json({ error: "Franchise account only" }); return; }
   const win = payoutWindow(req);
   const [settings, lite, settled] = await Promise.all([loadSettings(auth.tenantId), loadLite(auth.tenantId), settlementsFor(auth.tenantId, auth.franchiseId)]);
+  if (settings.basis === "perBooking") {
+    res.json({ range: { period: win.period, from: win.from, to: win.to, month: win.month, today: ukToday() }, blocked: "perBooking", basis: BASIS_NOTE, row: null, settlements: [] });
+    return;
+  }
   const result = computeFromLite(lite, { from: win.from, to: win.to, history: settings.history, fallbackRate: settings.rate }, [auth.franchiseId]);
   const r = result.franchises.get(auth.franchiseId)!;
   res.json({
     range: { period: win.period, from: win.from, to: win.to, month: win.month, today: ukToday() },
-    rate: settings.rate, basis: BASIS_NOTE,
+    rate: ratesView(settings.history, settings.rate).rate, basis: BASIS_NOTE,
     row: { ...plainRow(r), settlement: settled.find((s) => s.from === win.from && s.to === win.to) ?? null },
     settlements: settled.slice(0, 200),
   });
@@ -245,21 +268,18 @@ splitfees.post("/payouts/settle", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const { franchiseId, from, to } = parsed.data;
   if (from > to) { res.status(400).json({ error: "The period starts after it ends" }); return; }
-  if (to > ukToday()) { res.status(400).json({ error: "This period has not finished yet - settle it once it has ended, so the figures cannot change." }); return; }
+  // Only a period that has ENDED (its last day is before today, UK) can be settled, so the figures can no longer move under it.
+  if (to >= ukToday()) { res.status(400).json({ error: "This period has not finished yet - settle it once its last day has passed, so the figures cannot change." }); return; }
   const names = await franchiseNames(auth.tenantId);
   if (!names.has(franchiseId)) { res.status(404).json({ error: "No such franchise" }); return; }
   const id = sid(auth.tenantId, franchiseId, from, to);
   const ref = db.collection("franchiseSettlements").doc(id);
   const first = await ref.get();
   if (first.exists) { res.json({ settlement: settlementOf(first), alreadySettled: true }); return; }
-  // A different period that overlaps one already settled would count some bookings twice.
-  const prior = await settlementsFor(auth.tenantId, franchiseId);
-  const same = prior.find((s) => s.id === id); // a click that raced the first one: its record stands
-  if (same) { res.json({ settlement: same, alreadySettled: true }); return; }
-  const clash = prior.find((s) => s.from <= to && s.to >= from);
-  if (clash) { res.status(409).json({ error: `This overlaps ${clash.from} to ${clash.to}, which is already settled.` }); return; }
 
-  const [settings, lite, by] = await Promise.all([loadSettings(auth.tenantId), loadLite(auth.tenantId), actorName(req, "Head office")]);
+  // The recorded amount is worked out from FRESH data (never the 60-second cache): it is permanent.
+  const [settings, lite, by] = await Promise.all([loadSettings(auth.tenantId), loadLite(auth.tenantId, { fresh: true }), actorName(req, "Head office")]);
+  if (settings.basis === "perBooking") { res.status(409).json({ error: "This head office is on a per-booking fee. Choose a percentage to use payouts." }); return; }
   const r = computeFromLite(lite, { from, to, history: settings.history, fallbackRate: settings.rate }, [franchiseId]).franchises.get(franchiseId)!;
   const rec: Omit<Settlement, "id"> & { tenantId: string } = {
     tenantId: auth.tenantId, franchiseId, franchiseName: names.get(franchiseId) ?? "Franchise", from, to,
@@ -267,19 +287,20 @@ splitfees.post("/payouts/settle", async (req, res) => {
     card: r.card, direct: r.direct, hoKeepsCard: r.hoKeepsCard, hoShareDirect: r.hoShareDirect, bookings: r.bookings, rates: r.rates,
     settledAt: new Date().toISOString(), settledBy: { uid: req.user?.uid ?? "", name: by },
   };
-  // create() fails if another click got there first - that click's record stands. Under a burst the emulator / Firestore may also answer
-  // "aborted" to the losers: look again (briefly) before treating it as an error.
-  for (let attempt = 0; ; attempt++) {
-    try {
-      await ref.create(rec);
-      res.status(201).json({ settlement: { id, ...rec }, alreadySettled: false });
-      return;
-    } catch (e) {
-      const again = await ref.get();
-      if (again.exists) { res.json({ settlement: settlementOf(again), alreadySettled: true }); return; }
-      const code = (e as { code?: number }).code; // 6 = already exists, 10 = aborted (contention), 4 / 14 = busy
-      if (attempt >= 5 || ![6, 10, 4, 14].includes(code ?? -1)) throw e;
-      await new Promise((r) => setTimeout(r, 60 * (attempt + 1)));
-    }
-  }
+  // One lock document per franchise lists its settled periods. It is read and written in the SAME transaction as the settlement, so two
+  // overlapping periods submitted at the same instant cannot both be accepted, and a repeat click returns the first record.
+  const lockRef = db.collection("franchiseSettlementLocks").doc(`${auth.tenantId}__${franchiseId}`.replace(/[/\s]/g, "_"));
+  const outcome = await db.runTransaction(async (tx) => {
+    const [lock, existing] = await Promise.all([tx.get(lockRef), tx.get(ref)]);
+    if (existing.exists) return { kind: "same" as const, settlement: settlementOf(existing) };
+    const periods = ((lock.exists ? lock.data()!.periods : []) as { from: string; to: string }[]) ?? [];
+    const clash = periods.find((p) => p.from <= to && p.to >= from);
+    if (clash) return { kind: "clash" as const, clash };
+    tx.create(ref, rec);
+    tx.set(lockRef, { tenantId: auth.tenantId, franchiseId, periods: [...periods, { from, to }] });
+    return { kind: "new" as const };
+  });
+  if (outcome.kind === "same") { res.json({ settlement: outcome.settlement, alreadySettled: true }); return; }
+  if (outcome.kind === "clash") { res.status(409).json({ error: `This overlaps ${outcome.clash.from} to ${outcome.clash.to}, which is already settled.` }); return; }
+  res.status(201).json({ settlement: { id, ...rec }, alreadySettled: false });
 });

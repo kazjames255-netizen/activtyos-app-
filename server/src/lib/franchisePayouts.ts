@@ -13,7 +13,9 @@
 //  - refunds come off first from the card part (an offline refund comes off the direct part first); a refund back to the wallet is a refund too
 //  - a refund the provider has agreed but not yet sent is already taken off; a cancelled booking that kept a fee counts the kept amount only
 //  - Stripe's own card fee is NOT deducted (head office absorbs it)
-// Dates: UK time. A booking is dated by when it was made (the "booked" basis). The rate in force that day applies.
+// Dates (CASH statement): money counts in the UK day it was RECEIVED and a refund in the UK day it was GIVEN, so a late payment or refund lands
+// in the NEXT period instead of silently changing one already settled (a later period can be net negative: it is simply shown). The rate in
+// force on that day applies. A booking is turned into signed "money events" (payments +, refunds -) by eventRows(); everything else adds them up.
 import type { Booking } from "../../../features/bookings/types";
 import { cashReceivedOf, refundedGross, refundOwedOf } from "../../../features/bookings/helpers";
 
@@ -62,15 +64,19 @@ export function withRateChange(history: unknown, oldRate: number, newRate: numbe
 }
 
 export interface BookingMoney {
-  /** Does this booking count at all (money really received and kept)? */
+  /** Could this booking carry payout money at all (Confirmed / Cancelled, no card hold, cash received)? */
+  eligible: boolean;
+  /** Does this booking count (eligible AND something kept after refunds)? */
   counts: boolean;
+  /** Pence received (gross) and refunded, by card / direct: net = in - out. */
+  cardIn: number; directIn: number; cardOut: number; directOut: number;
   /** Net card money (pounds), net of refunds, wallet excluded. */
   card: number;
   /** Net money the franchise took directly (pounds). */
   direct: number;
   total: number;
 }
-const NONE: BookingMoney = { counts: false, card: 0, direct: 0, total: 0 };
+const NONE: BookingMoney = { eligible: false, counts: false, cardIn: 0, directIn: 0, cardOut: 0, directOut: 0, card: 0, direct: 0, total: 0 };
 
 /** What one booking is worth for royalty / payouts. Pure; see the rules at the top of the file. */
 export function bookingMoney(b: Booking): BookingMoney {
@@ -81,8 +87,9 @@ export function bookingMoney(b: Booking): BookingMoney {
   if (cashP <= 0) return NONE;
   // Split between the card and everything else.
   const isCardSplit = typeof b.cardPaid === "number" && b.cardPaid > 0;
-  let cardP = isCardSplit ? Math.min(toP(b.cardPaid ?? 0), cashP) : b.paymentIntentId ? cashP : 0;
-  let directP = cashP - cardP;
+  const card0 = isCardSplit ? Math.min(toP(b.cardPaid ?? 0), cashP) : b.paymentIntentId ? cashP : 0;
+  let cardP = card0;
+  let directP = cashP - card0;
   // Refunds: the wallet part of a refund went back to the wallet, the rest is real money back.
   const walletBack = Math.min(Math.max(0, b.walletApplied ?? 0), Math.max(0, b.walletRefunded ?? 0));
   let refundP = Math.max(0, toP(refundedGross(b)) - toP(walletBack));
@@ -96,8 +103,11 @@ export function bookingMoney(b: Booking): BookingMoney {
   let left = refundP;
   left = take(offlineFirst ? "direct" : "card", left);
   take(offlineFirst ? "card" : "direct", left);
-  if (cardP + directP <= 0) return NONE;
-  return { counts: true, card: cardP / 100, direct: directP / 100, total: (cardP + directP) / 100 };
+  return {
+    eligible: true, counts: cardP + directP > 0,
+    cardIn: card0, directIn: cashP - card0, cardOut: card0 - cardP, directOut: cashP - card0 - directP,
+    card: cardP / 100, direct: directP / 100, total: (cardP + directP) / 100,
+  };
 }
 
 /** The franchise a booking belongs to: its own stamp, else the owner of its listing, else null (head office's own). ONE rule for every screen. */
@@ -105,13 +115,63 @@ export function franchiseOf(raw: { franchiseId?: string | null; listingId?: stri
   return raw.franchiseId || (raw.listingId ? listingFr.get(raw.listingId) || null : null) || null;
 }
 
-export interface PayoutItem { b: Booking; fid: string | null; createdAt?: string }
-/** A booking boiled down to what the payouts need (small enough to keep in the 60-second cache). */
-export interface LiteMoney { fid: string | null; day: string | null; card: number; direct: number }
-/** Boil a booking down; null when it does not count. */
-export function liteOf(it: PayoutItem): LiteMoney | null {
-  const m = bookingMoney(it.b);
-  return m.counts ? { fid: it.fid, day: ukDay(it.createdAt ?? it.b.createdAt), card: m.card, direct: m.direct } : null;
+/** A payment received on a UK day (from the payments ledger). */
+export interface PayEvent { day: string | null; amount: number }
+export interface PayoutItem {
+  b: Booking; fid: string | null;
+  /** Legacy / test shortcut: with no pay events the money is dated by the booking's creation day. */
+  createdAt?: string;
+  /** The payments ledger rows that brought this booking's money in (any number; weights only). */
+  pays?: PayEvent[];
+  /** The UK day to use when nothing else dates an event (the booking document's last change). */
+  fallbackDay?: string | null;
+}
+/** A signed money event, small enough to keep in the 60-second cache: payments are positive, refunds negative, in pounds. */
+export interface LiteMoney { fid: string | null; day: string | null; card: number; direct: number; /** 1 on the booking's first payment row when it counts, else 0. */ n: number }
+
+/** Split `total` pence over `weights` (largest remainder), so the parts add back to the total exactly. */
+function spread(total: number, weights: number[]): number[] {
+  const sum = weights.reduce((a, w) => a + w, 0);
+  if (total <= 0 || weights.length === 0) return weights.map(() => 0);
+  if (sum <= 0) return weights.map((_, i) => (i === 0 ? total : 0));
+  const raw = weights.map((w) => (total * w) / sum);
+  const out = raw.map(Math.floor);
+  let left = total - out.reduce((a, v) => a + v, 0);
+  const order = raw.map((r, i) => [r - Math.floor(r), i] as const).sort((x, y) => y[0] - x[0] || x[1] - y[1]);
+  for (let k = 0; left > 0 && k < order.length; k++, left--) out[order[k][1]] += 1;
+  return out;
+}
+
+/** The UK day of a stored refund date: "2026-10-12", an ISO timestamp, or the older "12/10/2026, 09:30" text. */
+export function refundDay(on?: string | null): string | null {
+  if (!on) return null;
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(on.trim());
+  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  return ukDay(on);
+}
+
+/** Turn one booking into signed money events (see the header). [] when it cannot carry money. */
+export function eventRows(it: PayoutItem): LiteMoney[] {
+  const b = it.b;
+  const m = bookingMoney(b);
+  if (!m.eligible) return [];
+  const fallback = it.fallbackDay ?? null;
+  const pays: PayEvent[] = it.pays?.length ? it.pays : [{ day: ukDay(it.createdAt ?? b.createdAt) ?? fallback, amount: 1 }];
+  const cardParts = spread(m.cardIn, pays.map((p) => p.amount));
+  const directParts = spread(m.directIn, pays.map((p) => p.amount));
+  const rows: LiteMoney[] = pays.map((p, i) => ({ fid: it.fid, day: p.day ?? fallback, card: cardParts[i] / 100, direct: directParts[i] / 100, n: m.counts && i === 0 ? 1 : 0 }));
+  // Refunds, dated by the day each was given. What the log does not cover (an approved or owed cancellation refund) is dated by the cancellation.
+  const logged = (b.refundLog || []).filter((x) => (x.amount || 0) > 0).map((x) => ({ day: refundDay(x.on) ?? fallback, amount: x.amount || 0 }));
+  const loggedSum = logged.reduce((a, x) => a + x.amount, 0);
+  const rest = Math.max(0, refundedGross(b) + (b.status === "Cancelled" ? refundOwedOf(b) : 0) - loggedSum);
+  const events = rest > 0.004 ? [...logged, { day: refundDay(b.cancel?.refundedAt) ?? refundDay(b.cancel?.on) ?? fallback, amount: rest }] : logged;
+  if (m.cardOut + m.directOut > 0) {
+    const ev = events.length ? events : [{ day: fallback, amount: 1 }];
+    const cardR = spread(m.cardOut, ev.map((e) => e.amount));
+    const directR = spread(m.directOut, ev.map((e) => e.amount));
+    ev.forEach((e, i) => { if (cardR[i] || directR[i]) rows.push({ fid: it.fid, day: e.day, card: -cardR[i] / 100, direct: -directR[i] / 100, n: 0 }); });
+  }
+  return rows;
 }
 export interface PayoutRow {
   franchiseId: string;
@@ -155,34 +215,39 @@ export const inWindow = (day: string | null, from?: string | null, to?: string |
 /** THE calculation. Every franchise id in `knownFranchises` gets a row (even with no bookings). */
 export function computePayouts(items: PayoutItem[], opts: PayoutOptions = {}, knownFranchises: Iterable<string> = []): PayoutResult {
   const lite: LiteMoney[] = [];
-  for (const it of items) { const l = liteOf(it); if (l) lite.push(l); }
+  for (const it of items) lite.push(...eventRows(it));
   return computeFromLite(lite, opts, knownFranchises);
 }
 
-/** The same calculation on rows already boiled down by liteOf. */
+/** The same calculation on rows already boiled down by eventRows. The keep is rounded ONCE per franchise per calendar month and a longer window is
+ *  the sum of its months, so the all-time total always equals the sum of the monthly figures. */
 export function computeFromLite(rows: LiteMoney[], opts: PayoutOptions = {}, knownFranchises: Iterable<string> = []): PayoutResult {
   const history = cleanHistory(opts.history);
   const fallback = opts.fallbackRate ?? DEFAULT_RATE;
-  type Acc = { bookings: number; cardP: number; directP: number; keepCardF: number; keepDirectF: number; rates: Set<number> };
+  type Acc = { bookings: number; cardP: number; directP: number; months: Map<string, { keepCard: number; keepDirect: number }>; rates: Set<number> };
   const acc = new Map<string, Acc>();
-  const fresh = (): Acc => ({ bookings: 0, cardP: 0, directP: 0, keepCardF: 0, keepDirectF: 0, rates: new Set() });
+  const fresh = (): Acc => ({ bookings: 0, cardP: 0, directP: 0, months: new Map(), rates: new Set() });
   for (const f of knownFranchises) acc.set(f, fresh());
   const direct = { bookings: 0, cardP: 0, directP: 0 };
   for (const m of rows) {
     const day = m.day;
     if (!inWindow(day, opts.from, opts.to)) continue;
-    const it = { fid: m.fid };
-    if (!it.fid) { direct.bookings += 1; direct.cardP += toP(m.card); direct.directP += toP(m.direct); continue; }
-    const a = acc.get(it.fid) ?? fresh();
+    if (!m.fid) { direct.bookings += m.n; direct.cardP += toP(m.card); direct.directP += toP(m.direct); continue; }
+    const a = acc.get(m.fid) ?? fresh();
     const rate = rateOn(history, day, fallback);
-    a.bookings += 1; a.cardP += toP(m.card); a.directP += toP(m.direct);
-    a.keepCardF += toP(m.card) * rate / 100; a.keepDirectF += toP(m.direct) * rate / 100;
-    a.rates.add(rate);
-    acc.set(it.fid, a);
+    a.bookings += m.n; a.cardP += toP(m.card); a.directP += toP(m.direct);
+    const mk = day ? day.slice(0, 7) : "none";
+    const mo = a.months.get(mk) ?? { keepCard: 0, keepDirect: 0 };
+    mo.keepCard += toP(m.card) * rate / 100; mo.keepDirect += toP(m.direct) * rate / 100;
+    a.months.set(mk, mo);
+    if (m.card || m.direct) a.rates.add(rate);
+    acc.set(m.fid, a);
   }
   const franchises = new Map<string, PayoutRow>();
+  const half = (x: number) => Math.round(x + (x >= 0 ? 1e-9 : -1e-9));
   for (const [fid, a] of acc) {
-    const keepP = Math.round(a.keepCardF + 1e-9), shareP = Math.round(a.keepDirectF + 1e-9);
+    let keepP = 0, shareP = 0;
+    for (const mo of a.months.values()) { keepP += half(mo.keepCard); shareP += half(mo.keepDirect); }
     const rates = [...a.rates].sort((x, y) => x - y);
     franchises.set(fid, {
       franchiseId: fid, bookings: a.bookings,

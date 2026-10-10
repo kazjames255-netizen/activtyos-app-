@@ -9,6 +9,7 @@ import { providerPaidBell } from "./providerPaidBell";
 import { paidSoFar, cashReceivedOf } from "../../../features/bookings/helpers";
 import { balanceOf } from "./payGate";
 import type { Booking } from "../../../features/bookings/types";
+import { clearKitCache } from "./kitCache";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Settling a card payment — the ONE place that turns "Stripe took the money"
@@ -60,7 +61,7 @@ export async function paymentForIntent(intentId: string): Promise<{ id: string; 
  * Reconciliation badge reads "Auto-reconciled" rather than naming a person
  * (backlog cc5). The HMRC EPP feed, when it lands, stamps the same shape.
  */
-export async function settlePaymentRecord(paymentId: string, by: SettleBy): Promise<SettleResult> {
+async function settlePaymentRecordInner(paymentId: string, by: SettleBy): Promise<SettleResult> {
   const payRef = db.collection("payments").doc(paymentId);
   const at = new Date().toISOString();
 
@@ -357,7 +358,7 @@ export async function settleInvoiceBooking(invId: string, extra: { paymentIntent
 /** Mark an invoice paid from its own PaymentIntent, then settle its booking.
  *  Used by the pay-link confirm and by the webhook when the payer's browser
  *  never came back. */
-export async function settleInvoicePayment(paymentId: string, invoiceId: string, intentId: string, by: SettleBy): Promise<SettleResult> {
+async function settleInvoicePaymentInner(paymentId: string, invoiceId: string, intentId: string, by: SettleBy): Promise<SettleResult> {
   const payRef = db.collection("payments").doc(paymentId);
   const invRef = db.collection("invoices").doc(invoiceId);
   const at = new Date().toISOString();
@@ -391,4 +392,11 @@ export async function markCardFailed(intentId: string, failed: boolean): Promise
     batch.set(bRef, { cardFailed: failed }, { merge: true });
   }
   await batch.commit();
+}
+
+export async function settlePaymentRecord(...a: Parameters<typeof settlePaymentRecordInner>): ReturnType<typeof settlePaymentRecordInner> {
+  try { return await settlePaymentRecordInner(...a); } finally { clearKitCache(); }
+}
+export async function settleInvoicePayment(...a: Parameters<typeof settleInvoicePaymentInner>): ReturnType<typeof settleInvoicePaymentInner> {
+  try { return await settleInvoicePaymentInner(...a); } finally { clearKitCache(); }
 }
