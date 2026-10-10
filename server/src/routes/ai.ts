@@ -47,7 +47,7 @@ const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const HOWTO: Record<"operator" | "staff" | "parent" | "platform" | "headoffice", string> = {
   headoffice: [
     "See how the whole network is doing: the Dashboard (franchise-comparison command centre) — revenue & bookings by franchise, a league table and an attention list.",
-    "Royalty income / split fees: Money → Split fees — the royalty each franchise owes, filterable by date range. The rate/basis is set per network.",
+    "Royalty income: Money → Franchise payouts. It is a cash statement of money received and refunds given in the period. Head office keeps a percentage of card money and pays each franchise the rest; money a franchise took itself owes head office that percentage. Mark settled after the period ends. If the network is on a per-booking fee, choose a percentage first.",
     "Head office's own money: Money → Finance — your OWN money in/out, invoices (bill a franchise their fees), and a breakdown by franchise. Your central books are separate from the franchises'.",
     "Manage franchises: the Franchises page (performance + territory), Feature control (turn modules on/off per franchise or for all), Invite franchises, and the Territories map.",
     "Oversight across franchises: the Safeguarding group (Incidents, Accidents, Medication) — read-only network oversight — and Attendance registers.",
@@ -91,8 +91,8 @@ const HOWTO: Record<"operator" | "staff" | "parent" | "platform" | "headoffice",
   ].join("\n• "),
   parent: [
     "Pay what you owe: My bookings — pay outstanding invoices/bookings there (card, or store credit in your Wallet).",
-    "Book an activity: Browse → pick the activity and dates → checkout. Discount codes and wallet credit apply at checkout.",
-    "Change or cancel: My bookings → open the booking (cancellation follows the provider's cut-off and refund bands). When you cancel you choose where a refund goes: wallet credit (if the provider has one) or back to your card; if you paid by bank transfer, 'Back to my bank account' and you type your name, sort code and account number (shown to the provider once, then deleted); if you paid cash the provider refunds you directly. The provider approves it first, and you get a refund-approved email.",
+    "Book an activity: Browse → pick the activity and dates → checkout. Discount codes apply at checkout. If you have credit with the provider, checkout asks whether to use it, keep it or use part.",
+    "Change or cancel: My bookings → open the booking (cancellation follows the provider's cut-off and refund bands). When you cancel you choose where a refund goes: wallet credit (already selected when the provider has one), or ask the provider to send it back the way you paid (by bank transfer, in cash or by voucher; a card payment goes back to the card). For a bank transfer you type your name, sort code and account number (shown to the provider once, then deleted). The provider approves it first. You see 'Refund recorded' first, and a second message when the provider has sent it.",
     "Move your dates: My bookings → open the booking → move a date. Many providers let you do it yourself straight away (within their notice period, any fee they set); otherwise it goes to them as a request.",
     "Waiting list: if a day is full you can join the waiting list. You pay nothing while you wait; your queue position shows in My bookings and on the Home page. If a place opens you get an email with one Accept and pay button and 2 hours to take it (you pay only then). If you miss it you get a 'Sorry, you missed out' email and you are put back on the waiting list automatically, at the back of the queue, with nothing charged. You can leave the waiting list any time from My bookings.",
     "Pay by bank transfer: at checkout you see the provider's bank details and a reference to quote. Your booking is Confirmed but unpaid until they mark it paid, then you get one 'Payment received' email. Card bookings: no 'booked in' email until the card has gone through, then one 'Payment received' email (if a first card payment is stopped by the card protection, nothing is charged: just try again).",
@@ -106,7 +106,7 @@ const HOWTO: Record<"operator" | "staff" | "parent" | "platform" | "headoffice",
     "Trips & consent: the Trips & consent page — give consent for a trip; Medication to record your child's medication for the provider.",
   ].join("\n• "),
   platform: [
-    "Providers: the Providers area lists every tenant, their plan and activity.",
+    "Providers: the Providers area lists every tenant, their plan and activity, in tabs with counts (All, Trial, Ending soon, Trial ended, Active, Payment failed, Cancelled, No card), with search and sort. Test accounts are hidden by default; use the switch.",
     "Money & growth: Sales, Analytics and Engagement dashboards aggregate across all providers.",
     "Support: Messages & support holds provider queries and bug reports.",
   ].join("\n• "),
