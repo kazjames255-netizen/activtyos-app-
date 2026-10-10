@@ -785,6 +785,7 @@ function Page1() {
           { k: "Payments go to the provider", v: "Card payments land in the provider's own Stripe account, not the platform's. Stripe takes the card, the platform never holds booking money." },
           { k: "A blocked first live payment", v: "A first live card payment on a new Stripe account can be blocked by Stripe itself, before the platform sees it. The checkout then says nothing was charged and to try again or use another card. If it keeps happening, check the account in Stripe." },
           { k: "Shared booking links", v: "A signed-out visitor who opens a shared booking link gets a Sign in / Create account pop-up up front, so they can book after." },
+          { k: "Trips: consent and sign-off", v: "Every child needs a family's consent before a trip can be signed off, head-counted or marked returned. A changed answer after sign-off reopens it. Only the trip lead, organiser or owner can edit a trip; other staff see a medical flag, not the note. Cancelling tells families; no trip payment is taken in the app." },
           { k: "Top bar", v: "A Listings tab sits next to Families and Contact." },
           { k: "Replies", v: "A parent's reply to any email goes to the provider's contact email (Reply-To). The sender parents see is the platform's own address until the rename." },
         ]} />
