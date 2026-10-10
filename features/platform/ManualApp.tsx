@@ -885,9 +885,17 @@ function Page3() {
           <h3 className="m-0 mb-2 text-[18px] font-extrabold text-[var(--ink)]" style={display}>Who pays the card fee?</h3>
           <ul className="m-0 grid gap-2 pl-5">
             <li className={li}>Today the provider pays Stripe&apos;s card fee. The platform takes no cut of bookings.</li>
-            <li className={li}>A provider cannot pass the fee on or add a surcharge.</li>
-            <li className={li}>Adding one would be a new feature and needs a proper check first: UK rules limit surcharging on consumer card payments.</li>
-            <li className={li}>Options for later: absorb it (today), fold it into the listing price, or a platform fee.</li>
+            <li className={li}>Providers cannot pass it on or add a surcharge. That would be a new feature and needs a proper check first, as UK rules limit card surcharging.</li>
+            <li className={li}>Options later: absorb it (today), fold it into the price, or a platform fee.</li>
+          </ul>
+          <p className="m-0 mt-3 text-[13.5px] font-bold text-[var(--ink-2)]">Owner decision. No code change now.</p>
+        </Card>
+        <Card className="mt-4 p-4">
+          <h3 className="m-0 mb-2 text-[18px] font-extrabold text-[var(--ink)]" style={display}>Later: split card payments for franchises (Option B)</h3>
+          <ul className="m-0 grid gap-2 pl-5">
+            <li className={li}>Today (Option A): head office receives all franchise card money and pays each franchise a percentage from a payout screen.</li>
+            <li className={li}>Option B, after everything else is built: each franchisee has its own Stripe account under head office. Card payments split automatically: royalty to head office, the rest to the franchisee, who bears Stripe&apos;s fee. Refunds take the royalty back proportionally.</li>
+            <li className={li}>Cash, bank, vouchers and Tax-Free Childcare still need the payout screen. Franchisees must finish Stripe ID checks.</li>
           </ul>
           <p className="m-0 mt-3 text-[13.5px] font-bold text-[var(--ink-2)]">Owner decision. No code change now.</p>
         </Card>
