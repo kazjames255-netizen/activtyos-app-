@@ -10,7 +10,7 @@ import { firebaseAuth } from "@/lib/firebase/client";
 import { FieldLabel, Input } from "@/components/ui";
 import { AddressFields, type PostcodeState } from "@/features/common/AddressFields";
 import { composeAddress, isFullAddress, type AddressParts } from "@/lib/addressComplete";
-import { AUTH_LIGHT, AosMark, AosWordmark } from "@/components/auth/AuthBrand";
+import { AUTH_LIGHT, AuthLogo } from "@/components/auth/AuthBrand";
 import { useT } from "@/lib/i18n/provider";
 
 /**
@@ -182,9 +182,8 @@ function ParentAuth() {
       className="relative w-full max-w-[720px] rounded-[22px] bg-[var(--surface)] p-12 shadow-[0_24px_70px_-24px_rgba(20,30,90,.28)]"
       style={{ borderInlineStart: "4px solid #1d3a8f" }}
     >
-      <div className="mb-5 flex items-center gap-2.5">
-        <AosMark />
-        <AosWordmark className="text-[19px] font-extrabold" />
+      <div className="mb-5">
+        <AuthLogo />
       </div>
 
       <h1 className="text-[34px] font-extrabold tracking-[-0.01em]" style={{ fontFamily: "var(--ff-display)", color: "var(--ink)" }}>

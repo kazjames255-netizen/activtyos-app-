@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { BrandMark, BrandWordmark } from "@/components/ui/Logo";
+import { BrandLogo } from "@/components/ui/Logo";
 
 // Auth screens run the marketing-site palette so the hand-off from the website
 // into sign-up feels like one product. That palette is the blue + gold one —
@@ -20,12 +20,7 @@ export const AUTH_LIGHT: CSSProperties = {
   "--gold": "#f5b81f",
 } as CSSProperties;
 
-// The logo (person + three lane lines): one artwork in components/ui/Logo.tsx. These names are kept so the auth screens keep their imports.
-export function AosMark({ size = 30 }: { size?: number }) {
-  return <BrandMark size={size} />;
-}
-
-// Wordmark in the display font, themed ink.
-export function AosWordmark({ className = "" }: { className?: string }) {
-  return <BrandWordmark className={className} tone="auto" />;
+// The logo lives in components/ui/Logo.tsx (bare mark + two-tone wordmark). Auth cards are light, so the default is onLight.
+export function AuthLogo({ size = 36, variant = "onLight" }: { size?: number; variant?: "onLight" | "onDark" }) {
+  return <BrandLogo size={size} variant={variant} />;
 }

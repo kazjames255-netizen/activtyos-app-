@@ -8,7 +8,7 @@ import { get as apiGet } from "@/lib/api";
 import { SubscriptionApp } from "@/features/money/SubscriptionApp";
 import { useT, useI18n } from "@/lib/i18n/provider";
 import { BRAND, isRTL } from "@/lib/i18n/config";
-import { BrandMark } from "@/components/ui/Logo";
+import { BrandLogo } from "@/components/ui/Logo";
 
 // Signup account types that own a tenant and must pick a plan. Franchise and
 // staff join an existing tenant by invite, so they're never sent to the plan
@@ -130,7 +130,7 @@ export function SubscriptionLock({ portal, children }: { portal: string; childre
         {banner}
         <div className="p-3 sm:p-5">
           <div className="mx-auto mt-6 max-w-[560px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 text-[var(--ink)]">
-            <BrandMark size={34} className="mb-3" />
+            <BrandLogo size={34} variant="onLight" className="mb-3" />
             <div className="text-[18px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("p8ops.shPausedTitle")}</div>
             <p className="mt-1.5 text-[13px] leading-snug text-[var(--ink-2)]">
               {a.owner

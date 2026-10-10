@@ -8,7 +8,7 @@ import { sendMail, type MailAttachment } from "./mailer";
 import { tenantSender, inboundDomain, inboundConfigured } from "./sender";
 import { webUrl } from "./stripe";
 import { bookingPayUrl } from "./bookingPayToken";
-import { AOS_MARK_PNG_B64 } from "./brandLogo";
+import { AOS_MARK_DARK_PNG_B64, AOS_MARK_LIGHT_PNG_B64 } from "./brandLogo";
 import { geocodeAddress } from "../routes/geo";
 import {
   gbp, escapeHtml, layout, bankPayHtml, type BankPayDetails,
@@ -97,8 +97,17 @@ export async function ensureLeadVideoUrl(leadId: string): Promise<string | null>
  *  hot-linked so it renders in every client and regardless of environment —
  *  Gmail/Outlook strip SVG and data-URIs and can't reach a loopback/dev URL. Any
  *  email that shows the mark must include this in its attachments. */
-export function aosLogoAttachment(): MailAttachment {
-  return { filename: "activitylane.png", content: Buffer.from(AOS_MARK_PNG_B64, "base64"), contentType: "image/png", cid: "aos-mark" };
+/** The wordmark as email-safe inline spans: "Activity" + "Lane" in two colours. */
+export function brandTwoTone(name: string, first: string, second: string): string {
+  const cut = name.length - 4;
+  return `<span style="color:${first}">${name.slice(0, cut)}</span><span style="color:${second}">${name.slice(cut)}</span>`;
+}
+
+export function aosLogoAttachments(): MailAttachment[] {
+  return [
+    { filename: "activitylane-on-dark.png", content: Buffer.from(AOS_MARK_DARK_PNG_B64, "base64"), contentType: "image/png", cid: "aos-mark" },
+    { filename: "activitylane-on-light.png", content: Buffer.from(AOS_MARK_LIGHT_PNG_B64, "base64"), contentType: "image/png", cid: "aos-mark-light" },
+  ];
 }
 
 // Booking email templates. Plain, inline-styled HTML — per-provider sending
@@ -133,7 +142,7 @@ function sendGated(
 /** Inline attachments a customer booking email needs: ActivityLane mark for the
  *  "powered by" footer, plus the provider's own logo when they have one. */
 function brandAttachments(brand: { logo?: MailAttachment }): MailAttachment[] {
-  return [aosLogoAttachment(), ...(brand.logo ? [brand.logo] : [])];
+  return [...aosLogoAttachments(), ...(brand.logo ? [brand.logo] : [])];
 }
 
 /** Ungated provider-branded send (account access, invites, message alerts —
@@ -1180,10 +1189,10 @@ export function newBookingProviderEmail(a: NewBookingEmailArgs): string {
     <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 12px 34px -18px rgba(20,30,70,.4)">
 
       <!-- ${BRAND} brand header — the real mark, embedded inline (cid) so it
-           renders in every client (see aosLogoAttachment). -->
+           renders in every client (see aosLogoAttachments). -->
       <div style="background:linear-gradient(120deg,#16306e 0%,#274ba3 55%,#3f78d8 100%);padding:18px 24px;text-align:center">
-        <img src="cid:aos-mark" width="26" height="26" alt="" style="vertical-align:middle;margin-right:9px;border-radius:7px" />
-        <span style="font-size:21px;font-weight:800;letter-spacing:.2px;color:#ffffff;vertical-align:middle">${BRAND}</span>
+        <img src="cid:aos-mark" width="34" height="35" alt="" style="vertical-align:middle;margin-right:9px" />
+        <span style="font-size:23px;font-weight:800;letter-spacing:-.3px;color:#ffffff;vertical-align:middle">${brandTwoTone(BRAND, "#ffffff", "#ffb02e")}</span>
       </div>
 
       ${a.listingImage

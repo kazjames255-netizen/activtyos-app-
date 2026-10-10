@@ -4,7 +4,7 @@ import { navLabel } from "@/lib/i18n/words";
 import { useLbl } from "@/features/learninghub/hubLabel";
 import { useT, tNow } from "@/lib/i18n/provider";
 import { BRAND } from "@/lib/i18n/config";
-import { BrandMark } from "@/components/ui/Logo";
+import { BrandLogo } from "@/components/ui/Logo";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -701,10 +701,7 @@ export function Sidebar({ portal, drawer, sheet }: { portal: PortalKey; drawer?:
             {t("chrome.poweredBy")}
           </div>
           <div className="mt-1.5 flex items-center gap-2">
-            <BrandMark size={24} />
-            <span className="text-[15px] font-extrabold leading-none" style={{ fontFamily: "var(--ff-display)" }}>
-              <span style={{ color: "var(--side-ink)" }}>{BRAND}</span>
-            </span>
+            <BrandLogo size={28} variant="onDark" />
           </div>
           <div className="mt-1.5 text-[10px] font-semibold leading-snug" style={{ color: "var(--side-muted)" }}>
             {t("chrome.tagline")}

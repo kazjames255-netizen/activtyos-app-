@@ -100,7 +100,7 @@ export function layout(
         </div>
       </div>
       <div style="background:#f7f9fd;padding:16px 24px;text-align:center;border-top:1px solid #eef0f5">
-        <img src="cid:aos-mark" width="15" height="15" alt="" style="vertical-align:middle;margin-right:6px;border-radius:4px;opacity:.9" />
+        <img src="cid:aos-mark-light" width="18" height="18" alt="" style="vertical-align:middle;margin-right:6px" />
         <span style="font-size:11.5px;color:#8a86a3;vertical-align:middle">Powered by <b style="color:#4a4763">${BRAND}</b></span>
         <div style="font-size:11px;color:#a7a3bd;margin-top:5px">You're receiving this because a booking was made with ${escapeHtml(brand.name)}.</div>
       </div>
