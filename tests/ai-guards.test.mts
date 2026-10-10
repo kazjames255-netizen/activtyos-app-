@@ -8,6 +8,7 @@ import {
 import { cachedSnapshot, tenantSnapshot, snapshotCacheClear } from "../server/src/routes/ai";
 import { buildSetupSystem } from "../server/src/lib/setupKnowledge";
 import { db } from "../server/src/firebase";
+import { isSafeInternalHref } from "../lib/safeHref";
 
 // ── Rate limit ───────────────────────────────────────────────────────────────
 test("limiter: 20 per minute per user, 21st is refused with a friendly message and Retry-After", () => {
@@ -158,4 +159,37 @@ test("staff: money questions are refused before any model call; operational and 
 test("compose: owners only, staff and parents refused", () => {
   for (const r of ["company", "freelancer", "franchise"]) assert.equal(composeAllowed(r), true, r);
   for (const r of ["staff", "parent", "platform"]) assert.equal(composeAllowed(r), false, r);
+});
+
+// ── Link allowlist bypasses (verifier finding) ───────────────────────────────
+test("href: only a single-slash path starting with a letter or digit is internal", () => {
+  for (const ok of ["/company/bookings", "/company/setup?tab=cancel", "/custdash/wallet", "/help/get-paid", "/Company/Bookings", "/company/billing?tab=paid#x"]) assert.equal(isSafeInternalHref(ok), true, ok);
+  for (const bad of ["/\\evil.example", "/%5Cevil.example", "/%2fevil.example", "/%2Fevil", "//evil.example", "/ /evil", "/\tevil", "/\nevil", "/\u0000evil", "/", "", "evil", "https://evil", "javascript:alert(1)", "/\\\\evil", "/.evil", "/a\\b"]) assert.equal(isSafeInternalHref(bad), false, JSON.stringify(bad));
+});
+
+test("links: backslash, encoded, spaced and control-char hrefs lose the link on the server", () => {
+  for (const href of ["/\\evil.example", "/%5Cevil.example", "/%2fevil.example", "//evil.example", "/ /evil", "/\tevil", "/\nevil"]) {
+    const out = neutraliseLinks(`see [x](${href}) now`);
+    assert.doesNotMatch(out, /\]\(/, `kept a link for ${JSON.stringify(href)}: ${out}`);
+    assert.match(out, /see x/);
+  }
+});
+
+test("links: uppercase paths and nested brackets", () => {
+  assert.equal(neutraliseLinks("[Go](/Company/Bookings)"), "[Go](/Company/Bookings)");
+  const out = neutraliseLinks("[[a](https://evil.example)] and [b [c]](/\\evil)");
+  assert.doesNotMatch(out, /evil/);
+});
+
+test("staff money regex: wider coverage, and no false blocks", () => {
+  for (const q of ["what is the wallet balance", "what did we earn this week", "how much money came in", "sales this month", "total cash today", "what's the balance", "payments received?", "How much have we taken this week?",
+    "faint arian a gawsom", "ile zarobiliśmy w tym tygodniu", "jakie mamy przychody", "كم الأموال التي دخلت", "ما هو الرصيد", "كم الإيرادات"]) assert.equal(staffMoneyQuestion(q), true, q);
+  for (const q of ["A child has been taken ill, what do I do", "taking the register", "how did we make the snack list", "who is in today", "where are my payslips", "how do I log an accident", "has anyone been taken to hospital"]) assert.equal(staffMoneyQuestion(q), false, q);
+});
+
+test("429 message says how long to wait", () => {
+  const l = createAiLimiter({ perMinute: 1, perDay: 5, now: () => 0 });
+  l.check("u"); const r = l.check("u");
+  assert.equal(r.ok, false);
+  if (!r.ok) assert.match(r.message, /try again in \d+ seconds?/);
 });

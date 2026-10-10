@@ -9,6 +9,7 @@ import { LIGHT_PALETTE } from "@/components/OperatorPage";
 import { RobotAvatar, type RobotState } from "./RobotAvatar";
 import { useMic, useTts } from "./voice";
 import { useT } from "@/lib/i18n/provider";
+import { isSafeInternalHref } from "@/lib/safeHref";
 import { AnswerVisual, splitVisuals } from "./AnswerVisuals";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -126,7 +127,8 @@ function inlineHtml(s: string): string {
     .replace(/`([^`]+)`/g, '<code class="rounded bg-black/5 px-1 py-0.5 text-[12px]">$1</code>')
     // Links: ONLY internal /portal/view paths become links. A web address in an answer (the server strips them too) is never clickable,
     // so a name typed by a parent or provider cannot plant a link. "//host" is not an internal path.
-    .replace(/\[([^\]]+)\]\((\/(?!\/)[^)\s]*)\)/g, (_m, label: string, href: string) => `<a class="font-semibold text-[var(--brand,#2f6bd8)] underline" href="${href}">${label}</a>`);
+    // isSafeInternalHref (lib/safeHref.ts, same rule as the server filter) also refuses "/\host", "/%5Chost" and "//host", which browsers treat as external.
+    .replace(/\[([^\]]+)\]\(([^)\s]*)[^)]*\)/g, (_m, label: string, href: string) => (isSafeInternalHref(href) ? `<a class="font-semibold text-[var(--brand,#2f6bd8)] underline" href="${href}">${label}</a>` : label));
 }
 function RichText({ text }: { text: string }) {
   const lines = text.replace(/\r/g, "").split("\n");

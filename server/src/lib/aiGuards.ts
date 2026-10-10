@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { isSafeInternalHref } from "../../../lib/safeHref";
 
 // Guards around the in-app AI assistant (routes/ai.ts). All pure, so tests/ai-guards.test.mts runs them with no model and no database.
 
@@ -39,7 +40,7 @@ export function createAiLimiter(o: { perMinute?: number; perDay?: number; now?: 
       }
       if (e.minuteN >= perMinute) {
         const retryAfterSec = Math.max(1, Math.ceil((e.minuteReset - t) / 1000));
-        return { ok: false, scope: "minute", retryAfterSec, message: `You're asking quickly. Please wait ${retryAfterSec} second${retryAfterSec === 1 ? "" : "s"} and try again.` };
+        return { ok: false, scope: "minute", retryAfterSec, message: `You're asking quickly. Please try again in ${retryAfterSec} second${retryAfterSec === 1 ? "" : "s"}.` };
       }
       e.minuteN += 1; e.dayN += 1;
       return { ok: true };
@@ -56,7 +57,7 @@ export function aiRateLimit(req: Request, res: Response, next: NextFunction) {
   const r = limiter.check(key);
   if (r.ok) { next(); return; }
   res.setHeader("Retry-After", String(r.retryAfterSec));
-  res.status(429).json({ error: r.message });
+  res.status(429).json({ error: r.message, retryAfterSec: r.retryAfterSec });
 }
 
 // ── Links in answers ─────────────────────────────────────────────────────────
@@ -64,7 +65,7 @@ export function aiRateLimit(req: Request, res: Response, next: NextFunction) {
 // parent typed into a name, or inventing one) loses its link: markdown links keep their label, bare web addresses are removed.
 export function neutraliseLinks(reply: string): string {
   return reply
-    .replace(/\[([^\]]*)\]\(([^)\s]*)[^)]*\)/g, (m, label: string, href: string) => (/^\/(?!\/)/.test(href) ? m : label))
+    .replace(/\[((?:[^[\]]|\[[^\]]*\])*)\]\(([^)\s]*)[^)]*\)/g, (m, label: string, href: string) => (isSafeInternalHref(href) ? m : label))
     .replace(/\b(?:https?:\/\/|www\.)[^\s)<>\]]+/gi, "(link removed)");
 }
 
@@ -129,10 +130,12 @@ export function leanSnapshotJson(snapshot: unknown, max = 6000): string {
 }
 
 // ── Who may do what ──────────────────────────────────────────────────────────
-const STAFF_MONEY = /\b(takings?|taken|revenue|income|turnover|profit|owe[sd]?|owing|outstanding|unpaid|debts?|refunds?|invoices?|plan price|subscription|billing|stripe|bank details|payouts?|how much (have|has|did|do|are|is) (we|they|the|our)|approve|decline)\b/i;
+const STAFF_MONEY = /\b(takings|taken (this|today|so far|in)|revenue|income|turnover|profit|earn\w*|sales|balance|wallet|cash|money|owe[sd]?|owing|outstanding|unpaid|debts?|refunds?|invoices?|plan price|subscription|billing|stripe|bank details|payouts?|payments? (received|made|in)|how much (have|has|did|do|are|is) (we|they|the|our)|approve|decline)\b/i;
+// Welsh, Polish and Arabic equivalents (JS \b is ASCII-only, so no word boundaries here).
+const STAFF_MONEY_OTHER = /(arian|taliad|incwm|enillo|gwerthiant|pieni[aą]d|przychod|zarobi|zarabia|płatno|platno|saldo|sprzeda|zaleg|الأموال|المال|فلوس|إيراد|الدخل|رصيد|مدفوعات|المدفوعات|أرباح|الأرباح|مبيعات)/i;
 /** Front-line staff never get money answers (their snapshot has none either). True means: answer with the manager message, do not call the model. */
 export function staffMoneyQuestion(text: string): boolean {
-  return STAFF_MONEY.test(text);
+  return STAFF_MONEY.test(text) || STAFF_MONEY_OTHER.test(text);
 }
 export const STAFF_MONEY_REPLY = "Money, payments, who owes what and booking approvals are handled by your manager, so I can't see or answer those. I can help with today's register, sessions, tasks and care notes.";
 
