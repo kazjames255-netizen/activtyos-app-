@@ -168,7 +168,7 @@ invoices.post("/:id/email", async (req, res) => {
   // The trading name on the invoice is the name it should arrive from, and a
   // billing query has to be able to reply to the provider, not the platform.
   const sender = await tenantSender(o.snap.data()!.tenantId as string, (billing?.businessName as string) || undefined);
-  await sendMail(to, `Invoice${doc.reference ? ` ${doc.reference}` : ""} from ${(billing?.businessName as string) || (tenant.data()?.name as string) || "your provider"}`, html, sender);
+  await sendMail(to, `Invoice${doc.reference ? ` ${doc.reference}` : ""} from ${(billing?.businessName as string) || (tenant.data()?.name as string) || "your provider"}`, html, sender, { essential: true });
   const emailedAt = new Date().toISOString();
   // Sending an invoice moves a draft to "sent" (now awaiting payment).
   await o.snap.ref.set({ emailedAt, ...(statusAfterEmail(doc.status as string) ? { status: statusAfterEmail(doc.status as string) } : {}) }, { merge: true });

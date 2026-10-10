@@ -1,20 +1,24 @@
 import { Router, type Request } from "express";
 import { isRealDay, isBlankOrRealTime } from "../lib/ukDate";
 import { z } from "zod";
+import { createHash, randomUUID } from "node:crypto";
+import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
 import { esc } from "../lib/html";
 import { bareImageUrl, signImageUrl } from "../lib/signing";
 import { franchiseChildIds, isFranchise } from "../lib/franchiseScope";
 import { franchiseForChild, loadSettings } from "../lib/tenantLibrary";
-import { childVisibleTo } from "../lib/childAccess";
-import { bookingInSite, siteRecordFilter, staffSiteScope } from "../lib/siteScope";
+import { childVisibleTo, familyChildAccess } from "../lib/childAccess";
+import { siteRecordFilter } from "../lib/siteScope";
 import type { Role } from "../middleware/role";
 import { notify, parentEmailForChild } from "../lib/notify";
+import { parentIncidentView as parentView } from "../lib/parentViews";
 import { alertDsl, isSafeguardingLead, leadCovers, namesALead } from "../lib/dslAlert";
 import { whereInChunks } from "../lib/firestoreIn";
 import { auditIncidentDeletion } from "../lib/incidentDeletionAudit";
 import { actorName } from "../lib/actorName";
 import { headInjuryBell, headInjuryEmail, isHeadInjury } from "../lib/headInjury";
+import { recordMadeBell, recordMadeEmail } from "../lib/healthBells";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Incidents & Accidents (Pupils) — the safeguarding log every OFSTED-
@@ -114,7 +118,10 @@ const logSchema = z.object({
 /** Latest day an event may be dated: tomorrow in UTC, so a provider whose local day is
  *  ahead of UTC (or a late-night entry) is never refused, but a typo year is. */
 const latestEventDay = () => new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+const CONFIDENTIAL_SHARE_MSG = "A confidential record can't be shared with the parent. Untick one of the two.";
 const FUTURE_DATE_MSG = "That date is in the future. Pick today or an earlier day.";
+/** The same report from the same account inside this window is the same report (S10). */
+const DUPLICATE_WINDOW_MS = 60_000;
 const KINDS = ["accident", "incident", "safeguarding"] as const;
 const isKind = (v: unknown): v is (typeof KINDS)[number] => typeof v === "string" && (KINDS as readonly string[]).includes(v);
 
@@ -182,6 +189,41 @@ async function tellHeadInjury(id: string): Promise<"sent" | "head" | "no"> {
   }
 }
 
+/** A confidential ACCIDENT: the family is told that a record was made and who to contact - no text from it (bell, email, nothing else).
+ *  A confidential concern or incident tells nobody. */
+async function tellRecordMade(id: string, rec: { kind?: string; subject?: string; childId?: string | null; childName?: string; tenantId?: string }, gates: { notifyParentAccident: boolean }) {
+  if (rec.kind !== "accident" || rec.subject === "staff" || !gates.notifyParentAccident) return;
+  const email = await parentEmailForChild(rec.childId ?? undefined);
+  if (!email || !rec.tenantId) return;
+  const tenant = await db.collection("tenants").doc(rec.tenantId).get();
+  const v = { name: String(rec.childName ?? ""), provider: (tenant.get("name") as string) || "your activity provider" };
+  const bell = recordMadeBell(v);
+  const mail = recordMadeEmail(v);
+  await notify({
+    tenantId: rec.tenantId, to: { kind: "parent", email }, category: "accident",
+    title: bell.title, body: bell.body, i18n: bell.i18n, subject: mail.subject, emailHtml: mail.html,
+    href: "/custdash/accidents", ref: id,
+  });
+}
+
+/** A confidential ACCIDENT that is later edited or gets a provider note: the same neutral line on every path (bell + email, no record text,
+ *  only "a record was updated, please contact <provider>"). Other confidential kinds tell nobody. */
+async function tellRecordUpdated(id: string, rec: { kind?: string; subject?: string; childId?: string | null; childName?: string; tenantId?: string }, gates: { notifyParentAccident: boolean }) {
+  if (rec.kind !== "accident" || rec.subject === "staff" || !gates.notifyParentAccident) return;
+  const email = await parentEmailForChild(rec.childId ?? undefined);
+  if (!email || !rec.tenantId) return;
+  const tenant = await db.collection("tenants").doc(rec.tenantId).get();
+  const provider = (tenant.get("name") as string) || "your activity provider";
+  await notify({
+    tenantId: rec.tenantId, to: { kind: "parent", email }, category: "accident",
+    title: `${rec.childName}: a record was updated`,
+    body: `Please contact ${provider}.`,
+    emailHtml: `<p>A record about <b>${esc(rec.childName)}</b> was updated. Please contact ${esc(provider)}.</p>`,
+    subject: `${rec.childName}: a record was updated`,
+    href: "/custdash/accidents", ref: id,
+  });
+}
+
 const kindWord = (kind: string) => (kind === "accident" ? "accident" : kind === "safeguarding" ? "safeguarding concern" : "incident");
 // "An accident" / "An incident" / "A safeguarding concern" (it used to say "An safeguarding concern").
 const anWord = (word: string) => `${/^[aeiou]/i.test(word) ? "An" : "A"} ${word}`;
@@ -190,11 +232,14 @@ const anWord = (word: string) => `${/^[aeiou]/i.test(word) ? "An" : "A"} ${word}
  *  to share it. Internal behaviour notes, safeguarding concerns, confidential
  *  records and concerns about staff stay off their side entirely. */
 const parentMaySee = (x: { kind?: unknown; shareWithParent?: unknown; confidential?: unknown; subject?: unknown }) =>
-  x.shareWithParent === true || (x.kind === "accident" && x.confidential !== true && x.subject !== "staff");
+  x.confidential !== true && (x.shareWithParent === true || (x.kind === "accident" && x.subject !== "staff")); // confidential ALWAYS wins over sharing
 // Whether a record should reach the parent: accidents always (per settings),
 // behaviour when the setting is on OR staff ticked share, safeguarding only
 // when staff explicitly chose to share (it's confidential by default).
-function sharesWithParent(rec: { kind?: string; shareWithParent?: boolean; subject?: string }, gates: { notifyParentAccident: boolean; notifyParentIncident: boolean }) {
+function sharesWithParent(rec: { kind?: string; shareWithParent?: boolean; subject?: string; confidential?: boolean }, gates: { notifyParentAccident: boolean; notifyParentIncident: boolean }) {
+  // A confidential record is never shared, whatever else is ticked (health run H50). The family of a confidential ACCIDENT is told only that a
+  // record exists (tellRecordMade below), never what it says.
+  if (rec.confidential === true) return false;
   // A concern about a member of staff reaches a family only when the DSL chose to share it.
   if (rec.subject === "staff") return rec.shareWithParent === true;
   if (rec.kind === "accident") return gates.notifyParentAccident;
@@ -215,6 +260,49 @@ function barePhotos<T extends { photoUrl?: string; attachments?: string[] }>(x: 
   if (x.photoUrl !== undefined) x.photoUrl = bareImageUrl(x.photoUrl);
   if (x.attachments) x.attachments = x.attachments.map((u) => bareImageUrl(u));
   return x;
+}
+
+/** Where a stored photo / attachment must point: this API's own private image, nothing else (S52). */
+const IMAGE_URL = /^(?:https?:\/\/[^/?#\s]+)?\/api\/images\/([A-Za-z0-9_-]{6,})(?:\?[^#\s]*)?$/;
+const imageId = (u: unknown) => (typeof u === "string" ? u.match(IMAGE_URL)?.[1] : undefined);
+/** Which of these image ids are PRIVATE images uploaded by `tenantId`? One field-masked read each, no image bytes. */
+async function privateImagesOf(tenantId: string, imageIds: string[]): Promise<Set<string>> {
+  const uniq = [...new Set(imageIds)];
+  if (!uniq.length) return new Set();
+  const snaps = await db.getAll(...uniq.map((i) => db.collection("images").doc(i)), { fieldMask: ["tenantId", "private"] });
+  return new Set(snaps.filter((d) => d.exists && d.get("tenantId") === tenantId && d.get("private") === true).map((d) => d.id));
+}
+/** A write may only attach this tenant's own private uploads. Rewrites accepted links to this server's own bare URL
+ *  (a foreign host in front of our id is dropped); returns an error message for anything else. */
+async function checkPhotos(req: Request, tenantId: string, data: { photoUrl?: string; attachments?: string[] }): Promise<string | null> {
+  const urls = [...(data.photoUrl ? [data.photoUrl] : []), ...(data.attachments ?? [])];
+  if (!urls.length) return null;
+  const found = urls.map(imageId);
+  if (found.some((i) => !i)) return "Attachments must be photos uploaded through ActivityOS.";
+  const mine = await privateImagesOf(tenantId, found as string[]);
+  if (found.some((i) => !mine.has(i!))) return "That photo isn't one of your uploads. Upload it again and attach the new one.";
+  const own = (u: string) => `${req.protocol}://${req.get("host")}/api/images/${imageId(u)}`;
+  if (data.photoUrl) data.photoUrl = own(data.photoUrl);
+  if (data.attachments) data.attachments = data.attachments.map(own);
+  return null;
+}
+/** Read side of the same rule, for records stored before the check existed: a link that is not a private image of the
+ *  record's own tenant is dropped, never signed. One field-masked read per distinct image, none when no record has a photo. */
+async function withSafePhotos<T extends Record<string, unknown>>(list: T[]): Promise<T[]> {
+  const need = new Map<string, Set<string>>(); // tenant -> image ids
+  for (const x of list) {
+    const urls = [x.photoUrl, ...(Array.isArray(x.attachments) ? x.attachments : [])];
+    for (const u of urls) { const i = imageId(u); if (i && typeof x.tenantId === "string") (need.get(x.tenantId) ?? need.set(x.tenantId, new Set()).get(x.tenantId)!).add(i); }
+  }
+  const okByTenant = new Map<string, Set<string>>();
+  for (const [t, set] of need) okByTenant.set(t, await privateImagesOf(t, [...set]));
+  const good = (x: T, u: unknown) => { const i = imageId(u); return !!i && typeof x.tenantId === "string" && !!okByTenant.get(x.tenantId)?.has(i); };
+  return list.map((x) => {
+    const out: Record<string, unknown> = { ...x };
+    if (typeof x.photoUrl === "string" && x.photoUrl && !good(x, x.photoUrl)) delete out.photoUrl;
+    if (Array.isArray(x.attachments)) out.attachments = x.attachments.filter((u) => good(x, u));
+    return out as T;
+  });
 }
 
 /** How much of this record may this account see? Staff run the day, so
@@ -287,7 +375,7 @@ incidents.get("/", async (req, res) => {
     // Behaviour records reach the parent only when staff chose "share with parent".
     list = list.filter((x) => x.kind !== "safeguarding" || x.shareWithParent === true);
     list = list.filter((x) => x.kind !== "incident" || x.shareWithParent === true);
-    list = list.filter((x) => !x.confidential || x.shareWithParent === true);
+    list = list.filter((x) => !x.confidential);
     list = list.filter((x) => x.subject !== "staff" || x.shareWithParent === true);
     if (isKind(req.query.kind)) list = list.filter((x) => x.kind === req.query.kind);
     // Attach the owning provider's "require acknowledgement" flag so the parent
@@ -301,7 +389,7 @@ incidents.get("/", async (req, res) => {
     }));
     list = list.map((x) => ({ ...x, requireAck: x.tenantId ? (requireByTenant[x.tenantId] ?? false) : false }));
     list.sort((a, b) => (`${b.date} ${b.time ?? ""}` < `${a.date} ${a.time ?? ""}` ? -1 : 1));
-    res.json(list.map(signPhotos));
+    res.json((await withSafePhotos(list)).map((x) => signPhotos(parentView(x))));
     return;
   }
   let tenantId = auth.tenantId;
@@ -339,7 +427,7 @@ incidents.get("/", async (req, res) => {
   list = list.flatMap((x) => { const a = staffAccess(req, x, lead); return a === "full" ? [x] : a === "status" ? [statusOnly(x) as typeof x] : []; });
   list.sort((a, b) => (`${b.date} ${b.time ?? ""}` < `${a.date} ${a.time ?? ""}` ? -1 : 1));
   // Injury photos of named children: signed, expiring links (lib/signing.ts).
-  res.json(list.map(signPhotos));
+  res.json((await withSafePhotos(list)).map(signPhotos));
 });
 
 // POST /api/incidents — log an accident or incident (staff + operators).
@@ -355,12 +443,15 @@ incidents.post("/", async (req, res) => {
     return;
   }
   if (parsed.data.date > latestEventDay()) { res.status(400).json({ error: FUTURE_DATE_MSG }); return; }
+  if (parsed.data.confidential === true && parsed.data.shareWithParent === true) { res.status(400).json({ error: CONFIDENTIAL_SHARE_MSG, code: "confidential_not_shareable" }); return; }
   // Only a child this provider actually has — else the record lands on another
   // provider's child (their parent is emailed; the dossier hands their family back).
   if (parsed.data.childId && !(await childVisibleTo({ ...req.auth!, tenantId: scope.tenantId }, parsed.data.childId))) {
     res.status(403).json({ error: "That child isn't booked with you", code: "child_not_yours" });
     return;
   }
+  const photoErr = await checkPhotos(req, scope.tenantId, parsed.data);
+  if (photoErr) { res.status(400).json({ error: photoErr }); return; }
   // An allegation naming the DSL / deputy (the form's tick, or the named staff
   // member matching them in Setup) is the account holder's only.
   const aboutDsl = parsed.data.subject === "staff"
@@ -377,7 +468,23 @@ incidents.post("/", async (req, res) => {
     recordedByName: await actorName(req),
     createdAt: new Date().toISOString(),
   };
-  const ref = await col.add(doc);
+  // Idempotent create (S10): the same account sending the same report again inside the window - a double click, a retry after a
+  // timeout, two tabs - gets the FIRST record back and nothing else happens (no second record, no second email). An
+  // Idempotency-Key header makes that explicit and lasts a day. The claim and the record are written in one transaction.
+  const clientKey = (req.get("idempotency-key") ?? "").trim().slice(0, 100);
+  const keyRef = db.collection("incidentPostKeys").doc(createHash("sha256").update(JSON.stringify([scope.tenantId, doc.recordedBy, clientKey || parsed.data])).digest("hex").slice(0, 40));
+  const ref = col.doc();
+  const first = await db.runTransaction(async (tx) => {
+    const k = await tx.get(keyRef);
+    if (k.exists && Date.now() - Number(k.get("at")) < (clientKey ? 86_400_000 : DUPLICATE_WINDOW_MS)) {
+      const prev = await tx.get(col.doc(String(k.get("incidentId"))));
+      if (prev.exists) return { dup: prev };
+    }
+    tx.set(keyRef, { tenantId: scope.tenantId, incidentId: ref.id, at: Date.now() });
+    tx.set(ref, doc);
+    return { dup: null };
+  });
+  if (first.dup) { res.status(200).json(signPhotos({ id: first.dup.id, ...first.dup.data() })); return; }
   res.status(201).json(signPhotos({ id: ref.id, ...doc }));
 
   // Alert the safeguarding lead(s) named in Setup (bell + a details-free email);
@@ -390,6 +497,7 @@ incidents.post("/", async (req, res) => {
   void (async () => {
     if ((await tellHeadInjury(ref.id)) !== "no") return; // a head injury has its own immediate message; it replaces the ordinary one
     const gates = await safeguardingSettings(scope.tenantId!, doc.childId);
+    if (doc.confidential === true) { await tellRecordMade(ref.id, doc, gates); return; }
     if (!sharesWithParent(doc, gates)) return;
     const email = await parentEmailForChild(doc.childId);
     if (!email) return;
@@ -480,7 +588,17 @@ incidents.put("/:id", async (req, res) => {
   }
   // Screens hold the SIGNED photo link; compare and store the bare one, or a
   // re-save would read as a changed photo (and email the family) every time.
+  const photoErr = await checkPhotos(req, auth.tenantId!, parsed.data);
+  if (photoErr) { res.status(400).json({ error: photoErr }); return; }
   barePhotos(parsed.data);
+  {
+    const was = own.snap.data()!;
+    const conf = parsed.data.confidential ?? was.confidential === true;
+    const share = parsed.data.shareWithParent ?? was.shareWithParent === true;
+    if (conf && share && (parsed.data.confidential === true || parsed.data.shareWithParent === true)) { res.status(400).json({ error: CONFIDENTIAL_SHARE_MSG, code: "confidential_not_shareable" }); return; }
+    // An older record stored with both flags: confidential wins, so the share flag is cleared with whatever else is saved.
+    if (conf && share) parsed.data.shareWithParent = false;
+  }
   // Only a real change is an edit. Re-saving an unchanged form must not send
   // the family a second "this was updated" email.
   const before = own.snap.data()!;
@@ -489,7 +607,7 @@ incidents.put("/:id", async (req, res) => {
   );
   await own.snap.ref.set({ ...parsed.data, updatedAt: new Date().toISOString() }, { merge: true });
   const after = await own.snap.ref.get();
-  res.json(signPhotos({ id: after.id, ...after.data() }));
+  res.json(signPhotos((await withSafePhotos([{ id: after.id, ...after.data() }]))[0]));
 
   // Staff choose per edit whether the family is alerted or the record is just
   // quietly corrected on their profile — the stamp updates either way.
@@ -500,7 +618,8 @@ incidents.put("/:id", async (req, res) => {
     const rec = after.data()!;
     const kind = String(rec.kind ?? "incident");
     const gates = await safeguardingSettings(String(rec.tenantId), rec.childId as string | undefined);
-    if (!sharesWithParent({ kind, shareWithParent: rec.shareWithParent === true, subject: rec.subject as string | undefined }, gates)) return;
+    if (rec.confidential === true) { await tellRecordUpdated(after.id, rec as never, gates); return; }
+    if (!sharesWithParent({ kind, shareWithParent: rec.shareWithParent === true, subject: rec.subject as string | undefined, confidential: rec.confidential === true }, gates)) return;
     const email = await parentEmailForChild(rec.childId as string | undefined);
     if (!email) return;
     const word = kindWord(kind);
@@ -587,11 +706,14 @@ incidents.post("/:id/note", async (req, res) => {
     res.status(403).json({ error: "You can't add a note here" }); return;
   }
   const note = {
+    id: randomUUID(),
     by: role === "parent" ? (req.user?.name ?? req.user?.email ?? "Parent") : await actorName(req),
     role, text: parsed.data.text, at: new Date().toISOString(),
   };
-  const notes = Array.isArray(data.notes) ? data.notes : [];
-  await snap.ref.set({ notes: [...notes, note] }, { merge: true });
+  // Appended on the server in one atomic step (S25): read-then-write lost one of two notes posted at the same moment. The unique id
+  // keeps two identical texts as two notes (arrayUnion would otherwise merge equal elements).
+  try { await snap.ref.update({ notes: FieldValue.arrayUnion(note) }); }
+  catch { res.status(404).json({ error: "Record not found" }); return; }
   res.status(201).json({ ok: true, note });
 
   // Alert the other side so the conversation flows both ways. A parent's reply
@@ -609,7 +731,8 @@ incidents.post("/:id/note", async (req, res) => {
         href: "/company/incidents", ref: snap.id,
       });
     } else {
-      // Only email the parent when the record is one they can see.
+      // A confidential record never puts its text in an email or bell: a confidential ACCIDENT sends the one neutral line, anything else nothing.
+      if (data.confidential === true) { await tellRecordUpdated(snap.id, data as never, await safeguardingSettings(tenantId, data.childId as string | undefined)); return; }
       if (data.kind === "safeguarding" && data.shareWithParent !== true) return;
       if (data.kind === "incident" && data.shareWithParent !== true) return;
       if (data.subject === "staff" && data.shareWithParent !== true) return;
@@ -679,66 +802,43 @@ incidents.get("/:id/dossier", async (req, res) => {
   if (inSite && !inSite(snap.data()!) && !(lead && leadCovers(snap.data()!))) { res.status(404).json({ error: "Record not found" }); return; }
   if (!staffMayRead(req, snap.data()!, lead)) { res.status(403).json({ error: "You don't have access to this record" }); return; }
   const rec = snap.data()!;
-  const childName = String(rec.childName ?? "");
-  const site = await staffSiteScope({ ...req.auth!, tenantId: scope.tenantId });
+  const empty = { child: null, parent: null, siblings: [], bookings: [], history: [] };
+  // NEVER guess the child (S46): a record filed without a childId used to be matched to the first booking with the same child name,
+  // which handed a different family's contact details to anyone who opened it. No childId = no child, no parent, no bookings.
+  const childId = typeof rec.childId === "string" && rec.childId ? rec.childId : undefined;
+  if (!childId) { res.json({ ...empty, unlinked: true, unlinkedNote: "Not linked to a child profile, so no family details are shown. Link the record to the child to see them." }); return; }
 
-  // Recent bookings for this child (also used to resolve the child by name when
-  // the record wasn't linked to a childId).
-  const bsnap = await db.collection("bookings").where("tenantId", "==", scope.tenantId).get();
-  // Only bookings this caller may see: a franchise its own, site staff those at their sites.
-  const visibleBooking = (b: Record<string, unknown>) => (!frId || b.franchiseId === frId) && (!site || bookingInSite(b as { listingId?: string; blockId?: string }, site));
-  const nameMatch = (b: Record<string, unknown>) => b.child && String(b.child).trim().toLowerCase() === childName.trim().toLowerCase();
-  let childId = (rec.childId as string | undefined) || undefined;
-  // A record filed without a childId is resolved by name - but only against bookings the caller can see, never the whole tenant.
-  if (!childId) { const hit = bsnap.docs.map((d) => d.data() as Record<string, unknown>).find((b) => b.childId && visibleBooking(b) && nameMatch(b)); if (hit) childId = hit.childId as string; }
+  // Everything below is found by id with indexed queries (S47): the child, its parent, the parent's other children, the family's
+  // bookings and this child's records - never a scan of the tenant's bookings or incidents.
+  const who = { ...req.auth!, tenantId: scope.tenantId };
+  const cs = await db.collection("children").doc(childId).get();
+  const c = cs.exists ? (cs.data() as Record<string, unknown>) : null;
+  const parentUid = c?.parentUid as string | undefined;
+  const u = parentUid ? ((await db.collection("users").doc(parentUid).get()).data() ?? {}) as Record<string, string> : {};
+  const sibDocs = parentUid ? (await db.collection("children").where("parentUid", "==", parentUid).get()).docs.filter((d) => d.id !== childId) : [];
+  // The dossier hands back the family's contact details - only for a child this provider has (records filed before that check
+  // existed could name anyone's). A parent's account holds children of EVERY provider, franchise and site: siblings pass the same test.
+  const access = c ? await familyChildAccess(who, [childId, ...sibDocs.map((d) => d.id)], u.email) : { visible: new Set<string>(), bookings: [] };
+  if (!c || !access.visible.has(childId)) { res.json({ ...empty, unlinked: true, unlinkedNote: "Not linked to a child profile in your records, so no family details are shown." }); return; }
 
-  // The dossier hands back the family's contact details — only for a child
-  // this provider has (records filed before that check existed could name anyone's).
-  if (childId && !(await childVisibleTo({ ...req.auth!, tenantId: scope.tenantId }, childId))) childId = undefined;
+  const child = c;
+  let parent: { name?: string; email?: string; phone?: string; address?: string; postcode?: string } | null = parentUid ? { name: u.name, phone: u.phone, address: u.address, postcode: u.postcode, email: u.email } : null;
+  const siblings = sibDocs.filter((d) => access.visible.has(d.id)).map((d) => { const s = d.data(); return { name: s.name as string, dob: s.dob as string, age: s.age as number }; });
 
-  let child: Record<string, unknown> | null = null;
-  let parent: { name?: string; email?: string; phone?: string; address?: string; postcode?: string } | null = null;
-  let siblings: { name?: string; dob?: string; age?: number }[] = [];
-  if (childId) {
-    const cs = await db.collection("children").doc(childId).get();
-    if (cs.exists) {
-      const c = cs.data()!;
-      child = c;
-      const parentUid = c.parentUid as string | undefined;
-      if (parentUid) {
-        const us = await db.collection("users").doc(parentUid).get();
-        const u = (us.data() ?? {}) as Record<string, string>;
-        parent = { name: u.name, phone: u.phone, address: u.address, postcode: u.postcode, email: u.email };
-        const sib = await db.collection("children").where("parentUid", "==", parentUid).get();
-        // A parent's account holds children of EVERY provider, franchise and site: show only siblings this caller may see (same test as the child).
-        const who = { ...req.auth!, tenantId: scope.tenantId };
-        const others = sib.docs.filter((d) => d.id !== childId);
-        const ok = await Promise.all(others.map((d) => childVisibleTo(who, d.id)));
-        siblings = others.filter((_, i) => ok[i]).map((d) => { const s = d.data(); return { name: s.name as string, dob: s.dob as string, age: s.age as number }; });
-      }
-    }
-  }
-
-  const bookings = bsnap.docs
-    .map((d) => d.data() as Record<string, unknown>)
-    .filter(visibleBooking) // a franchise sees only ITS OWN bookings of the child, site staff only those at their sites
+  const bookings = access.bookings
     // By child id, never by name: a same-named child of another family must not bring its booker's contact details in.
-    .filter((b) => !!childId && (b.childId === childId || (Array.isArray(b.kids) && (b.kids as { childId?: string }[]).some((k) => k?.childId === childId))))
+    .filter((b) => b.childId === childId || (Array.isArray(b.kids) && (b.kids as { childId?: string }[]).some((k) => k?.childId === childId)))
     .map((b) => ({ listing: b.listing as string, dates: (b.dates ?? b.sessionLabel) as string, status: b.status as string, createdAt: b.createdAt as string, booker: b.booker as string, email: b.email as string, phone: b.phone as string }))
     .sort((a, b) => String(b.createdAt ?? "").localeCompare(String(a.createdAt ?? "")))
     .slice(0, 12);
   // Fall back to a booking for the parent's name/email/phone if the user doc had none.
   if (bookings[0]) parent = { name: parent?.name || bookings[0].booker, email: parent?.email || bookings[0].email, phone: parent?.phone || bookings[0].phone, address: parent?.address, postcode: parent?.postcode };
 
-  // This child's incident / accident / behaviour / safeguarding history in the tenant.
-  const isnap = await col.where("tenantId", "==", scope.tenantId).get();
-  // The child's other records — through the same staff filter as the record
-  // itself, or opening an ordinary accident showed staff the confidential
-  // safeguarding concerns about that child.
-  const history = isnap.docs.filter((d) => frMine(d.data()) && staffMayRead(req, d.data(), lead) && (!inSite || inSite(d.data()) || (lead && leadCovers(d.data()))))
-    .map((d) => { const x = d.data() as Record<string, unknown>; return { id: d.id, childId: x.childId as string | undefined, childName: x.childName as string | undefined, kind: x.kind as string, date: x.date as string, category: (x.concernCategory ?? x.incidentType ?? x.injury) as string, severity: x.severity as string, description: x.description as string }; })
-    .filter((h) => h.id !== req.params.id && ((childId && h.childId === childId) || (!h.childId && h.childName && h.childName.trim().toLowerCase() === childName.trim().toLowerCase())))
-    .map((h) => ({ kind: h.kind, date: h.date, category: h.category, severity: h.severity, description: h.description }))
+  // This child's incident / accident / behaviour / safeguarding history in the tenant - by child id only, through the same staff
+  // filter as the record itself, or opening an ordinary accident showed staff the confidential safeguarding concerns about that child.
+  const isnap = await col.where("tenantId", "==", scope.tenantId).where("childId", "==", childId).get();
+  const history = isnap.docs.filter((d) => d.id !== req.params.id && frMine(d.data()) && staffMayRead(req, d.data(), lead) && (!inSite || inSite(d.data()) || (lead && leadCovers(d.data()))))
+    .map((d) => { const x = d.data() as Record<string, unknown>; return { kind: x.kind as string, date: x.date as string, category: (x.concernCategory ?? x.incidentType ?? x.injury) as string, severity: x.severity as string, description: x.description as string }; })
     .sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")))
     .slice(0, 30);
 

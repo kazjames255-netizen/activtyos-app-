@@ -91,6 +91,7 @@ import { DEFAULT_POLICY, accumulatePendingRelease, effectiveRefundDate, noRefund
 import { bookingDocId } from "./bookings";
 import { cleanupAfterCancel } from "../lib/cancelCleanup";
 import { grantPlanAccess } from "./childFiles";
+import { erasureDueFor } from "../lib/childRetention";
 import { passCap, passClosedBy, passDaysProblem, passFullDay, bookingHasPass } from "../lib/passBooking";
 import { ukToday, ukTodayPlus, isRealDay, isBlankOrRealDay } from "../lib/ukDate";
 import { childSchema } from "../lib/childSchema";
@@ -107,6 +108,7 @@ import { autoEnrolFromBooking } from "../lib/hubAutoEnrol";
 import { BRAND } from "../lib/brand";
 import { consentObtained as tripConsentObtained, reopenedSignoff } from "../lib/tripRules";
 import { notifySignoffReopened } from "./trips";
+import { withEmail, normEmail } from "../lib/emailCase";
 
 // Parent ("my") endpoints. Identity comes exclusively from the verified
 // Firebase token — the booker email is stamped server-side and every read
@@ -298,7 +300,7 @@ my.get("/bookings", async (req, res) => {
     res.status(400).json({ error: "Account has no email address" });
     return;
   }
-  const snap = await bookingsCol.where("email", "==", email).get();
+  const snap = await withEmail(bookingsCol, "email", email);
   const list = snap.docs.map((d) => fromDoc(d.data() as BookingDoc));
   list.sort((a, b) => (a.ref < b.ref ? 1 : -1));
   // A childcare booking carries its derived childcare block, so the family can
@@ -343,7 +345,7 @@ my.get("/bank-details", async (req, res) => {
   const email = tokenEmail(req);
   const ref = typeof req.query.ref === "string" ? req.query.ref : "";
   if (!email || !ref) { res.json({ bank: null }); return; }
-  const snap = await bookingsCol.where("email", "==", email).where("ref", "==", ref).limit(1).get();
+  const snap = await withEmail(bookingsCol.where("ref", "==", ref).limit(1), "email", email);
   if (snap.empty) { res.json({ bank: null }); return; }
   const b = fromDoc(snap.docs[0].data() as BookingDoc);
   const owed = Math.max(0, (b.amount ?? 0) - (b.amountPaid ?? 0));
@@ -360,7 +362,7 @@ my.get("/attendance", async (req, res) => {
   const email = tokenEmail(req);
   if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
   const date = typeof req.query.date === "string" && req.query.date ? req.query.date : ukToday();
-  const snap = await bookingsCol.where("email", "==", email).get();
+  const snap = await withEmail(bookingsCol, "email", email);
   const bookings = snap.docs.map((d) => fromDoc(d.data() as BookingDoc));
   const rowsByBooking = bookings.map((b) => ({ b, rows: registerRows(b, date).filter((r) => r.expected) })).filter((x) => x.rows.length);
   if (!rowsByBooking.length) { res.json([]); return; }
@@ -396,7 +398,7 @@ my.get("/attendance", async (req, res) => {
 my.get("/meal-days", async (req, res) => {
   const email = tokenEmail(req);
   if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
-  const snap = await bookingsCol.where("email", "==", email).get();
+  const snap = await withEmail(bookingsCol, "email", email);
   const bookings = snap.docs
     .map((d) => fromDoc(d.data() as BookingDoc))
     // Only bookings that hold a place: a waitlisted / declined / merely-offered one has no day to feed a child on.
@@ -683,7 +685,7 @@ my.get("/coupons", async (req, res) => {
   const today = ukToday();
 
   // Providers the parent has booked with.
-  const bk = await bookingsCol.where("email", "==", email).get();
+  const bk = await withEmail(bookingsCol, "email", email);
   const tenantIds = [...new Set(bk.docs.map((d) => (d.data() as { tenantId?: string }).tenantId).filter(Boolean) as string[])].slice(0, 30);
 
   // Public codes for those providers + any code reserved for this parent.
@@ -822,6 +824,8 @@ my.post("/bookings", async (req, res) => {
       const c = cust.data() as { name?: string; email?: string; phone?: string };
       target = { name: target.name || c.name || "", email: target.email || c.email || "", phone: target.phone || c.phone || "" };
     }
+    // Stored lower-case, always: a booking written as "Pa@Example.com" is invisible to equality lookups on the family's own address.
+    target.email = normEmail(target.email);
     if (!target.email) {
       res.status(400).json({ error: "The family needs an email address" });
       return;
@@ -2242,7 +2246,7 @@ const amendSchema = z.object({
  */
 async function myBookingByRef(req: import("express").Request<{ ref?: string }>, email: string, ref: string): Promise<{ snap: FirebaseFirestore.QueryDocumentSnapshot } | { status: number; error: string }> {
   const tenantId = String((req.query.tenantId as string | undefined) ?? (req.body as { tenantId?: string } | undefined)?.tenantId ?? "").trim();
-  const matches = await bookingsCol.where("email", "==", email).where("ref", "==", ref).get();
+  const matches = await withEmail(bookingsCol.where("ref", "==", ref), "email", email);
   let docs = matches.docs;
   if (tenantId) docs = docs.filter((d) => d.get("tenantId") === tenantId);
   if (!docs.length) return { status: 404, error: "Booking not found" };
@@ -3352,6 +3356,8 @@ my.delete("/children/:id", async (req, res) => {
     res.status(404).json({ error: "Child not found" });
     return;
   }
+  // Deleting twice (a retry, a double tap) changes nothing: the first deletion's dates stand, so the 30 days never restart.
+  if (snap.get("archived") === true) { res.json({ ok: true, archived: true }); return; }
   const today = ukToday();
   const email = (req.user?.email ?? "").trim();
   const [byId, ...byEmail] = await Promise.all([
@@ -3379,7 +3385,9 @@ my.delete("/children/:id", async (req, res) => {
   }
   // Learning Hub: enrolments, homework, flashcard progress, quiz attempts, mastery and lesson attendance go with the child (lib/hubPrivacy.ts).
   await eraseChildLearning(snap.id);
-  await snap.ref.set({ archived: true, archivedAt: new Date().toISOString() }, { merge: true });
+  // Photos and moments of a deleted child go within 30 days (lib/childRetention.ts, daily sweep); safeguarding, accident and register records stay.
+  const archivedAt = new Date().toISOString();
+  await snap.ref.set({ archived: true, archivedAt, erasureDueAt: erasureDueFor(archivedAt) }, { merge: true });
   res.json({ ok: true, archived: true });
 });
 

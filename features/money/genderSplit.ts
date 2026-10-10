@@ -51,3 +51,34 @@ export function genderSplit(bookings: Pick<Booking, "kids" | "child" | "childId"
   out.known = out.boy + out.girl + out.other + out.na;
   return out;
 }
+
+// ── Small-cell suppression (privacy) ──────────────────────────────────────────────────────────────────────────────────────────
+// A provider with a handful of children could identify one from "1 girl" (and from "known 41, boys 40" by subtraction). So the display
+// never shows a count of 1-4 (it shows "<5"), and never shows what would let a hidden number be worked out:
+//   1. primary: any of boy / girl / other / na between 1 and 4 is hidden (0 is not identifying and stays 0);
+//   2. complement: if exactly ONE cell was hidden, the smallest other non-zero cell is hidden too (so it cannot be got back as total - rest);
+//   3. while anything is hidden the aggregates (known, total) and the boys:girls ratio are withheld, so no sum or share gives it away.
+export const SMALL_CELL = 5;
+export type SplitCell = "boy" | "girl" | "other" | "na";
+export type ShownSplit = {
+  /** null = suppressed (render "<5"). */
+  cells: Record<SplitCell, number | null>;
+  known: number | null;
+  total: number | null;
+  /** "60:40" boys:girls, or null when it would disclose or there is nothing to show. */
+  ratio: string | null;
+  suppressed: SplitCell[];
+};
+export function suppressSplit(s: GenderSplit, min = SMALL_CELL): ShownSplit {
+  const keys: SplitCell[] = ["boy", "girl", "other", "na"];
+  const hidden = new Set<SplitCell>(keys.filter((k) => s[k] > 0 && s[k] < min));
+  if (hidden.size === 1) {
+    const rest = keys.filter((k) => !hidden.has(k) && s[k] > 0).sort((a, b) => s[a] - s[b]);
+    if (rest.length) hidden.add(rest[0]);
+  }
+  const cells = Object.fromEntries(keys.map((k) => [k, hidden.has(k) ? null : s[k]])) as Record<SplitCell, number | null>;
+  const any = hidden.size > 0;
+  const bg = s.boy + s.girl;
+  const ratio = any || !bg ? null : `${Math.round((s.boy / bg) * 100)}:${Math.round((s.girl / bg) * 100)}`;
+  return { cells, known: any ? null : s.known, total: any ? null : s.total, ratio, suppressed: keys.filter((k) => hidden.has(k)) };
+}

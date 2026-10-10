@@ -7,6 +7,8 @@ import { countsTowardCapacity, type BlockDoc } from "../lib/blockDomain";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import { bookingInSite, staffSiteScope, type SiteScope } from "../lib/siteScope";
 import { realPhone } from "../../../features/bookings/helpers";
+import { capLevel } from "../../../lib/accessMap";
+import { capsFor } from "../middleware/access";
 
 // Operator-wide child lookup — the "Find a child" popup in the portal header.
 // Scoped to children booked with the caller's tenant, joined to the parent's
@@ -218,13 +220,16 @@ children.get("/:id", async (req, res) => {
     const u = await db.collection("users").doc(c.parentUid as string).get();
     if (u.exists) { const ud = u.data() as { postcode?: string; phone?: string }; postcode = ud.postcode ?? ""; if (!contact.phone && realPhone(ud.phone)) contact.phone = realPhone(ud.phone); }
   }
+  // The collection password decides who may take a child home: only a role that works the register (Registers view/edit) sees it. A Medical-only
+  // role reads the care details without it (health run H36). Owners, franchise accounts and staff with no role matrix are unaffected.
+  const mayCollect = auth.role !== "staff" || capLevel(await capsFor(req), "registers") !== "none";
   res.json({
     childId: doc.id, name: (c.name as string) ?? "",
     parentName: contact.parentName, parentEmail: contact.email, parentPhone: contact.phone, ref: contact.ref, postcode,
     bookings,
     record: {
       photo: c.photo, dob: c.dob, school: c.school, allergies: c.allergies, medical: c.medical, dietary: c.dietary,
-      send: c.send, sendPlanName: c.sendPlanName, careNotes: c.careNotes, collectionPassword: c.collectionPassword,
+      send: c.send, sendPlanName: c.sendPlanName, careNotes: c.careNotes, ...(mayCollect ? { collectionPassword: c.collectionPassword } : {}),
       emergencyName: c.emergencyName, emergencyPhone: c.emergencyPhone, photoConsent: c.photoConsent,
       likes: c.likes, dislikes: c.dislikes, swimming: c.swimming, sex: c.sex,
       suncreamConsent: c.suncreamConsent, firstAidConsent: c.firstAidConsent, walkHomeConsent: c.walkHomeConsent, answers: c.answers,
@@ -239,7 +244,7 @@ children.get("/:id", async (req, res) => {
 // the child must be booked with this provider (and, for a franchise, with that
 // franchise). Every change is attributed and kept in careHistory.
 const careSchema = z.object({
-  allergies: z.string().trim().max(1_000).optional(),
+  allergies: z.string().trim().max(300).optional(), // the same limit as the parent route (lib/childSchema.ts)
   medical: z.string().trim().max(1_000).optional(),
   dietary: z.string().trim().max(1_000).optional(),
   send: z.string().trim().max(1_000).optional(),

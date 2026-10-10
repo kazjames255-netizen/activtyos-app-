@@ -2,6 +2,7 @@ import nodemailer, { type Transporter } from "nodemailer";
 import type { Sender } from "./sender";
 import { db } from "../firebase";
 import { BRAND } from "./brand";
+import { isClosedAccount } from "./closedAccounts";
 
 // Transactional email engine (product spec build item 9, minus per-provider
 // sending domains for now).
@@ -137,6 +138,14 @@ export interface MailAttachment {
   cid?: string;
 }
 
+export interface MailOpts {
+  attachments?: MailAttachment[];
+  headers?: Record<string, string>;
+  /** Transactional mail the law or the money needs (refund / payment receipts, cancellations, invoices). Only these still reach a
+   *  parent who has closed their account; everything else is suppressed for them (lib/closedAccounts.ts). */
+  essential?: boolean;
+}
+
 /** Fire-and-forget send: true unless the transport REJECTED the message.
  *  A suppressed send (not live, address not allowlisted) also returns true —
  *  nothing went wrong, but nothing was delivered either, so anything that
@@ -145,7 +154,7 @@ export interface MailAttachment {
  *  `sender` brands the mail for one provider: their name on the From line and
  *  their address on Reply-To. Omit it for platform mail. `opts.attachments`
  *  adds files (or inline `cid:` images). */
-export async function sendMail(to: string, subject: string, html: string, sender?: Sender, opts?: { attachments?: MailAttachment[]; headers?: Record<string, string> }): Promise<boolean> {
+export async function sendMail(to: string, subject: string, html: string, sender?: Sender, opts?: MailOpts): Promise<boolean> {
   return (await sendMailDetailed(to, subject, html, sender, opts)).status !== "failed";
 }
 
@@ -169,7 +178,7 @@ const looksLikeAddress = (to: string) => /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(
 /** Resend's HTTPS API. Used in preference to SMTP whenever RESEND_API_KEY is
  *  set, because hosts commonly block outbound SMTP. Inline `cid:` images map
  *  to Resend's content_id so a provider's logo still renders. */
-async function sendViaResend(to: string, subject: string, html: string, sender?: Sender, opts?: { attachments?: MailAttachment[]; headers?: Record<string, string> }): Promise<MailOutcome> {
+async function sendViaResend(to: string, subject: string, html: string, sender?: Sender, opts?: MailOpts): Promise<MailOutcome> {
   const from = sender?.name || sender?.address
     ? `${(sender.name ?? fromName).replace(/["\\]/g, "")} <${sender.address ?? fromAddress}>`
     : MAIL_FROM;
@@ -218,16 +227,20 @@ async function recordMail(to: string, subject: string, o: MailOutcome, html?: st
   } catch { /* logging must never break mail */ }
 }
 
-export async function sendMailDetailed(to: string, subject: string, html: string, sender?: Sender, opts?: { attachments?: MailAttachment[]; headers?: Record<string, string> }): Promise<MailOutcome> {
+export async function sendMailDetailed(to: string, subject: string, html: string, sender?: Sender, opts?: MailOpts): Promise<MailOutcome> {
   const o = await sendMailDetailedRaw(to, subject, html, sender, opts);
   void recordMail(to, subject, o, html);
   return o;
 }
 
-async function sendMailDetailedRaw(to: string, subject: string, html: string, sender?: Sender, opts?: { attachments?: MailAttachment[]; headers?: Record<string, string> }): Promise<MailOutcome> {
+async function sendMailDetailedRaw(to: string, subject: string, html: string, sender?: Sender, opts?: MailOpts): Promise<MailOutcome> {
   if (!looksLikeAddress(to)) {
     console.warn(`[mail] "${subject}" → ${JSON.stringify(to)} NOT AN ADDRESS — refused before sending`);
     return { status: "failed", error: "not an email address" };
+  }
+  if (!opts?.essential && (await isClosedAccount(to))) {
+    console.log(`[mail] "${subject}" → ${to} SUPPRESSED (account closed: no non-essential email)`);
+    return { status: "suppressed", error: "account closed" };
   }
   if (!maySend(to)) {
     console.log(`[mail] "${subject}" → ${to} SUPPRESSED (not live; add to MAIL_ALLOWLIST to receive it)`);
