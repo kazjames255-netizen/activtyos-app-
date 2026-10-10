@@ -2,6 +2,20 @@
 import sharp from "sharp";
 import fs from "node:fs";
 
+// ---- Logo artwork (single source: keep identical to components/ui/Logo.tsx) ----
+// Figure + three lane lines. The lanes are one left-to-right gradient (sky blue fading to white on dark grounds, to navy on light).
+const TONES = {
+  dark: { figure: "#ffffff", activity: "#ffffff", lane: "#ffb02e", from: "#6ea4f5", to: "#ffffff" },
+  light: { figure: "#14378f", activity: "#14378f", lane: "#c77700", from: "#6ea4f5", to: "#14378f" },
+};
+const lanes = (k, t) => `<defs><linearGradient id="lane-${k}" gradientUnits="userSpaceOnUse" x1="16" y1="0" x2="90" y2="0"><stop offset="0" stop-color="${t.from}"/><stop offset="1" stop-color="${t.to}"/></linearGradient></defs>` + [
+  "M16 62H52Q70 62 82 52", "M16 76H60Q76 76 86 66", "M16 90H68Q82 90 90 80",
+].map((d) => `<path d="${d}" stroke="url(#lane-${k})" stroke-width="9" stroke-linecap="round" fill="none"/>`).join("");
+const FONT = "'Bricolage Grotesque','Hanken Grotesk',Helvetica,Arial,sans-serif";
+const figure = (c) => `<circle cx="50" cy="19" r="9" fill="${c}"/><path d="M50 41v10M50 41 37 30M50 41 63 30" stroke="${c}" stroke-width="8" stroke-linecap="round" fill="none"/>`;
+// Tile (icons only): blue rounded square, white figure, dark-tone lanes
+fs.writeFileSync("public/brand/mark.svg", `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" role="img" aria-label="ActivityLane"><rect width="100" height="100" rx="24" fill="#14378f"/>${figure("#fff")}${lanes("tile", TONES.dark)}</svg>\n`);
+
 const mark = fs.readFileSync("public/brand/mark.svg");
 const png = (n) => sharp(mark, { density: Math.max(72, n * 2) }).resize(n, n).png().toBuffer();
 
@@ -39,14 +53,10 @@ fs.writeFileSync("public/brand/og.png", ogPng);
 console.log("brand assets written");
 
 // ---- Bare lockups (no tile): the form used on every surface; the tile mark.svg stays for icons only ----
-const LANES = '<path d="M16 62H52Q70 62 82 52" stroke="#ff6f91" stroke-width="9" stroke-linecap="round" fill="none"/><path d="M16 76H60Q76 76 86 66" stroke="#18b9a4" stroke-width="9" stroke-linecap="round" fill="none"/><path d="M16 90H68Q82 90 90 80" stroke="#8a6cf2" stroke-width="9" stroke-linecap="round" fill="none"/>';
-const figure = (c) => `<circle cx="50" cy="19" r="9" fill="${c}"/><path d="M50 41v10M50 41 37 30M50 41 63 30" stroke="${c}" stroke-width="8" stroke-linecap="round" fill="none"/>`;
-const TONES = { dark: { figure: "#ffffff", activity: "#ffffff", lane: "#ffb02e" }, light: { figure: "#14378f", activity: "#14378f", lane: "#c77700" } };
-const FONT = "'Bricolage Grotesque','Hanken Grotesk',Helvetica,Arial,sans-serif";
 for (const [k, t] of Object.entries(TONES)) {
-  const bare = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="9 7 88 90" width="88" height="90" role="img" aria-label="ActivityLane">${figure(t.figure)}${LANES}</svg>`;
+  const bare = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="9 7 88 90" width="88" height="90" role="img" aria-label="ActivityLane">${figure(t.figure)}${lanes(k, t)}</svg>`;
   fs.writeFileSync(`public/brand/mark-bare-${k}.svg`, bare + "\n");
-  const lock = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 90" width="440" height="90" role="img" aria-label="ActivityLane"><g transform="translate(-9 -7)">${figure(t.figure)}${LANES}</g><text x="102" y="62" font-family="${FONT}" font-weight="800" font-size="56" letter-spacing="-1.5"><tspan fill="${t.activity}">Activity</tspan><tspan fill="${t.lane}">Lane</tspan></text></svg>`;
+  const lock = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 90" width="440" height="90" role="img" aria-label="ActivityLane"><g transform="translate(-9 -7)">${figure(t.figure)}${lanes(k, t)}</g><text x="102" y="62" font-family="${FONT}" font-weight="800" font-size="56" letter-spacing="-1.5"><tspan fill="${t.activity}">Activity</tspan><tspan fill="${t.lane}">Lane</tspan></text></svg>`;
   fs.writeFileSync(`public/brand/logo-${k}.svg`, lock + "\n");
 }
 

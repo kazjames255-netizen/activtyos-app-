@@ -1,9 +1,9 @@
-import type { CSSProperties } from "react";
+import { useId, type CSSProperties } from "react";
 import { BRAND } from "@/lib/i18n/config";
 
 /**
- * The ActivityLane logo: a person with arms raised above three coloured lane lines
- * (children #ff6f91, sessions #18b9a4, staff #8a6cf2).
+ * The ActivityLane logo: a person with arms raised above three lane lines. The lanes are one left-to-right
+ * gradient: sky blue #6ea4f5 fading to white on dark grounds, to navy #14378f on light grounds.
  *
  * Two forms:
  *  - TILE  = the mark on a deep-blue rounded square. ONLY for things that need a background of their own:
@@ -11,16 +11,32 @@ import { BRAND } from "@/lib/i18n/config";
  *  - BARE  = the lockup used on every surface: no tile, figure + three lanes + two-tone wordmark.
  *            variant "onDark"  (blue site bar, dark sidebars, blue hero headers): white figure, "Activity" white, "Lane" amber #ffb02e.
  *            variant "onLight" (login/auth cards, light pages, emails on white): navy #14378f figure, "Activity" navy, "Lane" deep amber
- *                              #c77700 (3.46:1 on white, passes for large/bold text), lanes unchanged.
+ *                              #c77700 (3.46:1 on white, passes for large/bold text), lanes sky to navy.
  * Choose the variant by the background the logo sits on. Artwork twin: public/brand/*.svg (keep the paths identical).
  */
-export const LANE_COLOURS = { children: "#ff6f91", sessions: "#18b9a4", staff: "#8a6cf2" } as const;
+export const LANE_PATHS = ["M16 62H52Q70 62 82 52", "M16 76H60Q76 76 86 66", "M16 90H68Q82 90 90 80"] as const;
 export const MARK_BLUE = "#14378f";
 export const LOGO_TONES = {
-  onDark: { figure: "#ffffff", activity: "#ffffff", lane: "#ffb02e" },
-  onLight: { figure: "#14378f", activity: "#14378f", lane: "#c77700" },
+  onDark: { figure: "#ffffff", activity: "#ffffff", lane: "#ffb02e", from: "#6ea4f5", to: "#ffffff" },
+  onLight: { figure: "#14378f", activity: "#14378f", lane: "#c77700", from: "#6ea4f5", to: "#14378f" },
 } as const;
 export type LogoVariant = keyof typeof LOGO_TONES;
+
+/** The three gradient lanes. Gradient ids are unique per instance (useId) so several logos on one page never clash. */
+function Lanes({ from, to }: { from: string; to: string }) {
+  const id = "lane-" + useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  return (
+    <>
+      <defs>
+        <linearGradient id={id} gradientUnits="userSpaceOnUse" x1="16" y1="0" x2="90" y2="0">
+          <stop offset="0" stopColor={from} />
+          <stop offset="1" stopColor={to} />
+        </linearGradient>
+      </defs>
+      {LANE_PATHS.map((d) => <path key={d} d={d} stroke={`url(#${id})`} strokeWidth="9" strokeLinecap="round" fill="none" />)}
+    </>
+  );
+}
 
 /** The tile mark (blue rounded square). Icons only; use BrandLogo / BrandMark variant on pages. */
 export function BrandMark({ size = 30, title, className, style, variant = "tile" }: { size?: number; title?: string; className?: string; style?: CSSProperties; variant?: "tile" | LogoVariant }) {
@@ -31,9 +47,7 @@ export function BrandMark({ size = 30, title, className, style, variant = "tile"
         <rect width="100" height="100" rx="24" fill={MARK_BLUE} />
         <circle cx="50" cy="19" r="9" fill="#fff" />
         <path d="M50 41v10M50 41 37 30M50 41 63 30" stroke="#fff" strokeWidth="8" strokeLinecap="round" fill="none" />
-        <path d="M16 62H52Q70 62 82 52" stroke={LANE_COLOURS.children} strokeWidth="9" strokeLinecap="round" fill="none" />
-        <path d="M16 76H60Q76 76 86 66" stroke={LANE_COLOURS.sessions} strokeWidth="9" strokeLinecap="round" fill="none" />
-        <path d="M16 90H68Q82 90 90 80" stroke={LANE_COLOURS.staff} strokeWidth="9" strokeLinecap="round" fill="none" />
+        <Lanes from={LOGO_TONES.onDark.from} to={LOGO_TONES.onDark.to} />
       </svg>
     );
   }
@@ -43,9 +57,7 @@ export function BrandMark({ size = 30, title, className, style, variant = "tile"
     <svg viewBox="9 7 88 90" width={Math.round(size * 0.98)} height={size} className={className} style={{ flexShrink: 0, ...style }} {...a11y}>
       <circle cx="50" cy="19" r="9" fill={f} />
       <path d="M50 41v10M50 41 37 30M50 41 63 30" stroke={f} strokeWidth="8" strokeLinecap="round" fill="none" />
-      <path d="M16 62H52Q70 62 82 52" stroke={LANE_COLOURS.children} strokeWidth="9" strokeLinecap="round" fill="none" />
-      <path d="M16 76H60Q76 76 86 66" stroke={LANE_COLOURS.sessions} strokeWidth="9" strokeLinecap="round" fill="none" />
-      <path d="M16 90H68Q82 90 90 80" stroke={LANE_COLOURS.staff} strokeWidth="9" strokeLinecap="round" fill="none" />
+      <Lanes from={LOGO_TONES[variant].from} to={LOGO_TONES[variant].to} />
     </svg>
   );
 }
