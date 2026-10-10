@@ -1,4 +1,4 @@
-// INDEPENDENT VERIFIER cases for wallet refund-back (c734ac51). Expected values are in ~/ActivityLane-QA/runs/wallet-refund-verify/EXPECTED.md (worked by hand first).
+// INDEPENDENT VERIFIER cases for wallet refund-back (c734ac51). Expected values are in ~/ActivityOS-QA/runs/wallet-refund-verify/EXPECTED.md (worked by hand first).
 import assert from "node:assert/strict";
 import { appendFileSync } from "node:fs";
 import { before, describe, it } from "node:test";

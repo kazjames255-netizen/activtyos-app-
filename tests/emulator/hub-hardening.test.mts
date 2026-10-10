@@ -1,5 +1,5 @@
 // Learning Hub hardening (10 Oct 2026): attack cases against the REAL API + Firestore emulator (npm run test:emu). Children's data.
-// Synthetic data only. Gaps from ~/ActivityLane-QA/runs/areas-10oct/learning-hub (CASES.md): LH03 LH04 LH05 LH06 LH07 LH08 LH11 LH12 LH30 LH31
+// Synthetic data only. Gaps from ~/ActivityOS-QA/runs/areas-10oct/learning-hub (CASES.md): LH03 LH04 LH05 LH06 LH07 LH08 LH11 LH12 LH30 LH31
 // LH35 LH36 LH44 LH46 LH57 LH63 and the owner-tenant flag (G6).
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";

@@ -1,5 +1,5 @@
 /**
- * Seed the add-ons run's fixtures (CASES-v2.md of ~/ActivityLane-QA/runs/addons-2026-10-08) into a LOCAL emulator stack.
+ * Seed the add-ons run's fixtures (CASES-v2.md of ~/ActivityOS-QA/runs/addons-2026-10-08) into a LOCAL emulator stack.
  *
  *   EMU_PORT_OFFSET=<n> server/node_modules/.bin/tsx scripts/emu/seed-addons-run.mts [--d1 10] [--extra-d1 4,2] [--reset] [--wipe]
  *
@@ -9,7 +9,7 @@
  *   --wipe          wipe ALL Firestore + Auth data first (restart the API afterwards), then seed
  *
  * Refuses any non-local host (exit 78), SYNTHETIC DATA ONLY, idempotent, prints ids as JSON (never passwords).
- * Plumbing and the seed itself live in addons-helpers.mts. See ~/ActivityLane-QA/runs/addons-2026-10-08/SEED-README.md.
+ * Plumbing and the seed itself live in addons-helpers.mts. See ~/ActivityOS-QA/runs/addons-2026-10-08/SEED-README.md.
  */
 import { resetToSeed, seedAddons } from "./addons-helpers.mts";
 

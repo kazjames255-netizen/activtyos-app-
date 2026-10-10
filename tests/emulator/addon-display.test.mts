@@ -1,5 +1,5 @@
 // Behaviour tests (npm run test:emu): how add-ons are SHOWN - Add-on orders, the register, the two emails and Finance Insights.
-// Cases AD09, AD13, AD18, AD19, AD21, AM01 of ~/ActivityLane-QA/runs/addons-2026-10-08/CASES-v2.md, with AD12, AD14, AD17 as regressions.
+// Cases AD09, AD13, AD18, AD19, AD21, AM01 of ~/ActivityOS-QA/runs/addons-2026-10-08/CASES-v2.md, with AD12, AD14, AD17 as regressions.
 // Real API + Firestore emulator; every booking goes through POST /api/my/bookings, every move/cancel through the real operator routes.
 // Expected values are worked by hand from the owner's rules (see CASES-v2), not from what the code does.
 //   - a PER-DAY add-on shows on every day it was bought for; a ONE-OFF add-on (T-shirt) shows ONCE, on the child's first day;
