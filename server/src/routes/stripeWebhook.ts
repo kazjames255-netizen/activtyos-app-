@@ -158,7 +158,7 @@ stripeWebhook.post("/", raw({ type: "application/json" }), async (req, res) => {
       case "payment_intent.succeeded": {
         const pi = event.data.object;
         const found = await paymentForIntent(pi.id);
-        // Not one of ours (a charge made outside ActivityOS) — nothing to do.
+        // Not one of ours (a charge made outside ActivityLane) — nothing to do.
         if (!found) break;
         const { id, rec } = found;
         // Settled without the payer's browser: stamped auto, so Reconciliation

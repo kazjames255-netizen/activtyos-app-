@@ -1,4 +1,4 @@
-// English GCSE — Unseen Poetry (Years 10–11). Every poem below is ORIGINAL, written for ActivityOS, in the style of a GCSE
+// English GCSE — Unseen Poetry (Years 10–11). Every poem below is ORIGINAL, written for ActivityLane, in the style of a GCSE
 // unseen-poetry task. Aligned to the DfE GCSE English Literature subject content (exam-board neutral).
 import type { CTopic } from "../types";
 import { qb, cards } from "./_h";

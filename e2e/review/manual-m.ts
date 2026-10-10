@@ -15,7 +15,7 @@ const BIZ = "Riverside Activity Camps";
 const pEmail = `e2e-mm-prov-${stamp}@${TEST_EMAIL_DOMAIN}`;
 const parEmail = `e2e-mm-par-${stamp}@${TEST_EMAIL_DOMAIN}`;
 const scrub = (person: string) => `(() => {
-  const fix = (s) => s.replace(/\\b(ActivityOS|Activly)\\b/g, "Name TBC").replace(/E2e(?: [A-Za-z0-9]+){2,3}/g, ${JSON.stringify(person)}).replace(/[\\w.+-]+@activityos-test\\.com/g, ${JSON.stringify(person === "Sam Taylor" ? "sam@riverside-camps.co.uk" : "alex@example.com")});
+  const fix = (s) => s.replace(/\\b(ActivityLane|ActivityLane)\\b/g, "ActivityLane").replace(/E2e(?: [A-Za-z0-9]+){2,3}/g, ${JSON.stringify(person)}).replace(/[\\w.+-]+@activityos-test\\.com/g, ${JSON.stringify(person === "Sam Taylor" ? "sam@riverside-camps.co.uk" : "alex@example.com")});
   const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); const nodes = []; while (w.nextNode()) nodes.push(w.currentNode);
   for (const n of nodes) { const v = n.nodeValue || ""; if (/Activ|E2e|activityos-test/.test(v)) n.nodeValue = fix(v); }
   document.querySelectorAll("input").forEach((i) => { if (/activityos-test/.test(i.value)) i.value = ${JSON.stringify(person === "Sam Taylor" ? "sam@riverside-camps.co.uk" : "alex@example.com")}; });

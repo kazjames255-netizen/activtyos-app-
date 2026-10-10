@@ -33,7 +33,7 @@ const operatorTopics = (t: Translate): [string, string][] => [
 ];
 const customerTopics = (t: Translate): [string, string][] => [
   // Customers use this ONLY for app problems — bookings/payments go to their
-  // provider, not Name TBC.
+  // provider, not ActivityLane.
   ["bug", t("account.topicNotWorking")],
   ["error", t("account.topicPageBroke")],
   ["account", t("account.topicLogin")],
@@ -48,7 +48,7 @@ const LOAD_FAILED = "Failed to load";
 interface SupportMsg { id: string; from: string; senderName?: string; topic?: string; subject?: string; body: string; createdAt?: string }
 const when = (iso?: string, loc = "en-GB") => (iso ? uiDateTime(new Date(iso), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }, loc) : "");
 
-/** A separate support channel between the provider and Name TBC/HQ. */
+/** A separate support channel between the provider and ActivityLane/HQ. */
 export function SupportApp() {
   const { t, locale } = useI18n();
   // Plain "en" formats dates US-style; the app's English is British.

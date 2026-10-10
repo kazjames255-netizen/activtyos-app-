@@ -4,7 +4,7 @@ import { Card, SectionHead } from "@/components/ui";
 import { useT } from "@/lib/i18n/provider";
 import { H, hq } from "./hqText";
 
-// Quick link to the Name TBC marketing site build (public/v2/*.html) — kept
+// Quick link to the ActivityLane marketing site build (public/v2/*.html) — kept
 // here so it's one click from HQ instead of a URL someone has to remember.
 const PAGES: { label: string; href: string }[] = [
   { label: H("Home"), href: "/v2/activly.html" },
@@ -20,7 +20,7 @@ export function ActivlySiteApp() {
   useT(); // re-render on language change
   return (
     <div className="flex flex-col gap-3.5 p-4">
-      <SectionHead>{hq("Name TBC site")}</SectionHead>
+      <SectionHead>{hq("ActivityLane site")}</SectionHead>
       <Card className="p-4">
         <a
           href="/v2/activly.html"

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db } from "../firebase";
 import { ukToday } from "../lib/ukDate";
 
-// Platform (HQ) notifications — the bell for the ActivityOS operators of the
+// Platform (HQ) notifications — the bell for the ActivityLane operators of the
 // platform itself. There's no per-tenant `notifications` doc feeding this (HQ
 // has no tenant), so it AGGREGATES the events HQ cares about on read: new
 // provider signups, cancellations, support messages and bug reports. Prefs +

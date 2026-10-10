@@ -22,7 +22,7 @@ for (const p of PAGES) {
   if (s.includes('<div class="nav-cta">')) s = s.replace('<div class="nav-cta">', '<div class="nav-cta">' + sel);
   else if (s.includes('</nav></div></header>')) s = s.replace('</nav></div></header>', sel + '</nav></div></header>');
   else throw new Error('no header slot ' + p);
-  if (!/<title/.test(s)) s = s.replace(early, early + '<title>For parents — Activly</title>');
+  if (!/<title/.test(s)) s = s.replace(early, early + '<title>For parents — ActivityLane</title>');
   s = s.replace(/<body( data-aos-legal(="[^"]*")?)?>/, LEGAL.has(p) ? '<body data-aos-legal="legal">' : p === 'pricing' ? '<body data-aos-legal="pricing">' : '<body>');
   fs.writeFileSync(f, s);
 }

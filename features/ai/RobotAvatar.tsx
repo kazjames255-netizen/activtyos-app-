@@ -1,6 +1,6 @@
 "use client";
 
-// The Name TBC co-pilot's face — the same robot from the guided walkthroughs,
+// The ActivityLane co-pilot's face — the same robot from the guided walkthroughs,
 // now a reactive React component. Drive it with `state`:
 //   idle       — gentle bob + blink
 //   thinking   — eyes scan, antenna pulses, "…" dots float above (model working)

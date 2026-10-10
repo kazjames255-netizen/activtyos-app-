@@ -2,7 +2,7 @@ import Stripe from "stripe";
 
 // Stripe Connect, per the product doc: each provider gets an EXPRESS
 // connected account and parents' card payments are DIRECT CHARGES on it —
-// the money lands in the provider's own Stripe balance, never ActivityOS's.
+// the money lands in the provider's own Stripe balance, never ActivityLane's.
 // The platform account (these keys) only orchestrates and records.
 //
 // Keys live in server/.env (test keys in dev — currently Amir's account;
@@ -19,7 +19,7 @@ export const stripe: Stripe | null = key ? new Stripe(key) : null;
 // flag in production: unfinished providers must not take money.
 //
 // PRODUCTION GUARD: in production this is FORCED OFF whatever the env says —
-// a live parent's card must never be charged on the ActivityOS platform
+// a live parent's card must never be charged on the ActivityLane platform
 // account. The flag is truthy if it is "1" / "true" / "yes" / "on".
 type Env = Record<string, string | undefined>;
 const truthy = (v: string | undefined) => /^(1|true|yes|on)$/i.test((v ?? "").trim());

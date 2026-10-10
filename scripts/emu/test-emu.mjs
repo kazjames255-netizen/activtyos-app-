@@ -68,7 +68,7 @@ if (await open(P.fs)) {
   const r = spawnSync(process.execPath, [self, "--inner", ...rest], { cwd: root, env, stdio: "inherit" });
   process.exit(r.status ?? 1);
 }
-const jh = join(homedir(), "ActivityOS-QA/tools/jdk/Contents/Home");
+const jh = join(homedir(), "ActivityLane-QA/tools/jdk/Contents/Home");
 if (spawnSync("java", ["-version"], { stdio: "ignore" }).status !== 0 && existsSync(join(jh, "bin/java"))) { env.JAVA_HOME = jh; env.PATH = `${jh}/bin:${env.PATH}`; }
 const dir = join(root, ".emu"); mkdirSync(dir, { recursive: true });
 const cfg = join(dir, `firebase.test.${off}.json`);

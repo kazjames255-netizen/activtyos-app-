@@ -1,4 +1,4 @@
-// VERIFIER break attempts for checkout wallet ask (commit 1c8890ce). Expected values: ~/ActivityOS-QA/runs/checkout-wallet-verify/EXPECTED.md
+// VERIFIER break attempts for checkout wallet ask (commit 1c8890ce). Expected values: ~/ActivityLane-QA/runs/checkout-wallet-verify/EXPECTED.md
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 import { call, db, makeCode, makeListing, makeParent, makeProvider, ok, uniq, type Listing, type Parent, type Provider } from "./helpers.mts";

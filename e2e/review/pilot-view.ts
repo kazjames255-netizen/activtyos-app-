@@ -13,7 +13,7 @@ const OUT = path.join(ROOT, "e2e/review/shots/pilot");
     await p.goto(`${WEB_URL}/platform/manual`, { waitUntil: "load", timeout: 120000 }); await p.waitForTimeout(5000);
     await p.getByRole("button", { name: /Page 3/ }).click(); await p.waitForTimeout(1200);
     const overflow = await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
-    console.log(name, "overflow:", overflow, "errors:", errs.length ? errs.join(" | ") : "none", "text has product name:", await p.evaluate(() => /ActivityOS|Activly/.test(document.body.innerText)));
+    console.log(name, "overflow:", overflow, "errors:", errs.length ? errs.join(" | ") : "none", "text has product name:", await p.evaluate(() => /ActivityLane|ActivityLane/.test(document.body.innerText)));
     await p.screenshot({ path: path.join(OUT, `${name}-top.png`) });
     if (name === "desktop-light") {
       await p.getByText("The ten bookings").scrollIntoViewIfNeeded(); await p.waitForTimeout(500); await p.screenshot({ path: path.join(OUT, `${name}-bookings.png`) });

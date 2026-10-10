@@ -12,7 +12,7 @@ const fake = (plan: Record<string, MailOutcome>) => {
 
 test("subject is fixed and never carries the brand", () => {
   assert.equal(TWO_FA_SUBJECT, "Your sign-in code");
-  assert.ok(!/Name TBC/.test(TWO_FA_SUBJECT));
+  assert.ok(!/ActivityLane/.test(TWO_FA_SUBJECT));
   assert.match(twoFaHtml("123456", 10, "Acme"), /Acme platform sign-in code[\s\S]*123456/);
 });
 

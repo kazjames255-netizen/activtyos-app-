@@ -59,7 +59,7 @@ function getTransport() {
   return transportPromise;
 }
 
-// MAIL_FROM is the one authenticated identity ("ActivityOS <no-reply@…>" or a
+// MAIL_FROM is the one authenticated identity ("ActivityLane <no-reply@…>" or a
 // bare address). Its ADDRESS is fixed — providers only ever vary the display
 // name in front of it (see lib/sender.ts).
 const MAIL_FROM = process.env.MAIL_FROM || `${BRAND} <no-reply@activityos.local>`;

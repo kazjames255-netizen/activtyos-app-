@@ -34,8 +34,11 @@ export const localeDef = (code: string): LocaleDef =>
 
 export const isRTL = (code: string): boolean => !!localeDef(code).rtl;
 
-/** The product name, shown in user-facing text. The product is being renamed: change it HERE only. Catalogue strings use the {brand} token (filled automatically by translate()). */
-export const BRAND = "Name TBC";
+/** The product name, shown in user-facing text. The product name: change it HERE only (server twin: server/src/lib/brand.ts). Catalogue strings use the {brand} token (filled automatically by translate()). */
+export const BRAND = "ActivityLane";
+
+/** The public web address, DISPLAY TEXT ONLY (never used to build a link, redirect or sender address). */
+export const BRAND_DOMAIN = "activitylane.com";
 
 /** Cookie mirror of the picked language, so the server can render the first paint in the right language + direction (no English flash). */
 export const LOCALE_COOKIE = "aos.locale";

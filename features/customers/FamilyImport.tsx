@@ -97,7 +97,7 @@ export function FamilyImport({ onClose, onDone }: { onClose: () => void; onDone:
     const csv = "First name,Surname,Email,Phone (optional)\nSarah,Doyle,sarah@example.com,07700 900123\nTom,Ives,tom@example.com,\n";
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a");
-    a.href = url; a.download = "activityos-families-template.csv";
+    a.href = url; a.download = "activitylane-families-template.csv";
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   }

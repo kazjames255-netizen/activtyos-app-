@@ -1,6 +1,6 @@
 import { db } from "../firebase";
 
-// Setup → Email → "Automatic emails": which system emails ActivityOS sends on
+// Setup → Email → "Automatic emails": which system emails ActivityLane sends on
 // a provider's behalf, and the reminder timings. The preferences live in the
 // tenant's settings blob (libraries/{tenantId}.settings.autoEmails) — this is
 // the server-side reader every sender consults before mailing a family.

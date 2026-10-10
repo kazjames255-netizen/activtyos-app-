@@ -27,7 +27,7 @@ export interface Msg {
   from: "hq" | "them";
   body: string;
   at: string;
-  // "Message ActivityOS" carries a per-message topic + subject (the provider
+  // "Message ActivityLane" carries a per-message topic + subject (the provider
   // picks one each time); HQ replies leave them blank.
   topic?: string;
   subject?: string;
@@ -138,7 +138,7 @@ async function notifyRecipient(t: ThreadDoc, text: string, fresh = false): Promi
         // A parent's own "Report a problem" thread has NO provider (providerId
         // null), so this used to fall through and the reply reached nobody —
         // no bell, no email. The parent bell is keyed on their email, so it
-        // needs no tenant; the email goes out under ActivityOS's own name.
+        // needs no tenant; the email goes out under ActivityLane's own name.
         const to = t.email.trim().toLowerCase();
         const bell = await db.collection("notifications").add({
           tenantId: "__platform__", audience: "parent", email: to, category: "message",

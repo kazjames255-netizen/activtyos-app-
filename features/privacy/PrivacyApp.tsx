@@ -29,7 +29,7 @@ export function PrivacyApp() {
       const blob = await apiGet<Record<string, unknown>>("/api/privacy/export");
       const url = URL.createObjectURL(new Blob([JSON.stringify(blob, null, 2)], { type: "application/json" }));
       const a = document.createElement("a");
-      a.href = url; a.download = `my-activityos-data-${new Date().toISOString().slice(0, 10)}.json`;
+      a.href = url; a.download = `my-activitylane-data-${new Date().toISOString().slice(0, 10)}.json`;
       a.click(); URL.revokeObjectURL(url);
     } catch (e) { setError(e instanceof Error ? e.message : t("account.exportErr")); }
     finally { setBusy(false); }

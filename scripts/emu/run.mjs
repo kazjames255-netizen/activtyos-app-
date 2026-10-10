@@ -18,10 +18,10 @@ const project = "demo-activityos";
 // Java fallback for the emulators.
 const env = { ...process.env };
 function ensureJava() {
-  const jh = join(homedir(), "ActivityOS-QA/tools/jdk/Contents/Home");
+  const jh = join(homedir(), "ActivityLane-QA/tools/jdk/Contents/Home");
   // macOS ships a /usr/bin/java stub that exists but fails, so test that java really runs.
   const hasJava = spawnSync("java", ["-version"], { stdio: "ignore" }).status === 0;
-  if (!hasJava && existsSync(join(jh, "bin/java"))) { env.JAVA_HOME = jh; env.PATH = `${jh}/bin:${env.PATH}`; } // same as: source ~/ActivityOS-QA/tools/java-env.sh
+  if (!hasJava && existsSync(join(jh, "bin/java"))) { env.JAVA_HOME = jh; env.PATH = `${jh}/bin:${env.PATH}`; } // same as: source ~/ActivityLane-QA/tools/java-env.sh
 }
 
 // Test-stack env. Live credentials are deliberately scrubbed so a stray server/.env can never leak in.

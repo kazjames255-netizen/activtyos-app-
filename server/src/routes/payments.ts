@@ -23,7 +23,7 @@ import { syncRefundsForTenant } from "../lib/stripeRefundSync";
 // Payments — Stripe Connect (build item 7).
 //
 // Operator side: connect/resume Express onboarding, see connection status
-// and the tenant's payment records (ActivityOS records every payment and
+// and the tenant's payment records (ActivityLane records every payment and
 // refund for oversight — the money itself never touches the platform).
 //
 // Parent side: POST /checkout {refs} creates ONE PaymentIntent for the

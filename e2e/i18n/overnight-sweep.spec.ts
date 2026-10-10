@@ -20,7 +20,7 @@ const STRICT = process.env.OVERNIGHT_STRICT === "1";
 const NON_LATIN = new Set(["ur", "pa", "bn", "ar"]);
 // Text the detector must not count as "untranslated English": this run's own test data, product/brand and official UK terms.
 const DATA = /\bE2E\b|\bmun[a-z0-9]{4,}\b|@activityos-test/;
-const ALLOW = /\b(Activ|ActivityOS|Activly|Stripe|HMRC|DBS|Ofsted|PayPal|Xero|Sage|QuickBooks|WhatsApp|Google|Gmail|Trustpilot|PAYE|Tax-Free Childcare|KCSIE|SEND|EHCP|VAT|PDF|CSV|Excel|Word|Zoom|Meta|Facebook|Instagram|Canva|Teaching Hub|My Classroom)\b/g;
+const ALLOW = /\b(Activ|ActivityLane|ActivityLane|Stripe|HMRC|DBS|Ofsted|PayPal|Xero|Sage|QuickBooks|WhatsApp|Google|Gmail|Trustpilot|PAYE|Tax-Free Childcare|KCSIE|SEND|EHCP|VAT|PDF|CSV|Excel|Word|Zoom|Meta|Facebook|Instagram|Canva|Teaching Hub|My Classroom)\b/g;
 // Next.js dev-server / dev-tools noise that is not an application error.
 const NOISE = /Failed to execute 'measure' on 'Performance'|Router action dispatched before initialization|ResizeObserver loop/;
 const STOP = /\b(the|and|your|you|you're|to|for|with|of|is|are|this|that|from|in|on|no|not|yet|will|can|have|has|all|new|add|edit|delete|save|cancel|view|search|select)\b/i;

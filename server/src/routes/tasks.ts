@@ -5,7 +5,7 @@ import type { Role } from "../middleware/role";
 import { ukToday, isRealDay, isRealTime } from "../lib/ukDate";
 
 // Task Manager — the operator to-do system. A task hangs off a real operational
-// record (camp / booking / compliance / venue) which is what makes it ActivityOS
+// record (camp / booking / compliance / venue) which is what makes it ActivityLane
 // Tasks rather than a generic to-do. Tenant-scoped; staff see only their own.
 export const tasks = Router();
 const col = db.collection("tasks");

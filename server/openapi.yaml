@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
-  title: ActivityOS API
+  title: ActivityLane API
   version: 0.35.0
   description: |
-    Express + Firestore backend for ActivityOS — a **multi-tenant** platform
+    Express + Firestore backend for ActivityLane — a **multi-tenant** platform
     for children's activity providers.
 
     ## v0.35.0 — Childcare payment references are MINTED, not typed
@@ -579,7 +579,7 @@ info:
     - **`POST /api/my/bookings` accepts `onBehalfOf`** (operator roles only):
       `{customerId?}` or `{name?, email, phone?}`. Same pricing/capacity/
       discount path as parents; the booking lands on the FAMILY's account —
-      an existing ActivityOS account with that email is reused (never
+      an existing ActivityLane account with that email is reused (never
       duplicated), otherwise one is created with **no password** and the
       single confirmation email includes Firebase's set-password link and
       the pay link. That email deliberately contains **no child data** (a
@@ -645,7 +645,7 @@ info:
     Tag `payments`. Per the product doc, each provider connects their OWN
     Stripe account (Express) and parents' card payments are **direct
     charges on the provider's connected account** — the money never touches
-    ActivityOS; the platform only records payments and refunds for
+    ActivityLane; the platform only records payments and refunds for
     oversight (`GET /api/payments`).
 
     - Operator: `POST /api/payments/connect` → Stripe-hosted Express

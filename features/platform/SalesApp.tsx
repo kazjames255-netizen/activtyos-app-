@@ -988,7 +988,7 @@ function ImportModal({ existing, onClose, onImport }: { existing: Lead[]; onClos
           <p className="text-[12.5px] text-[var(--ink-3)]">{tr("p8hq.slCsvHelp")}</p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <label className="cursor-pointer rounded-full bg-[#1d3a8f] px-4 py-2 text-[12.5px] font-bold text-white hover:brightness-110">{tr("p8hq.slCsvChoose")}<input type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void onFile(f); e.target.value = ""; }} /></label>
-            <a href={template} download="activityos-leads-template.csv" className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{tr("p8hq.slCsvTemplate")}</a>
+            <a href={template} download="activitylane-leads-template.csv" className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{tr("p8hq.slCsvTemplate")}</a>
           </div>
           {err && <div className="mt-3 rounded-lg bg-[#fdebec] px-3 py-2 text-[12px] font-bold text-[var(--red)]">{err}</div>}
           {parsed && (

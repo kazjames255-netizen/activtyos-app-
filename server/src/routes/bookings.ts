@@ -234,7 +234,7 @@ async function isOnlineListing(listingId: string | undefined): Promise<boolean> 
 /** The family's "payment received" email + bell. Exported because a CARD
  *  payment settles in lib/settlePayment.ts (shared with the Stripe webhook),
  *  which sent nothing at all — a family paying by card heard from Stripe, if
- *  anything, but never from ActivityOS. */
+ *  anything, but never from ActivityLane. */
 export async function notifyPaymentReceived(tenantId: string, b: Booking, label: string, group?: Booking[], approved = false, confirmedNow = false): Promise<void> {
   if (!b.email?.includes("@")) return;
   const email = b.email;
@@ -1240,7 +1240,7 @@ bookings.post("/:ref/actions", async (req, res) => {
     // Tell the family the outcome of their date-change request. The EMAIL is the
     // provider-branded one (their logo, each from → to date, approved/declined);
     // the notify here is bell-only so the family doesn't also get the plain
-    // ActivityOS-branded version.
+    // ActivityLane-branded version.
     if ((action.type === "move-approve" || action.type === "move-deny") && updated.email?.includes("@")) {
       const req = updated.dateChangeRequest;
       const someDeclined = (req?.moves ?? []).some((m) => m.approved === false);

@@ -106,7 +106,7 @@ Concrete actions, in order, this week — not "review the strategy," actual task
 
 Before market selection, pricing, or targets: **50,489 leads sit in the pipeline. 40,378 have never been contacted. Zero have ever been marked contacted, won, or lost.**
 
-This isn't a detail buried in an appendix — it's the fact that should reframe the whole conversation. You cannot model CAC, LTV, or a 2-year profit target off a funnel that has never once closed the loop on a single lead, in your own market, in your own language, with every structural advantage you'll ever have. Every dollar figure below inherits this uncertainty. Where we give "realistic" numbers, treat them as *the best available estimate given comparable companies*, not as validated data — because Name TBC-specific data doesn't exist yet.
+This isn't a detail buried in an appendix — it's the fact that should reframe the whole conversation. You cannot model CAC, LTV, or a 2-year profit target off a funnel that has never once closed the loop on a single lead, in your own market, in your own language, with every structural advantage you'll ever have. Every dollar figure below inherits this uncertainty. Where we give "realistic" numbers, treat them as *the best available estimate given comparable companies*, not as validated data — because ActivityLane-specific data doesn't exist yet.
 
 **The fast, nearly-free fix:** work is already paid for (leads are already acquired). A back-of-envelope: even a modest 5% conversion on the 40,378 never-contacted leads, at ~£60/mo blended ARPU, is roughly **2,000 new customers, ~£120k MRR (~£1.4M ARR)** — at close to zero incremental CAC. No international market gets close to that return per pound spent in year one. This is the highest-leverage move available *right now*, and it's domestic.
 `,
@@ -130,9 +130,9 @@ Comparisons to real companies in this exact category, not category-agnostic SaaS
 
 **The pattern: every real comp took 10–24 years to reach £5–13M in *revenue* — not profit — and the two most successful bootstrapped ones (ClassForKids, CampMinder) ended in acquisition/PE recap, not independent scale-up.** Even the one VC-fueled outlier (Amilia, £52M raised) took 16 years. Nobody in this category has done £10M in *profit* in 2 years. Nobody has come remotely close.
 
-**Pricing isn't the naive part.** Name TBC's £29–99/mo tiers sit comfortably inside what this market has proven it will pay. **The timeline is the naive part.**
+**Pricing isn't the naive part.** ActivityLane's £29–99/mo tiers sit comfortably inside what this market has proven it will pay. **The timeline is the naive part.**
 
-**What Name TBC does differently on monetization:** most UK rivals layer a commission on top of a subscription — LoveAdmin (£35/mo + 3% of transactions), Pebble (free + 10% commission, or £15/mo + 1%), Book That In (pure 1.5% take-rate, no subscription), ClassForKids (£35+/mo + an undisclosed volume-based fee). Name TBC's flat-subscription, zero-take-rate model is a genuine differentiator on paper economics — a provider running £5k/month in bookings keeps all of it, instead of giving up £50–500/month elsewhere. But it's also the easiest thing for a well-funded entrant to match or beat (it's a pricing choice, not a structural moat) — and, as the unit-economics section below shows, it also removes a retention lever every one of those competitors has and Name TBC doesn't.
+**What ActivityLane does differently on monetization:** most UK rivals layer a commission on top of a subscription — LoveAdmin (£35/mo + 3% of transactions), Pebble (free + 10% commission, or £15/mo + 1%), Book That In (pure 1.5% take-rate, no subscription), ClassForKids (£35+/mo + an undisclosed volume-based fee). ActivityLane's flat-subscription, zero-take-rate model is a genuine differentiator on paper economics — a provider running £5k/month in bookings keeps all of it, instead of giving up £50–500/month elsewhere. But it's also the easiest thing for a well-funded entrant to match or beat (it's a pricing choice, not a structural moat) — and, as the unit-economics section below shows, it also removes a retention lever every one of those competitors has and ActivityLane doesn't.
 `,
   },
   {
@@ -151,7 +151,7 @@ Comparisons to real companies in this exact category, not category-agnostic SaaS
 | Gross margin | 70% | 65–75% — high-touch SMB support drags this below typical 80%+ self-serve SaaS |
 | Avg. customer lifetime | 20 months (1 ÷ 5%) | |
 
-**The structural problem compounding churn:** competitors with a take-rate create a real switching cost — moving providers means re-plumbing payment flows. Name TBC's zero-take-rate model has no such lock-in beyond ordinary product stickiness, which should push churn toward the *higher* end of the range, not the lower one.
+**The structural problem compounding churn:** competitors with a take-rate create a real switching cost — moving providers means re-plumbing payment flows. ActivityLane's zero-take-rate model has no such lock-in beyond ordinary product stickiness, which should push churn toward the *higher* end of the range, not the lower one.
 
 ### The headline number
 
@@ -161,7 +161,7 @@ Comparisons to real companies in this exact category, not category-agnostic SaaS
 | **Base case** | **£770** | **£1,200** | **0.64:1** | **31 months** |
 | Pessimistic | £386 | £2,000 | 0.19:1 | 74 months |
 
-Healthy SaaS is **3:1 LTV:CAC with <12-month payback.** The base case here is **under 1:1, with a 31-month payback against a 20-month average customer lifetime** — meaning, on median assumptions, **Name TBC may not recover its CAC before the average customer has already churned.** This is the single most important finding in this report: before "how big can this get" is even the right question, "is new-customer acquisition profitable at all" needs an answer — and today it's unmeasured, not just unscaled.
+Healthy SaaS is **3:1 LTV:CAC with <12-month payback.** The base case here is **under 1:1, with a 31-month payback against a 20-month average customer lifetime** — meaning, on median assumptions, **ActivityLane may not recover its CAC before the average customer has already churned.** This is the single most important finding in this report: before "how big can this get" is even the right question, "is new-customer acquisition profitable at all" needs an answer — and today it's unmeasured, not just unscaled.
 
 ### Working backward from £10M profit
 
@@ -214,7 +214,7 @@ What specifically happens each quarter — concrete moves, not strategy-speak:
 This needs to be argued, not asserted, because the counter-case is real too.
 
 **Why not now:**
-1. **You cannot model unit economics you have never measured.** Every CAC/LTV number above is inferred from comparable companies, not from Name TBC's own funnel — because that funnel has never run to completion once, anywhere, including the market where you have every structural advantage (language, currency, regulation, brand). There is no basis for projecting performance somewhere you have *none* of those advantages.
+1. **You cannot model unit economics you have never measured.** Every CAC/LTV number above is inferred from comparable companies, not from ActivityLane's own funnel — because that funnel has never run to completion once, anywhere, including the market where you have every structural advantage (language, currency, regulation, brand). There is no basis for projecting performance somewhere you have *none* of those advantages.
 2. **If a new market underperforms, you can't diagnose why.** Market fit, pricing, localization, or the same broken follow-up process burying 40,378 UK leads — with no functioning UK funnel as a baseline, failure in a new country is unreadable.
 3. **Founder/team bandwidth is the tightest constraint, and it's already misallocated.** New legal entities, payment rails, country marketing, support coverage across time zones, and — specific to this vertical — child-safeguarding and data-protection regimes that vary materially by country, all compete for attention against the one proven, already-paid-for asset sitting idle.
 4. **Compliance cost in this vertical isn't "translate the website."** Child-safety and data-protection compliance per country plausibly runs £50–150k and multiple months of legal/ops work *before the first paying customer* — spend that produces zero PMF learning.
@@ -244,11 +244,11 @@ This needs to be argued, not asserted, because the counter-case is real too.
 A moat is something a well-funded competitor *can't* replicate quickly. Today, the 50,489-lead database is not one:
 
 - **It decays.** A parent's spring-club query is worthless by autumn; contact details go stale; consent windows lapse. Every week uncontacted, it loses value.
-- **The raw list is replicable — the conversion data isn't.** Any funded competitor can buy an equivalent volume of leads via Meta/Google ads or council directories. What can't be bought is the data you accumulate by actually running leads through contact → book → repeat-book: which lead profiles convert with which provider types, at what price, in what season, with what follow-up cadence. That data only exists once the funnel has run at volume — and nobody has run it yet, including Name TBC.
+- **The raw list is replicable — the conversion data isn't.** Any funded competitor can buy an equivalent volume of leads via Meta/Google ads or council directories. What can't be bought is the data you accumulate by actually running leads through contact → book → repeat-book: which lead profiles convert with which provider types, at what price, in what season, with what follow-up cadence. That data only exists once the funnel has run at volume — and nobody has run it yet, including ActivityLane.
 
 ### The single highest-leverage move
 
-**Monetize the lead engine as a success-fee layer bolted onto the existing subscription — charge providers only when Name TBC's own nurture funnel delivers a paying booking — and use that operating loop to build the moat the subscription business doesn't have.**
+**Monetize the lead engine as a success-fee layer bolted onto the existing subscription — charge providers only when ActivityLane's own nurture funnel delivers a paying booking — and use that operating loop to build the moat the subscription business doesn't have.**
 
 Concretely: build the machinery to actually work the 40,378 dormant leads (automated + human-assisted contact, qualification, routing to the right local provider), and charge a success fee (e.g. a flat fee per enrolled child, or a modest % of first-term value) *only* on bookings this engine originates. Leave core subscription pricing untouched.
 
@@ -261,7 +261,7 @@ Concretely: build the machinery to actually work the 40,378 dormant leads (autom
 **Why this is highest-leverage, specifically:**
 1. **Fastest path to profit** — activates revenue from an asset already paid for, no new CAC, no new geography.
 2. **It builds the real moat** — running the funnel at volume is the only way to generate matching/conversion data a rival would need years, not dollars, to replicate.
-3. **It creates genuine lock-in** — providers who depend on Name TBC as a *customer-acquisition channel*, not just a booking calendar, have a materially higher switching cost than UI preference alone provides. It also directly fixes the LTV:CAC problem in §3 by adding a revenue line that doesn't require new customer acquisition and by giving providers a reason to stay.
+3. **It creates genuine lock-in** — providers who depend on ActivityLane as a *customer-acquisition channel*, not just a booking calendar, have a materially higher switching cost than UI preference alone provides. It also directly fixes the LTV:CAC problem in §3 by adding a revenue line that doesn't require new customer acquisition and by giving providers a reason to stay.
 
 This also happens to be the prerequisite for making the churn/monetization fixes in §3 real, and for ever making the international case in §2/§4 numerically honest instead of aspirational.
 `,

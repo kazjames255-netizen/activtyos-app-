@@ -1,5 +1,5 @@
 // German — Film & Literature (A-level, Years 12 and 13). Original content aligned to the DfE GCE modern foreign languages subject content (OGL v3.0).
-// All film and story titles, synopses and extracts below are invented for ActivityOS.
+// All film and story titles, synopses and extracts below are invented for ActivityLane.
 import type { CTopic } from "../types";
 import { qb, cards } from "./_h";
 

@@ -1,4 +1,4 @@
-# The ActivityOS API (server/). The Next.js web app deploys separately on
+# The ActivityLane API (server/). The Next.js web app deploys separately on
 # Vercel and ignores this file.
 #
 # Why a Dockerfile at all: Railway's builders auto-detect the Next.js app at

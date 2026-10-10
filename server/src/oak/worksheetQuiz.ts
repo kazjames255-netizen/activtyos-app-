@@ -177,7 +177,7 @@ async function fetchPdf(gid: string): Promise<Buffer> {
   let wait = 4000;
   for (let a = 1; a <= 6; a++) {
     try {
-      const res = await fetch(`https://docs.google.com/presentation/d/${gid}/export/pdf`, { redirect: "follow", headers: { "User-Agent": "ActivityOS-oak-import/1.0" } });
+      const res = await fetch(`https://docs.google.com/presentation/d/${gid}/export/pdf`, { redirect: "follow", headers: { "User-Agent": "ActivityLane-oak-import/1.0" } });
       if (res.ok) { const b = Buffer.from(await res.arrayBuffer()); if (b.subarray(0, 5).toString("latin1") === "%PDF-" && b.length > 1000) return b; throw new Error("not a PDF"); }
       if ([401, 403, 404].includes(res.status)) throw new Error(`HTTP ${res.status}`);
     } catch (e) { if (a === 6 || /HTTP 40/.test((e as Error).message)) throw e; }

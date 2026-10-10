@@ -11,8 +11,8 @@ import { TEST_PASSWORD } from "./helpers/accounts";
 // then only navigates and highlights. Every screen is waited on until genuinely ready (no Loading text / spinners / skeletons, the expected demo
 // data on screen, no API-error banner) before its caption goes up, and a branded cover hides page loads so no half-loaded frame is ever recorded.
 // Run only with RECORD_VIDEOS=1. TOUR_PROBE=1 = no audio/video, just a screenshot of every scene into $TOUR_PROBE_DIR (default scratch dir).
-// Output: ~/Downloads/ActivityOS tour video/activly-tour.mp4 (no voice-over: captions burned into the page, a visible cursor doing real actions, and a synthesised music bed; MUSIC_FILE=path overrides the music).
-const OUT = process.env.VIDEO_OUT || path.join(os.homedir(), "Downloads/ActivityOS tour video");
+// Output: ~/Downloads/ActivityLane tour video/activly-tour.mp4 (no voice-over: captions burned into the page, a visible cursor doing real actions, and a synthesised music bed; MUSIC_FILE=path overrides the music).
+const OUT = process.env.VIDEO_OUT || path.join(os.homedir(), "Downloads/ActivityLane tour video");
 const PROBE = !!process.env.TOUR_PROBE;
 const W = 1440, H = 900;
 
@@ -359,7 +359,7 @@ test("record the product tour video", async ({ browser }) => {
   const rec = new Rec(page);
   rec.start(); // the video clock starts with the page
   await page.setContent('<html><body style="margin:0;background:#10195a"></body></html>');
-  await rec.card("A three-minute tour of Activly", ["Bookings, staff, money and safeguarding", "in one login."], { tag: "PRODUCT TOUR", ms: 4200 });
+  await rec.card("A three-minute tour of ActivityLane", ["Bookings, staff, money and safeguarding", "in one login."], { tag: "PRODUCT TOUR", ms: 4200 });
   const skipped: string[] = [];
   let sceneNo = 0;
   for (const sc of SCENES) {

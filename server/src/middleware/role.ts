@@ -5,7 +5,7 @@ import { normalizeApiPath } from "../../../lib/accessMap";
 // The six account types from the product spec, enforced server-side, now
 // with real tenancy:
 //
-//   platform   — ActivityOS super-admin: sees every tenant (read-only on
+//   platform   — ActivityLane super-admin: sees every tenant (read-only on
 //                bookings for now).
 //   company    — owns a company tenant (Head Office): full access to the
 //                whole tenant, including its franchises' data.

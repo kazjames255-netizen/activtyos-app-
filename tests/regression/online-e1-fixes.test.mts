@@ -6,7 +6,7 @@ import { onlineWording } from "../../server/src/lib/emailTemplates";
 // QA agent E1 (7 Oct 2026): an online listing always stores its hosting choice, and an online booking's emails never say "See you there!".
 const venues = [{ id: "v1", kind: "online" }, { id: "v2", kind: "venue" }, { id: "v3" }];
 
-test("an online venue with no hosting choice defaults to the ActivityOS room", () => {
+test("an online venue with no hosting choice defaults to the ActivityLane room", () => {
   assert.equal(videoModeDefault(venues, "v1", undefined), "platform");
 });
 test("a chosen hosting mode is never overwritten", () => {

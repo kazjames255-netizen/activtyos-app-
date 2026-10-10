@@ -1,7 +1,7 @@
 // (F1 picture policy: no decorative emoji art; pictures come only from the verified library.)
 // Interactive slides for Oak's "Spelling words with the suffixes -tion and -cian" (Year 6, Homophones and tense).
 // The teaching text follows the lesson's slide deck (Oak National Academy, OGL v3.0 — attribution is shown in the lesson);
-// the layout, colours and every interaction are ActivityOS's own. Block format: features/learninghub/lesson/slides/types.ts.
+// the layout, colours and every interaction are ActivityLane's own. Block format: features/learninghub/lesson/slides/types.ts.
 // Inline markup: {accent} = the suffix being taught, **bold**.
 
 type S = { kind: "intro" | "explain" | "practice" | "check" | "summary"; title: string; art?: string[]; blocks: Record<string, unknown>[] };

@@ -1,14 +1,14 @@
 // Server-side Xero helper for e2e (Admin SDK; never prints tokens). Run from server/:
 //   npx tsx ../e2e/helpers/xeroAdmin.ts <tenantId> get <journalId>      → prints @@JSON@@{...}@@END@@
 //   npx tsx ../e2e/helpers/xeroAdmin.ts <tenantId> void <journalId>     → DRAFT->POSTED->VOIDED (or leaves as VOIDED)
-// Uses the stored (already refreshed by the API) access token; refuses unless the connection label is 'ActivityOS Test'.
+// Uses the stored (already refreshed by the API) access token; refuses unless the connection label is 'ActivityLane Test'.
 import { db } from "../../server/src/firebase";
 
 const [tenantId, cmd, jid] = process.argv.slice(2);
 (async () => {
   const snap = await db.collection("accountingConnections").doc(`${tenantId}__xero`).get();
   if (!snap.exists) throw new Error("no xero connection");
-  if (snap.get("label") !== "ActivityOS Test") throw new Error(`refusing: xero org label is not 'ActivityOS Test'`);
+  if (snap.get("label") !== "ActivityLane Test") throw new Error(`refusing: xero org label is not 'ActivityLane Test'`);
   const h = { Authorization: `Bearer ${snap.get("accessToken")}`, "xero-tenant-id": snap.get("xeroTenantId"), Accept: "application/json", "Content-Type": "application/json" };
   const base = "https://api.xero.com/api.xro/2.0/ManualJournals";
   const getJ = async () => { const r = await fetch(`${base}/${jid}`, { headers: h }); const t = await r.text(); if (!r.ok) throw new Error(`GET ${r.status} ${t.slice(0, 200)}`); return JSON.parse(t).ManualJournals[0]; };

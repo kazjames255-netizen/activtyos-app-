@@ -51,7 +51,7 @@ const schema = z.discriminatedUnion("role", [
     contactEmail: z.string().trim().max(160).optional(),
     phone: z.string().trim().max(40).optional(),
     logoUrl: z.string().trim().max(600).optional(),
-    // Marketing attribution — where the operator first heard about ActivityOS.
+    // Marketing attribution — where the operator first heard about ActivityLane.
     heardAbout: z.string().trim().max(60).optional(),
     // The `?ref=` code from the invite link they signed up through, if any.
     referredBy: z.string().trim().max(80).optional(),
@@ -190,7 +190,7 @@ registerRole.post("/", async (req, res) => {
   // lead to "won" the instant the tenant exists — no manual board move.
   // Fire-and-forget: the CRM must never be able to block or fail a signup.
   convertMatchingLead(tenantRef.id, businessName, contactEmail || user.email || null, phone ?? null).catch(console.error);
-  // The provider's own welcome — introduces ActivityOS + first steps (add a
+  // The provider's own welcome — introduces ActivityLane + first steps (add a
   // listing, invite the team, finish Setup). Ungated by Setup → Email's
   // "automatic emails" toggles (those are booking/payment traffic, not this
   // once-ever account email) but still passes through the same MAIL_LIVE

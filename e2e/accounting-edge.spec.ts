@@ -6,7 +6,7 @@ import { fbSignIn } from "./helpers/accounts";
 import { computeTotals, journalLegs } from "../server/src/lib/accounting";
 
 // LIVE edge cases for the payroll -> accounting journal, run against the two authorised TEST orgs only:
-//   Xero  'ActivityOS Test'  (journals are VOIDED afterwards - Xero cannot delete posted manual journals)
+//   Xero  'ActivityLane Test'  (journals are VOIDED afterwards - Xero cannot delete posted manual journals)
 //   QBO   Intuit SANDBOX realm 9341458202792641 (journals are DELETED afterwards, existence re-checked)
 // Covers: after-tax deductions balance (7th bucket), odd pence, correction (negative) run, unique refs for same-month runs, concurrent double-post
 // (Promise.all), mapping validation (wrong type / unknown / clear), provider-side rejection stored as `failed` + retry, expired/revoked refresh token -> 409 (not 500)
@@ -74,7 +74,7 @@ for (const prov of P) {
     const tok = (await fbSignIn(co.email)).idToken;
     const conns = (await call("GET", "/api/accounting/connections", tok)).body;
     test.skip(!conns?.[prov.key]?.connected, `${prov.label} is not connected for the e2e company account`);
-    if (prov.key === "xero") expect(conns.xero.label, "SAFETY: only the 'ActivityOS Test' Xero org").toBe("ActivityOS Test");
+    if (prov.key === "xero") expect(conns.xero.label, "SAFETY: only the 'ActivityLane Test' Xero org").toBe("ActivityLane Test");
     else {
       expect(conns.quickbooks.label, "SAFETY: only the QBO sandbox company").toBe(`Company ${SANDBOX_REALM}`);
       expect(execFileSync("grep", ["-E", "^QBO_ENV=", path.join(server, ".env")]).toString().trim().replace(/["']/g, "")).toBe("QBO_ENV=sandbox");

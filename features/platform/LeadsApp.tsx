@@ -76,7 +76,7 @@ interface Lead {
 }
 
 // ── What we sell vs who they are ─────────────────────────────────────────────
-// Name TBC is built for session-booked children's activities: holiday camps,
+// ActivityLane is built for session-booked children's activities: holiday camps,
 // breakfast/after-school clubs and classes (bookings, registers, ratios, meals,
 // medication, Tax-Free Childcare). Nurseries mostly run on nursery software.
 const TYPE: Record<string, { label: string; emoji: string }> = {

@@ -1,6 +1,6 @@
 // English GCSE — Modern Prose & Drama (Years 10–11). Original questions aligned to the DfE GCSE English Literature subject content
 // (exam-board neutral). Modern texts are in copyright, so NOTHING is quoted from them: method questions use ORIGINAL extracts
-// invented for ActivityOS, and text knowledge is limited to well-known plot, theme and context.
+// invented for ActivityLane, and text knowledge is limited to well-known plot, theme and context.
 // Y10: An Inspector Calls, Lord of the Flies. Y11: Animal Farm, Blood Brothers.
 import type { CTopic } from "../types";
 import { qb, cards } from "./_h";

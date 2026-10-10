@@ -40,7 +40,7 @@ export function datesGridHtml(sessions: string[]): string {
 }
 
 /** The customer booking-email shell: the PROVIDER's logo/name up top, all the
- *  session dates, a button straight to the booking, and "powered by ActivityOS"
+ *  session dates, a button straight to the booking, and "powered by ActivityLane"
  *  at the bottom. `hasLogo` gates the inline provider logo (cid:provider-logo).
  *  `title`/`bodyHtml` are HTML, inserted raw. */
 /** "See you there!" reads wrong for a video session. */

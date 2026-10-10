@@ -10,8 +10,8 @@ import { TEST_PASSWORD } from "./helpers/accounts";
 // account (Riverside demo data). It only navigates, fills the form and explains: it NEVER presses the final button, so no booking, no account
 // and no email is created. The demo parent uses an @activityos-test.com address (the mailer never sends to that domain).
 // Voice-over: macOS `say`; captions burned into the page; mp4 via ffmpeg. Run only with RECORD_VIDEOS=1.
-// Output: ~/Downloads/ActivityOS how-to videos/take-a-booking.mp4
-const OUT = process.env.VIDEO_OUT || path.join(os.homedir(), "Downloads/ActivityOS how-to videos");
+// Output: ~/Downloads/ActivityLane how-to videos/take-a-booking.mp4
+const OUT = process.env.VIDEO_OUT || path.join(os.homedir(), "Downloads/ActivityLane how-to videos");
 test.skip(!process.env.RECORD_VIDEOS, "video recording only runs with RECORD_VIDEOS=1");
 
 type Ev = { t: number; file: string };
@@ -111,7 +111,7 @@ test("record the Take a booking how-to video", async ({ browser }) => {
     await page.waitForTimeout(2500);
     rec.cut = rec.now();
     await rec.card("Take a booking for a family", ["For phone and walk-in bookings.", "About 90 seconds."],
-      "How to take a booking for a family. Use this for phone calls and walk-ins, when you are doing the booking for them.", { tag: "ActivityOS how-to" });
+      "How to take a booking for a family. Use this for phone calls and walk-ins, when you are doing the booking for them.", { tag: "ActivityLane how-to" });
     await rec.hideCard();
 
     await rec.cap("Open Bookings and press Take a booking.", "Open Bookings, and press Take a booking.", { step: "1", hl: page.getByRole("button", { name: /Take a booking/ }).first() });

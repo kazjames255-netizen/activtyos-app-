@@ -1,6 +1,6 @@
 // Curriculum content format — shared by every subject/key-stage content file and the seeder.
 // Source spec: docs/curriculum-ks2-maths-spec.txt (DfE National Curriculum, Open Government Licence v3.0).
-// Content is ORIGINAL (written for ActivityOS), aligned to the published objectives. It is plain typed DATA:
+// Content is ORIGINAL (written for ActivityLane), aligned to the published objectives. It is plain typed DATA:
 // no Firestore, no side effects. `validate.ts` checks every file; the seeder turns it into hub docs.
 
 /** School year 1–13 (Reception is not covered). KS1 = 1–2, KS2 = 3–6, KS3 = 7–9, KS4 = 10–11 (GCSE), KS5 = 12–13 (A-level). */

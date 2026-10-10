@@ -22,7 +22,7 @@ export interface CertData {
   signImg?: string;      // signature image (data URL)
   signName?: string;     // signatory name
   signRole?: string;     // signatory role/title
-  verifyUrl?: string;    // QR target (defaults to activityos.uk/v/<ref>)
+  verifyUrl?: string;    // QR target (no default: the QR is only printed when the caller supplies a resolving URL)
   // ——— simple customisation ———
   accent?: string;       // accent colour (hex) — overrides the template's default
   title?: string;        // heading, e.g. "Certificate of Achievement"
@@ -62,9 +62,8 @@ const laurel = (a: string) => {
 
 const metaCell = (label: string, val: string) => `<div class="mcell"><span class="mk">${esc(label)}</span><b class="mv">${esc(val)}</b></div>`;
 // The QR is only printed when the caller supplies a verifyUrl that genuinely
-// resolves. It used to fall back to `https://activityos.uk/v/<ref>` — a
-// hardcoded domain, a /v/ route this app does not have, and a brand name that
-// is a placeholder. Every certificate therefore carried a "Scan to verify"
+// resolves. It used to fall back to a
+// hardcoded domain and a /v/ route this app did not have. Every certificate therefore carried a "Scan to verify"
 // badge that 404s, on a document staff hand to an inspector. A missing QR is
 // honest; one that fails to resolve is a false assurance.
 const qrFoot = (d: CertData) => {

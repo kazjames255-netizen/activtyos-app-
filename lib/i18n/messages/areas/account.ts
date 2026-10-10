@@ -4,7 +4,7 @@
 //
 // 12 Sept: My account (parent + staff + operator sections, incl. the parent
 // close-account flow), Data & privacy (export / erasure request) and the support
-// screen (Report a problem / Message Name TBC).
+// screen (Report a problem / Message ActivityLane).
 const en = {
   loading: "Loading…",
   failedLoad: "Failed to load",

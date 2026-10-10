@@ -30,7 +30,7 @@ export function BookPage({ id }: { id: string }) {
   const [outOfArea, setOutOfArea] = useState<{ provider: string; tenantId?: string; district: string } | null>(null);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   // ?embed=1 = we're inside a provider's website via public/embed.js:
-  // hide the Name TBC chrome and report our height to the parent so
+  // hide the ActivityLane chrome and report our height to the parent so
   // inline embeds size themselves. useSearchParams (not a one-shot read):
   // client-side navigations from an embedded storefront mount this page
   // before window.location settles.

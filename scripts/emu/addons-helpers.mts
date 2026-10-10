@@ -34,7 +34,7 @@ if (!PROJECT.startsWith("demo-")) { console.error("Refusing: project id must sta
 
 function password(): string {
   if (process.env.E2E_PASSWORD) return process.env.E2E_PASSWORD;
-  for (const f of [process.env.E2E_PASSWORD_FILE ?? "", resolve(ROOT, "e2e/.auth/e2e-password"), `${process.env.HOME}/ActivityOS-QA/runs/addons-2026-10-08/.emu-password`]) {
+  for (const f of [process.env.E2E_PASSWORD_FILE ?? "", resolve(ROOT, "e2e/.auth/e2e-password"), `${process.env.HOME}/ActivityLane-QA/runs/addons-2026-10-08/.emu-password`]) {
     try { if (f) { const p = readFileSync(f, "utf8").trim(); if (p) return p; } } catch { /* next */ }
   }
   throw new Error("No password: set E2E_PASSWORD (or E2E_PASSWORD_FILE) or create e2e/.auth/e2e-password");

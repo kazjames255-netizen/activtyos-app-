@@ -5,7 +5,7 @@ import "dotenv/config";
 //
 //   npm run fake-inbound --prefix server -- <to-address|tenantId> [subject]
 //
-// <to-address> is the provider's own ActivityOS address, the one shown in
+// <to-address> is the provider's own ActivityLane address, the one shown in
 // Email → Settings (e.g. amir-coaching@your-id.resend.app). A raw tenant id
 // works too, for when inbound isn't configured and no address is shown.
 //

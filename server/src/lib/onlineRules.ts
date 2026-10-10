@@ -71,7 +71,7 @@ export function joinState(p: { paid: boolean; mode: "platform" | "own"; now: num
   return p.hostLive ? "open" : "waiting_host";
 }
 
-/** The hosting choice a listing should carry: its own when it has one, "platform" (ActivityOS room) when its venue is the account's "online" place
+/** The hosting choice a listing should carry: its own when it has one, "platform" (ActivityLane room) when its venue is the account's "online" place
  *  and nothing was chosen, otherwise none (a venue or home-visit listing). */
 export function videoModeDefault(venues: { id: string; kind?: string }[] | undefined, venueId: string | undefined, current: string | undefined): "platform" | "own" | undefined {
   if (current === "platform" || current === "own") return current;
