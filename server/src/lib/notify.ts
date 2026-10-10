@@ -19,6 +19,7 @@ import { loadSettings } from "./tenantLibrary";
 import { sendMail, sendMailDetailed, type MailAttachment } from "./mailer";
 import { webUrl } from "./stripe";
 import { BRAND } from "./brand";
+import { scrubText } from "../oak/noOak";
 
 const col = () => db.collection("notifications");
 const prefsCol = () => db.collection("notificationPrefs");
@@ -301,7 +302,9 @@ export async function franchiseEmail(tenantId: string, franchiseId: string): Pro
 
 /** Raise the bell and send the email. Fire-and-forget: a notification must
  *  never fail the thing it is reporting on. */
-export async function notify(input: NotifyInput): Promise<void> {
+export async function notify(input0: NotifyInput): Promise<void> {
+  // OWNER RULE: Learning Hub bells and emails (tutor- and family-facing) never carry the content publisher's name.
+  const input = input0.category === "learning" ? { ...input0, title: scrubText(input0.title) || "Learning Hub", body: scrubText(input0.body) } : input0;
   try {
     const parentEmail = input.to.kind === "parent" ? key(input.to.email) : undefined;
     if (input.to.kind === "parent" && !parentEmail) return;

@@ -34,7 +34,12 @@ async function retryNet<T>(fn: () => Promise<T>): Promise<T> {
     }
   }
 }
-async function send(method: string, p: string, idToken: string, body?: unknown) {
+async function send(method: string, p: string, idToken: string, body?: unknown): Promise<{ status: number; body: Body }> {
+  // Saving a board that already exists must say which copy it started from (baseUpdatedAt), else the server answers 409 board_stale: fetch the current copy's stamp first.
+  if (method === "PUT" && /\/lessons\/[^/]+\/board(\?|$)/.test(p) && body && typeof body === "object" && !("baseUpdatedAt" in body)) {
+    const cur = await send("GET", p, idToken);
+    if (cur.status === 200 && (cur.body as { updatedAt?: string | null }).updatedAt) body = { ...body, baseUpdatedAt: (cur.body as { updatedAt: string }).updatedAt };
+  }
   const res = await retryNet(() => fetch(`${API_URL}${p}`, { method, headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }));
   const text = await res.text();
   let json: unknown = {};
