@@ -1,9 +1,12 @@
+import { planGrantFields } from "../lib/childRetention";
 import { Router, json } from "express";
 import { FieldValue } from "firebase-admin/firestore";
 import { z } from "zod";
 import { db } from "../firebase";
 import { contentDisposition } from "../lib/contentDisposition";
 import { franchiseFamilyEmails, isFranchise } from "../lib/franchiseScope";
+import { childVisibleTo } from "../lib/childAccess";
+import { staffSiteScope } from "../lib/siteScope";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Parent document storage — today, SEND/EHCP plans.
@@ -98,6 +101,13 @@ childFiles.put("/:id/chunks/:index", json({ limit: "1mb" }), async (req, res) =>
     res.status(404).json({ error: "File not found" });
     return;
   }
+  // A finished file is final. Overwriting a chunk after /done used to change what a provider who had been granted the plan then read, with no
+  // new grant and nothing for the parent to re-confirm (health run H45). A changed plan is a NEW upload; a new file carries no grant until
+  // the parent books again.
+  if (found.data.complete) {
+    res.status(409).json({ error: "This file is already complete and can't be changed. Upload the new version as a new file.", code: "file_complete" });
+    return;
+  }
   const index = Number(req.params.index);
   if (!Number.isInteger(index) || index < 0 || index >= found.data.total) {
     res.status(400).json({ error: "Chunk index out of range" });
@@ -147,6 +157,17 @@ childFiles.get("/:id", async (req, res) => {
   if (staff && !mine && req.auth && isFranchise(req.auth)) {
     const owner = String((await db.collection("users").doc(data.ownerUid).get()).get("email") ?? "").toLowerCase();
     staff = !!owner && (await franchiseFamilyEmails(tenant!, req.auth.franchiseId)).has(owner);
+  }
+  // A member of staff at certain sites reads only the plans of children booked at those sites (health run H42). The role matrix is enforced
+  // before this route (lib/accessMap CAP_API / FAMILY_READ_API: "/api/my/files").
+  if (staff && !mine && req.auth?.role === "staff") {
+    const site = await staffSiteScope(req.auth);
+    if (site) {
+      const kids = await db.collection("children").where("sendPlanId", "==", req.params.id).get();
+      let visible = false;
+      for (const k of kids.docs) if (await childVisibleTo(req.auth, k.id)) { visible = true; break; }
+      staff = visible;
+    }
   }
   if (!mine && !staff) {
     // 404 rather than 403: whether a plan exists is itself worth not saying.
@@ -217,10 +238,13 @@ export async function readChildFile(
 export async function grantPlanAccess(fileIds: string[], tenantId: string) {
   await Promise.all(
     [...new Set(fileIds.filter(Boolean))].map((id) =>
-      filesCol
-        .doc(id)
-        .update({ tenantIds: FieldValue.arrayUnion(tenantId) })
-        .catch(() => {}),
+      db.runTransaction(async (tx) => {
+        const ref = filesCol.doc(id);
+        const snap = await tx.get(ref);
+        if (!snap.exists) return;
+        // A new grant must never push out the review a provider ALREADY has coming (lib/childRetention.ts): keep the earliest date.
+        tx.update(ref, { tenantIds: FieldValue.arrayUnion(tenantId), ...planGrantFields(tenantId, snap.get("accessReviewDue") as string | undefined) });
+      }).catch(() => {}),
     ),
   );
 }

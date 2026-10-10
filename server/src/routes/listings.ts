@@ -11,7 +11,7 @@ import { videoModeDefault } from "../lib/onlineRules";
 import { DEFAULT_POLICY, policyById, policyWording, type NamedPolicy } from "../../../lib/cancellation";
 import { staffListingView } from "../lib/rosterRules";
 import { canWrite } from "../middleware/role";
-import { isFranchise, visibleToFranchise } from "../lib/franchiseScope";
+import { franchiseExists, isFranchise, visibleToFranchise } from "../lib/franchiseScope";
 import { blockSummary, type BlockDoc } from "../lib/blockDomain";
 import { desiredRuns, syncListingBlocks, bookedDatesDropped } from "../lib/listingRuns";
 import { resolveBundlePricing, type BundleDoc, type PassDoc, type PeriodDoc } from "../lib/bundlePricing";
@@ -657,7 +657,17 @@ listings.put("/:id", async (req, res) => {
   // franchise (or back to "own" with null). A franchise can never change ownership.
   if ((req.auth!.role === "company" || req.auth!.role === "platform") && "franchiseId" in (req.body as Record<string, unknown>)) {
     const fid = (req.body as { franchiseId?: string | null }).franchiseId;
+    // null / "" = back to head office; anything else must be a real franchise id string (a number, object or blank text used to move the listing to head office silently).
+    if (fid !== null && fid !== undefined && fid !== "" && (typeof fid !== "string" || !fid.trim() || fid.length > 80)) {
+      res.status(400).json({ error: "franchiseId must be a franchise id, or null for head office" });
+      return;
+    }
     patch.franchiseId = typeof fid === "string" && fid.trim() ? fid.trim() : null;
+    // Only a franchise that exists under THIS head office can own a listing (an unknown id used to be stored: the listing then belonged to nobody).
+    if (patch.franchiseId && !(await franchiseExists(own.snap.data()!.tenantId as string, patch.franchiseId as string))) {
+      res.status(404).json({ error: "Franchise not found" });
+      return;
+    }
   }
   if (data.title ?? data.name) {
     patch.name = data.title ?? data.name;

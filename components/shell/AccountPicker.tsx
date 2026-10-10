@@ -2,11 +2,12 @@
 
 // HQ super-admin: open ANY provider or parent account and see the app exactly as
 // they do (impersonation). Platform-only; each open is audit-logged server-side.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { get as apiGet, post as apiPost, setActAs } from "@/lib/api";
 import { getDefaultView, type PortalKey } from "@/lib/nav/config";
 import { useT } from "@/lib/i18n/provider";
+import { hq } from "@/features/platform/hqText";
 
 interface Account { uid: string; email: string; name: string; role: string; label: string; provider: string; portal: string }
 const ROLE_CHIP: Record<string, { key: string; bg: string; fg: string }> = {
@@ -21,23 +22,30 @@ export function AccountPicker({ onClose }: { onClose: () => void }) {
   const router = useRouter();
   const t = useT();
   const [accounts, setAccounts] = useState<Account[] | null>(null);
+  const [next, setNext] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const [reason, setReason] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
+  // The server searches and pages (50 at a time) and logs each lookup: HQ never receives every account at once.
+  const load = (cursor?: string) =>
+    apiGet<{ accounts: Account[]; nextCursor: string | null }>(`/api/platform/accounts?limit=50&q=${encodeURIComponent(q.trim())}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`)
+      .then((d) => { setAccounts((prev) => (cursor ? [...(prev ?? []), ...(d.accounts ?? [])] : (d.accounts ?? []))); setNext(d.nextCursor ?? null); })
+      .catch((e) => { setErr(e instanceof Error ? e.message : t("p8ops.shCouldntLoadAccounts")); if (!cursor) setAccounts([]); });
   useEffect(() => {
-    apiGet<{ accounts: Account[] }>("/api/platform/accounts").then((d) => setAccounts(d.accounts ?? [])).catch((e) => { setErr(e instanceof Error ? e.message : t("p8ops.shCouldntLoadAccounts")); setAccounts([]); });
-  }, []);
+    const id = setTimeout(() => { void load(); }, 250);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
 
-  const filtered = useMemo(() => {
-    const ql = q.trim().toLowerCase();
-    return (accounts ?? []).filter((a) => !ql || a.label.toLowerCase().includes(ql) || a.email.toLowerCase().includes(ql) || a.provider.toLowerCase().includes(ql) || a.role.includes(ql));
-  }, [accounts, q]);
+  const filtered = accounts ?? [];
 
   async function open(a: Account) {
+    if (reason.trim().length < 5) { setErr(hq("Say why you are opening this account (at least 5 characters). It is kept in the audit log.")); return; }
     setBusy(a.uid); setErr(null);
     try {
-      const r = await apiPost<{ uid: string; role: string; portal: string }>("/api/platform/impersonate", { uid: a.uid });
+      const r = await apiPost<{ uid: string; role: string; portal: string }>("/api/platform/impersonate", { uid: a.uid, reason: reason.trim() });
       setActAs({ uid: a.uid, label: a.label, portal: r.portal, role: r.role });
       onClose();
       router.push(`/${r.portal}/${getDefaultView(r.portal as PortalKey)}`);
@@ -56,6 +64,9 @@ export function AccountPicker({ onClose }: { onClose: () => void }) {
         </div>
         <div className="border-b border-[var(--line)] p-3">
           <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("p8ops.shSearchAccounts")} className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-[13px] outline-none focus:border-[#2f6bd8]" />
+        </div>
+        <div className="border-b border-[var(--line)] p-3">
+          <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} placeholder={hq("Why are you opening this account? (kept in the audit log)")} className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-[13px] outline-none focus:border-[#2f6bd8]" />
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-2">
           {err && <div className="m-2 rounded-lg border border-[#E4E9F5] bg-[#FDE7EF] px-3 py-2 text-[12px] text-[#C81E5E]">{err}</div>}
@@ -76,6 +87,7 @@ export function AccountPicker({ onClose }: { onClose: () => void }) {
                   </button>
                 );
               })}
+          {next && <button type="button" onClick={() => { void load(next); }} className="mx-auto my-2 block rounded-full border border-[var(--line)] px-4 py-1.5 text-[12px] font-bold text-[#2f5fd0] hover:bg-[var(--panel)]">{hq("Show more")}</button>}
         </div>
       </div>
     </div>

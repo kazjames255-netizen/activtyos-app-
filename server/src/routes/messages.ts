@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { refKeys } from "../lib/bookingRef";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
@@ -340,7 +341,7 @@ messages.post("/from-booking", async (req, res) => {
   if (!tenantId) return;
   const parsed = fromBookingSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const bkSnap = await db.collection("bookings").where("tenantId", "==", tenantId).where("ref", "==", parsed.data.ref).limit(1).get();
+  const bkSnap = await db.collection("bookings").where("tenantId", "==", tenantId).where("ref", "in", refKeys(parsed.data.ref)).limit(1).get();
   if (bkSnap.empty) { res.status(404).json({ error: "Booking not found" }); return; }
   const b = bkSnap.docs[0].data() as BookingLike;
   // A franchise can only message the families booked on ITS OWN listings.
@@ -950,7 +951,7 @@ messages.post("/support", async (req, res) => {
   const m: Msg = { id: randomUUID(), from: "them", body: parsed.data.body, at, topic: parsed.data.topic ?? "general", subject: parsed.data.subject ?? "" };
   const isFirst = !(t.data.messages?.length);
   await t.ref.update({
-    messages: [...(t.data.messages ?? []), m],
+    messages: FieldValue.arrayUnion(m), // appended, so a reply HQ writes at the same moment is not overwritten
     status: "open",
     unreadByHq: true, // surfaces in the HQ inbox + notification bell
     updatedAt: at,

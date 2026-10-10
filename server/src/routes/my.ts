@@ -1,4 +1,5 @@
 import { mergeGroupKey } from "../lib/bookingMergeKey";
+import { refKeys } from "../lib/bookingRef";
 import { isFranchise } from "../lib/franchiseScope";
 import { stopOpenPayments } from "../lib/checkoutIntent";
 import { ageCapGroup } from "../lib/childAge";
@@ -91,6 +92,7 @@ import { DEFAULT_POLICY, accumulatePendingRelease, effectiveRefundDate, noRefund
 import { bookingDocId } from "./bookings";
 import { cleanupAfterCancel } from "../lib/cancelCleanup";
 import { grantPlanAccess } from "./childFiles";
+import { erasureDueFor } from "../lib/childRetention";
 import { passCap, passClosedBy, passDaysProblem, passFullDay, bookingHasPass } from "../lib/passBooking";
 import { ukToday, ukTodayPlus, isRealDay, isBlankOrRealDay } from "../lib/ukDate";
 import { childSchema } from "../lib/childSchema";
@@ -107,6 +109,7 @@ import { autoEnrolFromBooking } from "../lib/hubAutoEnrol";
 import { BRAND } from "../lib/brand";
 import { consentObtained as tripConsentObtained, reopenedSignoff } from "../lib/tripRules";
 import { notifySignoffReopened } from "./trips";
+import { withEmail, normEmail } from "../lib/emailCase";
 
 // Parent ("my") endpoints. Identity comes exclusively from the verified
 // Firebase token — the booker email is stamped server-side and every read
@@ -298,7 +301,7 @@ my.get("/bookings", async (req, res) => {
     res.status(400).json({ error: "Account has no email address" });
     return;
   }
-  const snap = await bookingsCol.where("email", "==", email).get();
+  const snap = await withEmail(bookingsCol, "email", email);
   const list = snap.docs.map((d) => fromDoc(d.data() as BookingDoc));
   list.sort((a, b) => (a.ref < b.ref ? 1 : -1));
   // A childcare booking carries its derived childcare block, so the family can
@@ -339,11 +342,20 @@ my.get("/bookings", async (req, res) => {
 
 // GET /api/my/bank-details?ref=AMI-1 — where to send a bank transfer for one of MY unpaid bookings.
 // Only the booker (matched on email) gets it, and only while money is still owed by bank transfer.
+/** Bookings with this reference (any common spelling of it) belonging to this email (any common spelling of it). ONE `in` on the ref, the email matched in memory (two `in` clauses could exceed Firestore's 30-disjunction limit). */
+async function bookingByRefForEmail(ref: string, email: string, limit?: number): Promise<{ empty: boolean; docs: FirebaseFirestore.QueryDocumentSnapshot[] }> {
+  const want = normEmail(email);
+  const snap = await bookingsCol.where("ref", "in", refKeys(ref)).get();
+  let docs = snap.docs.filter((d) => normEmail(d.get("email")) === want);
+  if (limit) docs = docs.slice(0, limit);
+  return { empty: docs.length === 0, docs };
+}
+
 my.get("/bank-details", async (req, res) => {
   const email = tokenEmail(req);
   const ref = typeof req.query.ref === "string" ? req.query.ref : "";
   if (!email || !ref) { res.json({ bank: null }); return; }
-  const snap = await bookingsCol.where("email", "==", email).where("ref", "==", ref).limit(1).get();
+  const snap = await bookingByRefForEmail(ref, email, 1);
   if (snap.empty) { res.json({ bank: null }); return; }
   const b = fromDoc(snap.docs[0].data() as BookingDoc);
   const owed = Math.max(0, (b.amount ?? 0) - (b.amountPaid ?? 0));
@@ -360,7 +372,7 @@ my.get("/attendance", async (req, res) => {
   const email = tokenEmail(req);
   if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
   const date = typeof req.query.date === "string" && req.query.date ? req.query.date : ukToday();
-  const snap = await bookingsCol.where("email", "==", email).get();
+  const snap = await withEmail(bookingsCol, "email", email);
   const bookings = snap.docs.map((d) => fromDoc(d.data() as BookingDoc));
   const rowsByBooking = bookings.map((b) => ({ b, rows: registerRows(b, date).filter((r) => r.expected) })).filter((x) => x.rows.length);
   if (!rowsByBooking.length) { res.json([]); return; }
@@ -396,7 +408,7 @@ my.get("/attendance", async (req, res) => {
 my.get("/meal-days", async (req, res) => {
   const email = tokenEmail(req);
   if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
-  const snap = await bookingsCol.where("email", "==", email).get();
+  const snap = await withEmail(bookingsCol, "email", email);
   const bookings = snap.docs
     .map((d) => fromDoc(d.data() as BookingDoc))
     // Only bookings that hold a place: a waitlisted / declined / merely-offered one has no day to feed a child on.
@@ -683,7 +695,7 @@ my.get("/coupons", async (req, res) => {
   const today = ukToday();
 
   // Providers the parent has booked with.
-  const bk = await bookingsCol.where("email", "==", email).get();
+  const bk = await withEmail(bookingsCol, "email", email);
   const tenantIds = [...new Set(bk.docs.map((d) => (d.data() as { tenantId?: string }).tenantId).filter(Boolean) as string[])].slice(0, 30);
 
   // Public codes for those providers + any code reserved for this parent.
@@ -822,6 +834,8 @@ my.post("/bookings", async (req, res) => {
       const c = cust.data() as { name?: string; email?: string; phone?: string };
       target = { name: target.name || c.name || "", email: target.email || c.email || "", phone: target.phone || c.phone || "" };
     }
+    // Stored lower-case, always: a booking written as "Pa@Example.com" is invisible to equality lookups on the family's own address.
+    target.email = normEmail(target.email);
     if (!target.email) {
       res.status(400).json({ error: "The family needs an email address" });
       return;
@@ -1303,8 +1317,11 @@ my.post("/bookings", async (req, res) => {
   // child who already holds a place on that exact day of that block. A
   // different TIMING on the same day (a morning and an afternoon session) is a
   // different session, so it's allowed.
+  // The "already holds a place" check runs INSIDE the booking transaction (dupCheck below), not here: two identical posts sent at the
+  // same instant (a double-click) both passed a check made outside it. The transaction also writes the tenant's booking counter, so
+  // concurrent bookings for one provider are serialised and the second one re-reads the first one's booking.
+  const want: { name: string; childId?: string; blockId: string; day: string; timing: string }[] = [];
   {
-    const want: { name: string; childId?: string; blockId: string; day: string; timing: string }[] = [];
     const seen = new Set<string>();
     for (const p of priced) {
       const rc = resolveChild(p.item);
@@ -1318,8 +1335,10 @@ my.post("/bookings", async (req, res) => {
           want.push({ name: rc.name, childId: rc.childId, blockId: seg.blockId, day: d, timing });
         }
     }
+  }
+  const dupBlockIds = [...new Set(want.map((w) => w.blockId))];
+  const dupCheck = (onBlocks: FirebaseFirestore.QuerySnapshot[]) => {
     const famEmail = familyEmail.trim().toLowerCase();
-    const onBlocks = await Promise.all([...new Set(want.map((w) => w.blockId))].map((id) => bookingsCol.where("blockId", "==", id).get()));
     for (const snap of onBlocks)
       for (const d of snap.docs) {
         const b = fromDoc(d.data() as BookingDoc);
@@ -1334,10 +1353,10 @@ my.post("/bookings", async (req, res) => {
           // place and double-book them. (Queued bookings aren't "expected" on the register, so they are matched here by their days.)
           const queuedOn = isQueuedOn(b.status, b.days, w.day);
           const hit = registerRows(b, w.day).some((r) => (r.expected || queuedOn) && (w.childId && r.childId ? r.childId === w.childId : sameFamily && r.name.trim().toLowerCase() === w.name.trim().toLowerCase()));
-          if (hit) { res.status(409).json({ error: queuedOn ? `${w.name || "This child"} is already on the waiting list for ${prettyDay(w.day)} (booking ${b.ref}).` : `${w.name || "This child"} already has a place on ${prettyDay(w.day)} (booking ${b.ref}).` }); return; }
+          if (hit) throw new HttpError(409, queuedOn ? `${w.name || "This child"} is already on the waiting list for ${prettyDay(w.day)} (booking ${b.ref}).` : `${w.name || "This child"} already has a place on ${prettyDay(w.day)} (booking ${b.ref}).`);
         }
       }
-  }
+  };
 
   // (A freelancer "minimum gap between sessions" clash check used to run here. Removed: a provider can run several sessions and bookings at once; it must never block a booking.)
 
@@ -1512,6 +1531,8 @@ my.post("/bookings", async (req, res) => {
       const redemption = codesToConsume.length ? await redeemCodesInTx(tx, listing.tenantId, codesToConsume, familyEmail) : null;
       if (redemption && !redemption.ok) throw new HttpError(409, redemption.reason);
       if (!tenantSnap.exists) throw new HttpError(400, "Listing's provider no longer exists");
+      // One child, one place per session: read under the transaction (see dupCheck) so parallel identical posts yield one booking.
+      dupCheck(await Promise.all(dupBlockIds.map((id) => tx.get(bookingsCol.where("blockId", "==", id)))));
       const blockById = new Map<string, BlockDoc>();
       for (const snap of blockSnaps) {
         if (!snap.exists) throw new HttpError(400, "Unknown block");
@@ -2242,7 +2263,7 @@ const amendSchema = z.object({
  */
 async function myBookingByRef(req: import("express").Request<{ ref?: string }>, email: string, ref: string): Promise<{ snap: FirebaseFirestore.QueryDocumentSnapshot } | { status: number; error: string }> {
   const tenantId = String((req.query.tenantId as string | undefined) ?? (req.body as { tenantId?: string } | undefined)?.tenantId ?? "").trim();
-  const matches = await bookingsCol.where("email", "==", email).where("ref", "==", ref).get();
+  const matches = await bookingByRefForEmail(ref, email);
   let docs = matches.docs;
   if (tenantId) docs = docs.filter((d) => d.get("tenantId") === tenantId);
   if (!docs.length) return { status: 404, error: "Booking not found" };
@@ -2451,7 +2472,7 @@ async function ownOfferedBooking(email: string, ref: string, req?: import("expre
   if (req) { const found = await myBookingByRef(req, email, ref); return "error" in found ? null : found.snap.ref; }
   const matches = await bookingsCol
     .where("email", "==", email)
-    .where("ref", "==", ref)
+    .where("ref", "in", refKeys(ref))
     .limit(1)
     .get();
   return matches.empty ? null : matches.docs[0].ref;
@@ -3352,6 +3373,8 @@ my.delete("/children/:id", async (req, res) => {
     res.status(404).json({ error: "Child not found" });
     return;
   }
+  // Deleting twice (a retry, a double tap) changes nothing: the first deletion's dates stand, so the 30 days never restart.
+  if (snap.get("archived") === true) { res.json({ ok: true, archived: true }); return; }
   const today = ukToday();
   const email = (req.user?.email ?? "").trim();
   const [byId, ...byEmail] = await Promise.all([
@@ -3379,7 +3402,9 @@ my.delete("/children/:id", async (req, res) => {
   }
   // Learning Hub: enrolments, homework, flashcard progress, quiz attempts, mastery and lesson attendance go with the child (lib/hubPrivacy.ts).
   await eraseChildLearning(snap.id);
-  await snap.ref.set({ archived: true, archivedAt: new Date().toISOString() }, { merge: true });
+  // Photos and moments of a deleted child go within 30 days (lib/childRetention.ts, daily sweep); safeguarding, accident and register records stay.
+  const archivedAt = new Date().toISOString();
+  await snap.ref.set({ archived: true, archivedAt, erasureDueAt: erasureDueFor(archivedAt) }, { merge: true });
   res.json({ ok: true, archived: true });
 });
 

@@ -2,7 +2,9 @@
 
 import { dateLocale as dl, uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
-import { get as apiGet } from "@/lib/api";
+import { get as apiGet, post as apiPost, setActAs } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import { getDefaultView, type PortalKey } from "@/lib/nav/config";
 import { useRealtime } from "@/lib/realtime";
 import { PlatformPricingApp } from "./PlatformPricingApp";
 import { useT } from "@/lib/i18n/provider";
@@ -139,7 +141,7 @@ export function ProvidersApp() {
   });
   const pool = showTest ? enriched : enriched.filter((e) => !isTestAccount(e.f));
   const hidden = enriched.length - pool.length;
-  const summary = tiles(pool.map((e) => e.f));
+  const summary = tiles(pool.map((e) => e.f), now);
   const inKind = pool.filter((e) => matchesSearch(e.f, search) && (filter === "all" || kindOf(e.p) === filter));
   const tabCount = (t: StatusTab) => inKind.filter((e) => classify(e.f, now).has(t)).length;
   const shown = sortProviders(inKind.filter((e) => classify(e.f, now).has(stTab)).map((e) => e.f), sort, now);
@@ -262,8 +264,9 @@ export function ProvidersApp() {
                       <Row k={hq("Renews / cancels")} v={fmt((sub.cancelAt as string) ?? (sub.currentPeriodEnd as string))} />
                       <Row k={hq("Staff")} v={`${p.staffCount}${sub.staffLimit != null ? ` / ${sub.staffLimit}` : ""}`} />
                       <Row k={hq("Started")} v={sub.since ? fmt(sub.since as string) : "—"} />
-                      {p.bank && <Row k={hq("Payout bank")} v={`${p.bank.bankName ?? ""} ${p.bank.sortCode ?? ""} ${p.bank.accountNumber ? `••••${String(p.bank.accountNumber).slice(-4)}` : ""}`.trim() || "—"} />}
+                      {p.bank && <BankRow providerId={p.id} bank={p.bank} />}
                       <Row k={hq("Tenant id")} v={p.id} />
+                      {p.ownerEmail && <OpenAs email={p.ownerEmail} />}
                     </Section>
                   </div>
                 </div>
@@ -281,6 +284,60 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     <div>
       <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">{title}</div>
       <div className="flex flex-col gap-0.5">{children}</div>
+    </div>
+  );
+}
+/** "Open as": open this provider's owner account (found by the owner's exact email, one logged lookup). Asks for the reason, which is kept in the audit log. */
+function OpenAs({ email }: { email: string }) {
+  const router = useRouter();
+  const [err, setErr] = useState<string | null>(null);
+  async function open() {
+    setErr(null);
+    try {
+      const reason = (window.prompt(hq("Why are you opening this account? (kept in the audit log)"), "") ?? "").trim();
+      if (reason.length < 5) { setErr(hq("Say why you are opening this account (at least 5 characters). It is kept in the audit log.")); return; }
+      const found = await apiGet<{ accounts: { uid: string; email: string; label: string }[] }>(`/api/platform/accounts?limit=5&q=${encodeURIComponent(email)}`);
+      const acc = found.accounts.find((a) => a.email.toLowerCase() === email.toLowerCase());
+      if (!acc) { setErr(hq("No account found to open for {who}.", { who: email })); return; }
+      const r = await apiPost<{ uid: string; role: string; portal: string }>("/api/platform/impersonate", { uid: acc.uid, reason });
+      setActAs({ uid: acc.uid, label: acc.label, portal: r.portal, role: r.role });
+      router.push(`/${r.portal}/${getDefaultView(r.portal as PortalKey)}`);
+    } catch (e) { setErr(e instanceof Error ? e.message : hq("Couldn’t open that account")); }
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-3 text-[12.5px]">
+      <span className="w-[128px] shrink-0 text-[var(--ink-3)]">{hq("Open as")}</span>
+      <button type="button" onClick={open} className="rounded-full border border-[#1d3a8f] px-2.5 py-0.5 text-[11px] font-bold text-[#1d3a8f] hover:bg-[#eaf0fc]">{hq("Open as owner")}</button>
+      {err && <span className="text-[11px] font-semibold text-[var(--red)]">{err}</span>}
+    </div>
+  );
+}
+
+/** Payout bank: the list only ever carries the masked numbers. "Reveal" asks the server for the full ones (audited, rate limited) and shows them for 30 seconds. */
+function BankRow({ providerId, bank }: { providerId: string; bank: NonNullable<Provider["bank"]> }) {
+  const [full, setFull] = useState<NonNullable<Provider["bank"]> | null>(null);
+  const [left, setLeft] = useState(0);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    if (!full) return;
+    if (left <= 0) { setFull(null); return; }
+    const id = setTimeout(() => setLeft((x) => x - 1), 1000);
+    return () => clearTimeout(id);
+  }, [full, left]);
+  const b = full ?? bank;
+  async function reveal() {
+    setErr(null);
+    try { const r = await apiPost<{ bank: NonNullable<Provider["bank"]> }>(`/api/platform/providers/${encodeURIComponent(providerId)}/bank-reveal`, {}); setFull(r.bank); setLeft(30); }
+    catch (e) { setErr(e instanceof Error ? e.message : hq("Couldn’t reveal")); }
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-3 text-[12.5px]">
+      <span className="w-[128px] shrink-0 text-[var(--ink-3)]">{hq("Payout bank")}</span>
+      <span className="min-w-0 break-words font-semibold text-[var(--ink)]">{`${b.bankName ?? ""} ${b.sortCode ?? ""} ${b.accountNumber ?? ""}`.trim() || "—"}</span>
+      {full
+        ? <span className="text-[11px] font-bold text-[#b45309]">{hq("Shown for {s}s, this view was logged", { s: left })}</span>
+        : <button type="button" onClick={reveal} className="rounded-full border border-[#1d3a8f] px-2.5 py-0.5 text-[11px] font-bold text-[#1d3a8f] hover:bg-[#eaf0fc]">{hq("Reveal")}</button>}
+      {err && <span className="text-[11px] font-semibold text-[var(--red)]">{err}</span>}
     </div>
   );
 }

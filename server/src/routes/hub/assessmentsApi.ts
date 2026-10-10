@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { seedFromHeadOffice } from "../../lib/franchiseLibrary";
 import { db } from "../../firebase";
 import { forgetSettings } from "../../middleware/access";
 import { pingHub } from "../../lib/hubPing";
@@ -54,7 +55,7 @@ hubAssessmentsApi.put("/config", async (req, res) => {
     // A franchise's library is seeded from head office's on first read (routes/library.ts) — don't pre-empt that with a near-empty doc.
     if (!snap.exists && ctx.franchiseId) {
       const ho = await tx.get(db.collection("libraries").doc(ctx.tenantId));
-      if (ho.exists) data = { ...(ho.data() as Record<string, unknown>), tenantId: ctx.tenantId, franchiseId: ctx.franchiseId };
+      if (ho.exists) data = { ...seedFromHeadOffice(ho.data()), tenantId: ctx.tenantId, franchiseId: ctx.franchiseId }; // franchise-safe fields only (F12), never the whole head-office doc
     }
     const settings = { ...((data.settings as Record<string, unknown> | undefined) ?? {}) };
     const hub = { ...((settings.hub as Partial<HubSettings> | undefined) ?? {}), ...v.patch };

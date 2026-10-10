@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { db } from "../firebase";
 import { emailDemoBooked, emailQuestionAnswered, emailCallNote } from "../lib/emails";
+import { platformAudit } from "../lib/platformAudit";
 
 // Sales CRM (HQ pipeline) — mounted at /api/platform/leads. Leads live in a
 // top-level `leads` collection with activities EMBEDDED as an array on the
@@ -85,7 +86,7 @@ platformLeads.get("/:id", async (req, res) => {
     return;
   }
   const snap = await col.doc(req.params.id).get();
-  if (!snap.exists) { res.status(404).json({ error: "Lead not found" }); return; }
+  if (!snap.exists || snap.get("deletedAt")) { res.status(404).json({ error: "Lead not found" }); return; }
   res.json({ id: snap.id, ...snap.data() });
 });
 
@@ -114,7 +115,7 @@ platformLeads.put("/:id", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const ref = col.doc(req.params.id);
   const snap = await ref.get();
-  if (!snap.exists) { res.status(404).json({ error: "Lead not found" }); return; }
+  if (!snap.exists || snap.get("deletedAt")) { res.status(404).json({ error: "Lead not found" }); return; }
   const now = new Date().toISOString();
   // Stamp stage MOVES, not just the edit. `updatedAt` bumps on any change, so
   // without this "how many reached Demo this week" can only ever be guessed at
@@ -153,7 +154,7 @@ platformLeads.put("/:id/answer", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const ref = col.doc(req.params.id);
   const snap = await ref.get();
-  if (!snap.exists) { res.status(404).json({ error: "Lead not found" }); return; }
+  if (!snap.exists || snap.get("deletedAt")) { res.status(404).json({ error: "Lead not found" }); return; }
   const lead = snap.data() as { email?: string; name?: string; contactName?: string; business?: string; message?: string; activities?: unknown[] };
   const now = new Date().toISOString();
   // Appended as its own thread message (direction "out"), same as an inbound
@@ -173,15 +174,19 @@ platformLeads.put("/:id/answer", async (req, res) => {
   res.json({ id: after.id, ...after.data() });
 });
 
-// DELETE /:id.
+// DELETE /:id - a SOFT delete. The lead leaves the board, the lists and the bell (inPipeline off, excluded), but the record stays with who deleted it
+// and when, and an audit row says so: a lead (a person's name, email, phone and the notes about them) must not vanish without a trace.
 platformLeads.delete("/:id", async (req, res) => {
   if (req.auth!.role !== "platform") {
     res.status(403).json({ error: "Requires the platform role" });
     return;
   }
   const ref = col.doc(req.params.id);
-  if (!(await ref.get()).exists) { res.status(404).json({ error: "Lead not found" }); return; }
-  await ref.delete();
+  const snap = await ref.get();
+  if (!snap.exists || snap.get("deletedAt")) { res.status(404).json({ error: "Lead not found" }); return; }
+  const now = new Date().toISOString();
+  await platformAudit(req, "lead_deleted", { leadId: req.params.id, business: (snap.get("business") as string | undefined) ?? null, stage: (snap.get("stage") as string | undefined) ?? null });
+  await ref.set({ deletedAt: now, deletedBy: req.user?.email ?? req.user?.uid ?? "unknown", deletedByUid: req.user?.uid ?? null, inPipeline: false, excluded: true, updatedAt: now }, { merge: true });
   res.json({ ok: true });
 });
 
@@ -197,7 +202,7 @@ platformLeads.post("/:id/activities", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const ref = col.doc(req.params.id);
   const snap = await ref.get();
-  if (!snap.exists) { res.status(404).json({ error: "Lead not found" }); return; }
+  if (!snap.exists || snap.get("deletedAt")) { res.status(404).json({ error: "Lead not found" }); return; }
   const now = new Date().toISOString();
   const shared = parsed.data.type === "note" && parsed.data.shared === true;
   const activity = {

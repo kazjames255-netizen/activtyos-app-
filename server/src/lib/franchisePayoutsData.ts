@@ -83,10 +83,26 @@ export async function reassignBlockedBySettlement(tenantId: string, listingId: s
   for (const d of (await db.collection("bookings").where("tenantId", "==", tenantId).where("listingId", "==", listingId).get()).docs) docs.set(d.id, d);
   for (let i = 0; i < blockIds.length; i += 30)
     for (const d of (await db.collection("bookings").where("tenantId", "==", tenantId).where("blockId", "in", blockIds.slice(i, i + 30)).get()).docs) docs.set(d.id, d);
+  // Dated the way the payouts statement dates it: each payment by the day it was RECEIVED (payments ledger), each refund by the day it was given.
+  // (A booking made in an open month but paid in a settled one, or the reverse, was judged on its creation day before.)
+  const refs = new Set([...docs.values()].map((d) => String(d.get("ref") ?? "")).filter(Boolean));
+  const paysByRef = new Map<string, PayEvent[]>();
+  // Only THIS listing's payments are read (refs array-contains-any, 30 at a time; the single-field index, tenant checked in memory), never the tenant's whole ledger.
+  const refList = [...refs], seen = new Set<string>();
+  for (let i = 0; i < refList.length; i += 30) {
+    for (const d of (await db.collection("payments").where("refs", "array-contains-any", refList.slice(i, i + 30)).get()).docs) {
+      if (seen.has(d.id)) continue;
+      seen.add(d.id);
+      const p = d.data() as { tenantId?: string; refs?: string[]; amount?: number; type?: string; status?: string; paidAt?: string; createdAt?: string };
+      if (p.tenantId !== tenantId || !isMoneyIn(p) || !p.refs?.length || !(Number(p.amount) > 0)) continue;
+      const day = ukDay(p.paidAt ?? p.createdAt);
+      for (const r of p.refs) if (refs.has(r)) (paysByRef.get(r) ?? paysByRef.set(r, []).get(r)!).push({ day, amount: Number(p.amount) / p.refs.length });
+    }
+  }
   const hit = [...docs.values()].some((d) => {
     const b = fromDoc(d.data() as BookingDoc);
-    const day = ukDay(b.createdAt) ?? (d.updateTime ? ukDay(d.updateTime.toDate().toISOString()) : null);
-    return eventRows({ b, fid: oldFranchiseId, fallbackDay: day }).length > 0 && (!day || day <= lastTo);
+    const changed = d.updateTime ? ukDay(d.updateTime.toDate().toISOString()) : null;
+    return eventRows({ b, fid: oldFranchiseId, pays: paysByRef.get(b.ref), fallbackDay: ukDay(b.createdAt) ?? changed }).some((e) => (e.card !== 0 || e.direct !== 0) && (!e.day || e.day <= lastTo));
   });
   return hit ? `This listing has bookings in a payout period that is already settled (up to ${lastTo}). Moving it to another franchise would change a settled payout, so it cannot be moved.` : null;
 }

@@ -102,7 +102,8 @@ invites.post("/", async (req, res) => {
   // Plan enforcement (decision #4): a banded plan hard-caps team size — over
   // it, block with an upgrade prompt. The metered 76+ band has no cap (extra
   // heads bill +£1/staff on acceptance).
-  const cap = await staffHeadroom(auth.tenantId);
+  // A FRANCHISE invite takes no staff seat (a franchise login is billed as a location, counted separately): only staff invites meet the cap.
+  const cap = invitedRole === "staff" ? await staffHeadroom(auth.tenantId) : { ok: true as const, reason: undefined };
   if (!cap.ok) {
     res.status(403).json({ error: cap.reason });
     return;

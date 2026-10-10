@@ -150,6 +150,7 @@ export const CAP_API: { prefix: string; area: string }[] = [
   { prefix: "/api/calendar-events", area: "calendar" },
   { prefix: "/api/tasks", area: "tasks" },
   { prefix: "/api/children", area: "medical" },
+  { prefix: "/api/my/files", area: "medical" }, // a child's SEND / EHCP plan file (staff read it once the family has booked with them)
   { prefix: "/api/incidents", area: "incidents" },
   { prefix: "/api/medications", area: "medication" },
   { prefix: "/api/moments", area: "moments" },
@@ -216,6 +217,7 @@ const under = (path: string, prefix: string) => path === prefix || path.startsWi
  *  (view/edit). Enforced once, in middleware/access.ts (staffMayReadFamilies). GET only; everything else is the area's own rule. */
 export const FAMILY_READ_API: { re: RegExp; area: string; allMethods?: boolean }[] = [
   { re: /^\/api\/children(\/.*)?$/, area: "medical" },
+  { re: /^\/api\/my\/files(\/.*)?$/, area: "medical" },
   { re: /^\/api\/moments(\/.*)?$/, area: "moments", allMethods: true },
   { re: /^\/api\/incidents(\/.*)?$/, area: "incidents" }, // reads only: LOGGING a concern/accident stays open to all staff (NEVER_REFUSED)
   { re: /^\/api\/medications(\/.*)?$/, area: "medication", allMethods: true },

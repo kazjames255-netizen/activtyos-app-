@@ -4,6 +4,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { CATALOGUE } from "../../../lib/testTracker/catalogue";
 
 export const testTracker = Router();
 
@@ -19,6 +20,8 @@ const STATUS = z.enum(["todo", "pass", "fail", "blocked", "fixed", "na"]);
 const ACCOUNTS = ["company", "freelancer", "franchise", "head-office", "staff", "parent", "platform"] as const;
 const col = () => db.collection("testTrackerResults");
 const ID = /^[A-Z]{2,3}-\d{3,4}$/;
+/** Only a check that really exists in the catalogue can be given a result (a typo like ZZZ-9999 would sit in the tracker for ever). */
+const KNOWN_IDS = new Set(CATALOGUE.map((c) => c.id));
 
 // GET /api/platform/test-tracker — every recorded result
 testTracker.get("/", async (_req, res) => {
@@ -39,6 +42,10 @@ testTracker.put("/:checkId", async (req, res) => {
   const checkId = String(req.params.checkId);
   if (!ID.test(checkId)) {
     res.status(400).json({ error: "Bad check id" });
+    return;
+  }
+  if (!KNOWN_IDS.has(checkId)) {
+    res.status(404).json({ error: "No such check in the catalogue", code: "unknown_check" });
     return;
   }
   const parsed = putSchema.safeParse(req.body);

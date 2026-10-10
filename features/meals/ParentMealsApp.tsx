@@ -197,12 +197,13 @@ export function ParentMealsApp() {
       const g = groups.get(key) ?? { tenantId: l.tenantId, listingId: l.listingId, date: l.date, child: l.child, items: new Map<string, number>(), keys: [] };
       g.items.set(l.dishId, (g.items.get(l.dishId) ?? 0) + 1); g.keys.push(lineKey(l)); groups.set(key, g);
     }
-    const doneKeys: string[] = []; const createdIds: string[] = []; let failMsg: string | null = null;
+    const doneKeys: string[] = []; const createdIds: string[] = []; let failMsg: string | null = null; const allergyWarnings: string[] = [];
     for (const g of groups.values()) {
-      try { const o = await apiPost<{ id: string }>("/api/meal-orders", { tenantId: g.tenantId, listingId: g.listingId, date: g.date, childName: g.child, items: [...g.items].map(([menuItemId, qty]) => ({ menuItemId, qty })) }); doneKeys.push(...g.keys); if (o?.id) createdIds.push(o.id); }
+      try { const o = await apiPost<{ id: string; warnings?: string[] }>("/api/meal-orders", { tenantId: g.tenantId, listingId: g.listingId, date: g.date, childName: g.child, items: [...g.items].map(([menuItemId, qty]) => ({ menuItemId, qty })) }); doneKeys.push(...g.keys); if (o?.id) createdIds.push(o.id); if (o?.warnings?.length) allergyWarnings.push(...o.warnings); }
       catch (err) { failMsg = err instanceof Error ? err.message : t("meals.someMealsFailed"); break; }
     }
     if (doneKeys.length) { const s = new Set(doneKeys); setBasket((prev) => prev.filter((l) => !s.has(lineKey(l)))); }
+    if (allergyWarnings.length) setToast(allergyWarnings.join(" "));
     if (failMsg) setPayErr(`${failMsg} ${doneKeys.length ? t("meals.restInBasket") : ""}`.trim());
     setBusy(false);
     // Take card payment for the meals just created (real Stripe, same flow as

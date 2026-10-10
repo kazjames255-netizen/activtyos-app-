@@ -13,6 +13,7 @@ import { siteChildIds, siteRecordFilter, staffSiteScope } from "../lib/siteScope
 import { customerAreaOn } from "../lib/customerArea";
 import { whereInChunks } from "../lib/firestoreIn";
 import { childVisibleTo } from "../lib/childAccess";
+import { parentMomentView } from "../lib/parentViews";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Moments (Pupils) — the photos a provider shares of the day, and the feed a
@@ -57,7 +58,8 @@ async function resolveChildren(
   const names: Record<string, string> = {};
   for (const d of docs) {
     if (!d.exists) return { ok: false, blocked: "a child who no longer exists" };
-    const c = d.data() as { name?: string; photoConsent?: boolean };
+    const c = d.data() as { name?: string; photoConsent?: boolean; archived?: boolean };
+    if (c.archived === true) return { ok: false, blocked: "a child whose family has deleted them" }; // their photos and moments are being erased: never tag them again
     if (requireConsent && c.photoConsent !== true) return { ok: false, blocked: c.name ?? "a child" };
     names[d.id] = c.name ?? "";
   }
@@ -140,7 +142,7 @@ moments.post("/", async (req, res) => {
   }
   const consent = await resolveChildren(parsed.data.childIds, parsed.data.photoType !== "work");
   if (!consent.ok) {
-    res.status(409).json({ error: `${consent.blocked} can't be tagged in a child photo — no photo consent on file. Use “their work” instead.` });
+    res.status(409).json({ error: consent.blocked.startsWith("a child whose") ? `${consent.blocked} can't be tagged.` : `${consent.blocked} can't be tagged in a child photo — no photo consent on file. Use “their work” instead.` });
     return;
   }
   const doc = {
@@ -198,7 +200,7 @@ moments.post("/", async (req, res) => {
  *  Re-check on every read: any child-photo moment tagging a child whose photo
  *  consent is now off is hidden from parents, and flagged for the provider so
  *  they can take it down. Photo links are re-signed on the way out. */
-async function forViewing<T extends Record<string, unknown> & { childIds?: string[]; photoType?: unknown; photoUrl?: unknown }>(
+export async function forViewing<T extends Record<string, unknown> & { childIds?: string[]; photoType?: unknown; photoUrl?: unknown }>(
   list: T[],
   viewer: "parent" | "team",
 ): Promise<T[]> {
@@ -236,17 +238,7 @@ moments.get("/", async (req, res) => {
       .sort((a, b) => (`${(b as { createdAt?: string }).createdAt}` < `${(a as { createdAt?: string }).createdAt}` ? -1 : 1));
     // A parent sees who shared it by NAME — never the staff member's sign-in email (postedBy is that, and postedByName
     // falls back to it when the account has no display name).
-    const forParent = (await forViewing(list as (Record<string, unknown> & { childIds?: string[] })[], "parent")).map((m) => {
-      const { postedBy: _pb, ...rest } = m as Record<string, unknown> & { postedBy?: unknown; postedByName?: unknown };
-      const nm = typeof rest.postedByName === "string" ? rest.postedByName : "";
-      // A group shot tags other families' children too: this parent sees only THEIR OWN child's name/id, and only the
-      // team's comments plus their own — never another family's name or reply.
-      const tagged = Array.isArray(rest.childIds) ? (rest.childIds as string[]) : [];
-      const names = Array.isArray(rest.childNames) ? (rest.childNames as string[]) : [];
-      const mineIdx = tagged.map((id, i) => (ids.includes(id) ? i : -1)).filter((i) => i >= 0);
-      const comments = (Array.isArray(rest.comments) ? (rest.comments as { role?: string; by?: string }[]) : []).filter((c) => c.role !== "parent" || c.by === req.user!.uid);
-      return { ...rest, postedByName: nm.includes("@") ? "The team" : nm, childIds: mineIdx.map((i) => tagged[i]), childNames: mineIdx.map((i) => names[i] ?? ""), comments };
-    });
+    const forParent = (await forViewing(list as (Record<string, unknown> & { childIds?: string[] })[], "parent")).map((m) => parentMomentView(m, ids, req.user!.uid));
     res.json(forParent);
     return;
   }
@@ -372,7 +364,7 @@ moments.put("/:id", async (req, res) => {
     const requireConsent = (parsed.data.photoType ?? (own.snap.data()!.photoType as string | undefined)) !== "work";
     const consent = await resolveChildren(parsed.data.childIds, requireConsent);
     if (!consent.ok) {
-      res.status(409).json({ error: `${consent.blocked} can't be tagged in a child photo — no photo consent on file.` });
+      res.status(409).json({ error: consent.blocked.startsWith("a child whose") ? `${consent.blocked} can't be tagged.` : `${consent.blocked} can't be tagged in a child photo — no photo consent on file.` });
       return;
     }
     patch.childNames = parsed.data.childIds.map((id: string) => consent.names[id] ?? "");

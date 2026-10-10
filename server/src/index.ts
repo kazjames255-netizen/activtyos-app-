@@ -10,7 +10,7 @@ import express from "express";
 import swaggerUi from "swagger-ui-express";
 import { parse as parseYaml } from "yaml";
 import { optionalAuth, requireAuth } from "./middleware/auth";
-import { attachRole, attachRoleOptional } from "./middleware/role";
+import { attachRole, attachRoleOptional, refuseOrphanFranchise } from "./middleware/role";
 import { blockBundles, passes, periods } from "./routes/blockBundles";
 import { blocks } from "./routes/blocks";
 import { bookings } from "./routes/bookings";
@@ -114,6 +114,7 @@ import { noOakResponse } from "./oak/noOakResponse";
 import { platformLeads } from "./routes/platformLeads";
 import { platformSupport, supportReport } from "./routes/platformSupport";
 import { readStats, resetReadStats, withReadLabel } from "./lib/readMeter";
+import { pathIdGuard } from "./lib/idGuard";
 import { timingSafeEqual } from "node:crypto";
 import { tfc, tfcCallback } from "./routes/tfc";
 
@@ -144,6 +145,8 @@ app.use((req, _res, next) => {
   const label = `http:${req.method} ${req.path.split("/").map((s) => (/^[A-Za-z0-9_-]{16,}$/.test(s) || /^\d+$/.test(s) ? ":id" : s)).join("/").slice(0, 80)}`;
   withReadLabel(label, next);
 });
+// An id that cannot be a real id (2000 characters, a NUL, a backslash, a broken %-escape) is "no such record" everywhere: 404, never a 500.
+app.use(pathIdGuard);
 app.get("/internal/read-stats", (req, res) => {
   // With READ_STATS_KEY set (required in production): the key must match, compared in constant time. Without a key (dev only): loopback
   // callers only, and never a request that came through a proxy (x-forwarded-for present) — behind a same-host reverse proxy every
@@ -245,7 +248,7 @@ app.use("/api/emails/inbound", rateLimit("email-inbound", 300), emailsInbound);
 // Signed-out callers are rate-limited (scraping the storefront); a signed-in
 // operator saving a listing isn't — a bad token is a 401 anyway.
 const anonOnly = (limit: express.RequestHandler): express.RequestHandler => (req, res, next) => (req.headers.authorization ? next() : limit(req, res, next));
-app.use("/api/listings", anonOnly(rateLimit("listings-public", 300)), optionalAuth, attachRoleOptional, enforceAccess, listings);
+app.use("/api/listings", anonOnly(rateLimit("listings-public", 300)), optionalAuth, attachRoleOptional, refuseOrphanFranchise, enforceAccess, listings);
 
 // Parent-facing settings for the signed-out booking page (see library.ts).
 app.use("/api/public/library", anonOnly(rateLimit("library-public", 300)), optionalAuth, libraryPublic);
@@ -299,7 +302,7 @@ app.use("/api/tfc/callback", rateLimit("tfc-callback", 30), tfcCallback);
 // Authorization header, the single-use `state` is the only proof (routes/accounting.ts).
 app.use("/api/accounting/callback", rateLimit("accounting-callback", 30), accountingCallback);
 
-app.use("/api", requireAuth, attachRole);
+app.use("/api", requireAuth, attachRole, refuseOrphanFranchise);
 // The subscription wall: a lapsed owner tenant (canceled / past_due / past
 // its cancel date) gets 402 on everything except the endpoints that let them
 // see and fix their subscription. See middleware/subscription.ts.

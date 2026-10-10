@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { FieldPath } from "firebase-admin/firestore";
 import { db, auth } from "../firebase";
 import type { BookingDoc } from "../lib/bookingDoc";
 import { takesStaffSeat } from "../lib/billing";
@@ -7,6 +8,11 @@ import { getPlans, limitsFor } from "./subscription";
 import { churnByMonth } from "../lib/subscriptionEvents";
 import { cachedCollection, invalidateCollection } from "../lib/platformReads";
 import { ttlCache } from "../lib/ttlCache";
+import { rateLimit } from "../lib/rateLimit";
+import { platformAudit, platformAuditBestEffort } from "../lib/platformAudit";
+import { cleanReason, MIN_REASON, maskBank, knownFeatureKeys, truthyFlag } from "../lib/hqSafety";
+import { forgetSettings } from "../middleware/access";
+import { isOnTrial } from "../../../lib/providerFilters";
 import { classifyRisk, stateReason, isWatchedStatus, mapLimit, type RiskInput } from "../lib/atRisk";
 
 export const platform = Router();
@@ -17,31 +23,95 @@ export const platform = Router();
 // the act (see attachRole in middleware/role.ts for the actual override).
 type PortalKey = "company" | "freelancer" | "franchise" | "staff" | "custdash" | "platform";
 const portalForRole = (role: string): PortalKey => role === "parent" ? "custdash" : role === "company" || role === "franchise" || role === "freelancer" || role === "staff" || role === "platform" ? role : "custdash";
+// Paging is a REAL cursor query (never "read every user, slice in memory"), so a big account list costs one page of reads, not the whole collection:
+//   no `?q=`  : users in id order, `?cursor=` = the last id of the previous page;
+//   `?q=`     : the START of the login email (case-insensitive), ordered by email, `?cursor=` = "<email>\u0001<id>".
+// `?limit=` is 1-100 (default 50). Business names are not searched here (that would need another collection read): search by email, or open the
+// provider from Providers. Each lookup is written to the audit trail (platformAudit).
 platform.get("/accounts", async (req, res) => {
   if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
-  const [usersSnap, tenantsSnap] = await Promise.all([cachedCollection("users"), cachedCollection("tenants")]);
-  const tenantName = new Map(tenantsSnap.docs.map((d) => [d.id, (d.data().name as string) ?? d.id]));
-  const accounts = usersSnap.docs.map((d) => {
-    const u = d.data() as { role?: string; tenantId?: string; franchiseId?: string; email?: string; name?: string; franchiseName?: string; franchiseArea?: string };
+  const q = typeof req.query.q === "string" ? req.query.q.trim().toLowerCase().slice(0, 80) : "";
+  const asked = Number(req.query.limit);
+  const limit = Math.min(100, Math.max(1, Number.isFinite(asked) && asked > 0 ? Math.floor(asked) : 50));
+  const cursor = typeof req.query.cursor === "string" ? req.query.cursor.slice(0, 400) : "";
+  type U = { role?: string; tenantId?: string; franchiseId?: string; email?: string; name?: string; franchiseName?: string; franchiseArea?: string };
+  // A cursor is "<id>" (no search) or "<email>\u0001<id>" (search). Anything else is a 400, never a 500.
+  const ID = /^[A-Za-z0-9_-]{1,128}$/;
+  let cursorEmail = "", cursorId = "";
+  if (cursor) {
+    if (q) { [cursorEmail, cursorId] = cursor.split("\u0001"); if (!cursorEmail || cursorEmail.length > 200 || !ID.test(cursorId ?? "")) { res.status(400).json({ error: "Bad cursor", code: "bad_cursor" }); return; } }
+    else if (!ID.test(cursor)) { res.status(400).json({ error: "Bad cursor", code: "bad_cursor" }); return; }
+  }
+  const picked: { id: string; u: U; email: string }[] = [];
+  let more = false;
+  let exhausted = false;
+  let last: FirebaseFirestore.QueryDocumentSnapshot | null = null;
+  // Some rows are skipped (HQ accounts, rows with no email), so keep reading batches until the page is full or the list ends. The scan is capped
+  // (20 batches); if the cap is hit first the response still carries a cursor from where the scan stopped, so paging simply continues (never a silent stop).
+  const MAX_BATCHES = 20;
+  for (let batch = 0; batch < MAX_BATCHES && picked.length <= limit; batch++) {
+    let query: FirebaseFirestore.Query = q
+      ? db.collection("users").where("email", ">=", q).where("email", "<=", `${q}\uf8ff`).orderBy("email").orderBy(FieldPath.documentId())
+      : db.collection("users").orderBy(FieldPath.documentId());
+    if (last) query = q ? query.startAfter(last.get("email"), last.id) : query.startAfter(last.id);
+    else if (cursor) query = q ? query.startAfter(cursorEmail, cursorId) : query.startAfter(cursor);
+    const snap = await query.limit(limit + 1).get();
+    for (const d of snap.docs) {
+      const u = d.data() as U;
+      if (u.email && u.role !== "platform") picked.push({ id: d.id, u, email: u.email });
+    }
+    last = snap.docs[snap.docs.length - 1] ?? null;
+    if (snap.size < limit + 1) { exhausted = true; break; }
+  }
+  if (picked.length > limit) more = true;
+  const page = picked.slice(0, limit);
+  const tIds = [...new Set(page.map((p) => p.u.tenantId).filter((x): x is string => !!x))];
+  const tSnaps = tIds.length ? await db.getAll(...tIds.map((id) => db.collection("tenants").doc(id))) : [];
+  const tenantName = new Map(tSnaps.map((d) => [d.id, (d.get("name") as string | undefined) ?? d.id]));
+  const accounts = page.map(({ id, u }) => {
     const role = u.role === "provider" ? "freelancer" : (u.role ?? "parent");
     const tName = u.tenantId ? tenantName.get(u.tenantId) : undefined;
     const frLabel = u.franchiseName ? (u.franchiseArea ? `${u.franchiseName} · ${u.franchiseArea}` : u.franchiseName) : undefined;
     const label = role === "parent" ? (u.name || u.email || "Parent") : (role === "franchise" ? (frLabel || tName) : tName) || u.name || u.email || "Account";
-    return { uid: d.id, email: u.email ?? "", name: u.name ?? "", role, label, provider: role === "parent" ? "" : (tName ?? ""), portal: portalForRole(role) };
-  }).filter((a) => a.email && a.role !== "platform");
-  accounts.sort((a, b) => a.role === b.role ? a.label.localeCompare(b.label) : a.role.localeCompare(b.role));
-  res.json({ accounts });
+    return { uid: id, email: u.email ?? "", name: u.name ?? "", role, label, provider: role === "parent" ? "" : (tName ?? ""), portal: portalForRole(role) };
+  });
+  const tail = page[page.length - 1];
+  // Email search matches the start of the stored email, lower-cased: Firebase Auth lower-cases login emails, so only very old rows could differ.
+  let nextCursor: string | null = null;
+  if (more && tail) nextCursor = q ? `${tail.email}\u0001${tail.id}` : tail.id;
+  else if (!exhausted && last && picked.length <= limit) nextCursor = q ? `${last.get("email")}\u0001${last.id}` : last.id; // cap hit with a short page: continue from the scan
+  await platformAuditBestEffort(req, "accounts_lookup", { q, returned: accounts.length, paged: !!cursor });
+  res.json({ accounts, nextCursor });
 });
-const impersonateSchema = z.object({ uid: z.string().min(1).max(128) });
-platform.post("/impersonate", async (req, res) => {
+const impersonateSchema = z.object({ uid: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/, "Not an account id"), reason: z.string().max(2000).optional() });
+// The 10-a-minute limits here (open, bank reveal) are counted per API process (lib/rateLimit is in memory): with several instances the
+// effective ceiling is 10 x instances. Every open and reveal is also an audit row, so a flood is visible; a shared counter in Firestore would
+// cost a read+write on every attempt, so it is deliberately not used. Revisit if the API is ever scaled out.
+// POST /impersonate - HQ opens an account. A short reason is REQUIRED (stored in the audit row), at most 10 opens a minute per HQ user,
+// and the audit row is written BEFORE anything is handed back: if it cannot be written the account is not opened (503, not a silent 500).
+platform.post("/impersonate", rateLimit("hq-impersonate", 10, 60_000, (req) => req.user?.uid), async (req, res) => {
   if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
   const parsed = impersonateSchema.safeParse(req.body ?? {});
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const reason = cleanReason(parsed.data.reason);
+  if (!reason) { res.status(400).json({ error: `Say why you are opening this account (at least ${MIN_REASON} characters). It is kept in the audit log.`, code: "reason_required" }); return; }
   const target = await db.collection("users").doc(parsed.data.uid).get();
   if (!target.exists) { res.status(404).json({ error: "No such account" }); return; }
   const t = target.data()!;
-  await db.collection("impersonationLog").add({ byUid: req.user!.uid, byEmail: req.user?.email ?? null, targetUid: parsed.data.uid, targetEmail: t.email ?? null, targetRole: t.role ?? "parent", at: new Date().toISOString() });
-  res.json({ uid: parsed.data.uid, role: t.role === "provider" ? "freelancer" : (t.role ?? "parent"), email: t.email ?? "", portal: portalForRole((t.role as string) ?? "parent") });
+  if (parsed.data.uid === req.user!.uid || t.role === "platform") { res.status(400).json({ error: "An HQ account can't be opened this way." }); return; }
+  const status = t.deactivatedAt ? "closed" : truthyFlag(t.disabled) ? "disabled" : "active";
+  try {
+    await db.collection("impersonationLog").add({
+      kind: "open", byUid: req.user!.uid, byEmail: req.user?.email ?? null, targetUid: parsed.data.uid, targetEmail: t.email ?? null, targetRole: t.role ?? "parent",
+      targetTenantId: (t.tenantId as string) ?? null, action: "OPEN", method: "POST", path: "/api/platform/impersonate", reason, targetStatus: status, at: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.error("[impersonate] open not recorded, refused:", (e as Error).message);
+    res.status(503).json({ error: "Couldn't record this support session in the audit log, so the account was not opened. Try again.", code: "audit_unavailable" });
+    return;
+  }
+  // `status` / `readOnly`: a switched-off or closed account opens for LOOKING only (every change is refused while acting as it).
+  res.json({ uid: parsed.data.uid, role: t.role === "provider" ? "freelancer" : (t.role ?? "parent"), email: t.email ?? "", portal: portalForRole((t.role as string) ?? "parent"), status, readOnly: status !== "active" });
 });
 
 // GET /api/platform/overview — platform-wide aggregates for the HQ
@@ -160,7 +230,8 @@ platform.get("/subscriptions", async (req, res) => {
     summary: {
       total: rows.length,
       mrr,
-      trialing: rows.filter((r) => r.status === "trialing").length,
+      // Same classifier as the HQ Trial tab (lib/providerFilters): a trial that has run out is "Trial ended", not "On trial".
+      trialing: rows.filter((r) => isOnTrial({ status: r.status, trialEndsAt: r.trialEndsAt }, new Date())).length,
       active: rows.filter((r) => r.status === "active").length,
     },
   });
@@ -223,9 +294,10 @@ platform.get("/providers", async (req, res) => {
       logoUrl: (billing.logoUrl as string) ?? null,
       heardAbout: (t.heardAbout as string) ?? null,
       referredBy: (t.referredBy as string) ?? null,
-      // Bank details, if they've since added them in Setup.
+      // Bank details, if they've since added them in Setup: ALWAYS masked here (last digits only). The full numbers only leave through the
+      // audited, rate-limited POST /providers/:id/bank-reveal, never in this list, its cache or any log.
       bank: billing.accountNumber || billing.sortCode || billing.bankName
-        ? { bankName: billing.bankName ?? null, accountName: billing.accountName ?? null, sortCode: billing.sortCode ?? null, accountNumber: billing.accountNumber ?? null }
+        ? maskBank({ bankName: billing.bankName, accountName: billing.accountName, sortCode: billing.sortCode, accountNumber: billing.accountNumber })
         : null,
       subscription: (t.subscription as Record<string, unknown>) ?? null,
       staffCount: staffByTenant[d.id] ?? 0,
@@ -238,6 +310,25 @@ platform.get("/providers", async (req, res) => {
   res.json({ providers });
 });
 
+// POST /api/platform/providers/:id/bank-reveal - HQ asks to SEE one provider's full payout bank details (for a support call, a payout query).
+// Audited BEFORE anything is returned (who, which tenant, when; never the numbers) - if the trail cannot be written nothing is revealed (503).
+// 10 a minute per HQ user. Not available while acting as someone (the role is then theirs, not platform's).
+platform.post("/providers/:id/bank-reveal", rateLimit("hq-bank-reveal", 10, 60_000, (req) => req.user?.uid), async (req, res) => {
+  if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
+  const id = String(req.params.id);
+  const [tenant, lib] = await Promise.all([db.collection("tenants").doc(id).get(), db.collection("libraries").doc(id).get()]);
+  if (!tenant.exists) { res.status(404).json({ error: "No such provider" }); return; }
+  const billing = ((lib.data()?.settings as Record<string, unknown> | undefined)?.billing as Record<string, unknown> | undefined) ?? {};
+  try { await platformAudit(req, "bank_reveal", { tenantId: id, tenantName: (tenant.data()!.name as string) ?? id }); }
+  catch (e) {
+    console.error("[bank-reveal] not recorded, refused:", (e as Error).message);
+    res.status(503).json({ error: "Couldn't record this in the audit log, so the bank details were not shown. Try again.", code: "audit_unavailable" });
+    return;
+  }
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ tenantId: id, bank: { bankName: billing.bankName ?? null, accountName: billing.accountName ?? null, sortCode: billing.sortCode ?? null, accountNumber: billing.accountNumber ?? null } });
+});
+
 // PATCH /api/platform/providers/:id/features — HQ turns a page/feature on or
 // off for one provider. Writes settings.features on the tenant's library, the
 // same store the operator app + Sidebar already read (featureOff = === false).
@@ -247,12 +338,16 @@ platform.patch("/providers/:id/features", async (req, res) => {
   if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
   const parsed = z.object({ view: z.string().min(1).max(60), on: z.boolean() }).safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  // Only a switch that really gates a page/feature: an arbitrary key ("zzz") would sit in the provider's settings doing nothing, and look like a control.
+  if (!knownFeatureKeys().has(parsed.data.view)) { res.status(400).json({ error: `"${parsed.data.view}" is not a feature that can be switched on or off`, code: "unknown_feature" }); return; }
   // Only for a real tenant — a typo'd/stale id must not mint an orphan library doc.
   if (!(await db.collection("tenants").doc(req.params.id).get()).exists) { res.status(404).json({ error: "No such provider" }); return; }
   await db.collection("libraries").doc(req.params.id).set(
     { settings: { features: { [parsed.data.view]: parsed.data.on } } },
     { merge: true },
   );
+  forgetSettings(req.params.id); // the API's own copy of this provider's switches (cached 10s per request) - drop it so the switch bites on the very next request
+  await platformAuditBestEffort(req, "feature_switch", { tenantId: req.params.id, view: parsed.data.view, on: parsed.data.on });
   res.json({ ok: true });
 });
 
@@ -342,8 +437,8 @@ async function computeAtRisk() {
   // Reads: tenants (shared 45s copy), then ONE newest-booking query per tenant that needs it (was: every booking
   // and every library doc in the database), then library docs only for the flagged rows. Same numbers as before.
   const tenantsSnap = await cachedCollection("tenants");
-  type RiskRow = { id: string; name: string; type: string; fee: number; contactEmail: string | null; phone: string | null; reason: string; detail: string; contactedAt: string | null };
-  type T = Record<string, unknown> & { name?: string; type?: string; createdAt?: string; ownerUid?: string; subscription?: Record<string, unknown>; retentionContactedAt?: string };
+  type RiskRow = { id: string; name: string; type: string; fee: number; contactEmail: string | null; phone: string | null; reason: string; detail: string; contactedAt: string | null; contactedBy: string | null };
+  type T = Record<string, unknown> & { name?: string; type?: string; createdAt?: string; ownerUid?: string; subscription?: Record<string, unknown>; retentionContactedAt?: string; retentionContactedBy?: string };
   const watched = tenantsSnap.docs.map((d) => {
     const t = d.data() as T;
     const sub = t.subscription ?? {};
@@ -361,7 +456,7 @@ async function computeAtRisk() {
   for (const { x, r } of flagged) {
     const billing = (settingsById[x.id]?.billing as Record<string, unknown> | undefined) ?? {};
     const contactEmail: string | null = (billing.email as string) || null;
-    const row: RiskRow = { id: x.id, name: x.t.name ?? x.id, type: x.t.type ?? "freelancer", fee: Number(x.sub.price) || 0, contactEmail, phone: (billing.phone as string) ?? null, reason: r!.reason, detail: r!.detail, contactedAt: x.t.retentionContactedAt ?? null };
+    const row: RiskRow = { id: x.id, name: x.t.name ?? x.id, type: x.t.type ?? "freelancer", fee: Number(x.sub.price) || 0, contactEmail, phone: (billing.phone as string) ?? null, reason: r!.reason, detail: r!.detail, contactedAt: x.t.retentionContactedAt ?? null, contactedBy: x.t.retentionContactedBy ?? null };
     rows.push(row);
     if (!contactEmail && x.t.ownerUid) needOwner.push({ row, uid: x.t.ownerUid });
   }
@@ -377,15 +472,28 @@ platform.get("/at-risk", async (req, res) => {
   res.json({ rows: await atRiskCache.wrap("all", computeAtRisk) }); // same list for every platform admin: share for 2 min
 });
 
-// POST /api/platform/at-risk/:id/contacted — mark (or un-mark) as contacted.
+// POST /api/platform/at-risk/:id/contacted — mark (or un-mark) as contacted. Stored ONCE with who and when: a second "contacted" keeps the first
+// person and time; un-marking clears both (and the trail keeps who did it).
 platform.post("/at-risk/:id/contacted", async (req, res) => {
   if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
   const contacted = (req.body as { contacted?: boolean })?.contacted !== false;
   // Same as the features toggle: merge-set on a missing id would mint a phantom tenant that then shows up in every HQ list.
-  if (!(await db.collection("tenants").doc(req.params.id).get()).exists) { res.status(404).json({ error: "No such provider" }); return; }
-  await db.collection("tenants").doc(req.params.id).set({ retentionContactedAt: contacted ? new Date().toISOString() : null }, { merge: true });
+  const ref = db.collection("tenants").doc(req.params.id);
+  const snap = await ref.get();
+  if (!snap.exists) { res.status(404).json({ error: "No such provider" }); return; }
+  const was = snap.get("retentionContactedAt") as string | null | undefined;
+  let at: string | null = was ?? null;
+  let by: string | null = (snap.get("retentionContactedBy") as string | null | undefined) ?? null;
+  if (contacted && !was) {
+    at = new Date().toISOString(); by = req.user?.email ?? req.user?.uid ?? "unknown";
+    await ref.set({ retentionContactedAt: at, retentionContactedBy: by, retentionContactedByUid: req.user?.uid ?? null }, { merge: true });
+  } else if (!contacted && was) {
+    at = null; by = null;
+    await ref.set({ retentionContactedAt: null, retentionContactedBy: null, retentionContactedByUid: null }, { merge: true });
+  }
+  await platformAuditBestEffort(req, contacted ? "at_risk_contacted" : "at_risk_uncontacted", { tenantId: req.params.id });
   atRiskCache.clear(); invalidateCollection("tenants"); // the At-risk list must show the new contacted state on its next read
-  res.json({ ok: true, contactedAt: contacted ? new Date().toISOString() : null });
+  res.json({ ok: true, contactedAt: at, contactedBy: by });
 });
 
 // ── GET /churn?months=6 — the churn rate per month, from HISTORY ──────────
