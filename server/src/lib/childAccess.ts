@@ -46,3 +46,39 @@ export async function childVisibleTo(who: Who, childId: string | null | undefine
   }
   return false;
 }
+
+/** The cheap form of childVisibleTo for ONE family (a dossier: the child plus the siblings): which of `childIds` this provider may
+ *  see, using indexed queries only - the bookings naming those children, and the bookings of the family's email (where a joint
+ *  booking keeps its other children in kids[]) - instead of reading every booking the tenant has. Also returns the in-scope
+ *  bookings it found, so the caller does not read them again. Same scope rule as childVisibleTo (franchise, site, joined-themselves). */
+export async function familyChildAccess(who: Who, childIds: string[], email?: string | null): Promise<{ visible: Set<string>; bookings: FirebaseFirestore.DocumentData[] }> {
+  const visible = new Set<string>();
+  const found = new Map<string, FirebaseFirestore.DocumentData>();
+  if (!who.tenantId || !childIds.length) return { visible, bookings: [] };
+  const franchiseId = (who.role === "franchise" || who.role === "staff") && who.franchiseId ? who.franchiseId : null;
+  const site = await staffSiteScope(who);
+  const inScope = (b: FirebaseFirestore.DocumentData) => (!franchiseId || (b.franchiseId ?? null) === franchiseId) && (!site || bookingInSite(b, site));
+  const wanted = new Set(childIds);
+  const docs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+  for (let i = 0; i < childIds.length; i += 10) {
+    docs.push(...(await db.collection("bookings").where("tenantId", "==", who.tenantId).where("childId", "in", childIds.slice(i, i + 10)).get()).docs);
+  }
+  const mail = (email ?? "").trim();
+  if (mail) for (const e of new Set([mail.toLowerCase(), mail])) docs.push(...(await db.collection("bookings").where("tenantId", "==", who.tenantId).where("email", "==", e).get()).docs);
+  for (const d of docs) {
+    const b = d.data();
+    if (!inScope(b)) continue;
+    const touched = [b.childId, ...(Array.isArray(b.kids) ? b.kids.map((k: { childId?: string }) => k?.childId) : [])].filter((c): c is string => typeof c === "string" && wanted.has(c));
+    if (!touched.length) continue;
+    for (const c of touched) visible.add(c);
+    found.set(d.id, b);
+  }
+  // A family that joined this provider themselves (tenant-wide accounts only, as in childVisibleTo).
+  if (!franchiseId && !site && mail && childIds.some((c) => !visible.has(c))) {
+    for (const e of new Set([mail.toLowerCase(), mail])) {
+      const cust = await db.collection("customers").where("tenantId", "==", who.tenantId).where("email", "==", e).get();
+      if (cust.docs.some((cd) => joinedThemselves(cd.data()))) { for (const c of childIds) visible.add(c); break; }
+    }
+  }
+  return { visible, bookings: [...found.values()] };
+}
