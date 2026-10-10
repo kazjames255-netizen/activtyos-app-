@@ -56,7 +56,7 @@ async function until<T>(fn: () => Promise<T | null | undefined | false>, ms = 60
 
 let PA: Provider, PB: Provider, PC: Provider;
 let owner: { token: string; uid: string };
-let parentA: { token: string; uid: string }, parentDis: { uid: string }, parentClosed: { uid: string };
+let parentA: { token: string; uid: string }, parentDis: { uid: string }, parentClosed: { uid: string }, parentStrDis: { uid: string };
 let h1: Hq, h2: Hq;
 const SECRET = `SECRETCAT-${u}`;
 const leakA = "jane.smith@example.com", leakB = "Jane Smith", leakC = "Ava Testchild", leakD = "07700 900123";
@@ -72,6 +72,7 @@ before(async () => {
   parentA = await mkUser(`pa-hq-${u}@emu.test`);
   parentDis = await mkUser(`pdis-hq-${u}@emu.test`, { disabled: true });
   parentClosed = await mkUser(`pclosed-hq-${u}@emu.test`, { deactivatedAt: new Date().toISOString() });
+  parentStrDis = await mkUser(`pstr-hq-${u}@emu.test`, { disabled: "true" });
   for (let i = 1; i <= 5; i++) await mkUser(`acct-${u}-${i}@emu.test`, { name: `Acct ${u} ${i}` });
   h1 = await mkHq("h1"); h2 = await mkHq("h2");
   // Support threads for the AI digest (X27): a parent's name, email, phone and child's name inside the free text.
@@ -136,6 +137,7 @@ describe("X06/X07/X08/X34: opening and acting as an account", () => {
     const none = await callB("POST", "/api/platform/impersonate", h.token, { uid: owner.uid });
     assert.equal(none.status, 400); assert.equal(none.json.code, "reason_required");
     assert.equal((await callB("POST", "/api/platform/impersonate", h.token, { uid: owner.uid, reason: "abcd" })).status, 400);
+    assert.equal((await callB("POST", "/api/platform/impersonate", h.token, { uid: owner.uid, reason: "\u200b\u200b\u200b\u200b\u200b\u200b" })).status, 400, "invisible characters are not a reason");
     assert.equal((await callB("POST", "/api/platform/impersonate", h.token, { uid: owner.uid, reason: "      " })).status, 400);
     const ok = await callB("POST", "/api/platform/impersonate", h.token, { uid: owner.uid, reason: "  Provider rang about a refund  " });
     assert.equal(ok.status, 200);
@@ -163,7 +165,7 @@ describe("X06/X07/X08/X34: opening and acting as an account", () => {
     assert.equal(read.targetTenantId, PA.tenantId); assert.equal(read.status, 200); assert.equal(read.bodyHash ?? null, null);
     const write = rows.find((x) => x.method === "POST" && x.path === "/api/expenses")!;
     assert.ok(write, "the write is logged");
-    assert.match(write.bodyHash, /^[0-9a-f]{12}$/); assert.equal(write.status, 201); assert.equal(write.targetTenantId, PA.tenantId);
+    assert.match(write.bodyHash, /^[A-Za-z0-9_-]{43}$/); assert.ok(!/^[0-9a-f]{12}/.test(write.bodyHash)); assert.equal(write.status, 201); assert.equal(write.targetTenantId, PA.tenantId);
     assert.equal(write.targetUid, owner.uid); assert.equal(write.byUid, h.uid);
     assert.ok(!JSON.stringify(rows).includes(SECRET), "the body content is never stored");
   });
@@ -190,7 +192,9 @@ describe("X06/X07/X08/X34: opening and acting as an account", () => {
     assert.equal(dis.status, 200); assert.equal(dis.json.status, "disabled"); assert.equal(dis.json.readOnly, true);
     const clo = await callB("POST", "/api/platform/impersonate", h.token, { uid: parentClosed.uid, reason: "closed their account" });
     assert.equal(clo.status, 200); assert.equal(clo.json.status, "closed"); assert.equal(clo.json.readOnly, true);
-    for (const target of [parentDis.uid, parentClosed.uid]) {
+    const str = await callB("POST", "/api/platform/impersonate", h.token, { uid: parentStrDis.uid, reason: "flag stored as a string" });
+    assert.equal(str.json.status, "disabled"); assert.equal(str.json.readOnly, true);
+    for (const target of [parentDis.uid, parentClosed.uid, parentStrDis.uid]) {
       assert.equal((await callB("GET", "/api/my/bookings", h.token, undefined, { "x-act-as": target })).status, 200, "reading is allowed");
       const w = await callB("PUT", "/api/my/children/none", h.token, { name: "x" }, { "x-act-as": target });
       assert.equal(w.status, 403); assert.equal(w.json.code, "impersonation_target_frozen");
@@ -372,6 +376,12 @@ describe("X23/X26/X27: support", () => {
     assert.equal((await dup(c, a)).status, 400, "C dup A would close A-B-C");
     assert.equal((await dup(c, d)).status, 200);
     assert.equal((await dup(a, a)).status, 400);
+    // Two people linking in opposite directions at the same instant: exactly one wins, never a ring.
+    const [e, f] = [await mk(`re${u}`), await mk(`rf${u}`)];
+    const race = await Promise.all([dup(e, f), dup(f, e)]);
+    assert.deepEqual(race.map((r) => r.status).sort(), [200, 400], "one link accepted, the opposite one refused");
+    const [de, df] = [(await threadDoc(e)).duplicateOf, (await threadDoc(f)).duplicateOf];
+    assert.ok(!(de === f && df === e), "no ring stored");
     assert.equal((await threadDoc(b)).duplicateOf, c, "the refused link was not stored");
   });
   it("X27: the digest sent to the AI model holds no parent name, email, phone or child name (the model is a stub; nothing leaves the machine)", async () => {
@@ -416,7 +426,7 @@ describe("X28/X29/X31: deletion requests, bookings, accounts", () => {
     const q = `acct-${u}`;
     const p1 = await page(`q=${q}&limit=2`);
     assert.equal(p1.status, 200);
-    assert.equal(p1.json.accounts.length, 2); assert.equal(p1.json.matching, 5); assert.ok(p1.json.nextCursor);
+    assert.equal(p1.json.accounts.length, 2); assert.ok(p1.json.nextCursor);
     const p2 = await page(`q=${q}&limit=2&cursor=${encodeURIComponent(p1.json.nextCursor)}`);
     const p3 = await page(`q=${q}&limit=2&cursor=${encodeURIComponent(p2.json.nextCursor)}`);
     const all = [...p1.json.accounts, ...p2.json.accounts, ...p3.json.accounts].map((a: any) => a.email);
@@ -424,6 +434,11 @@ describe("X28/X29/X31: deletion requests, bookings, accounts", () => {
     assert.equal(new Set(all).size, 5, "five different accounts across the pages");
     assert.ok(all.every((e: string) => e.startsWith(q)));
     assert.deepEqual(Object.keys(p1.json.accounts[0]).sort(), ["email", "label", "name", "portal", "provider", "role", "uid"]);
+    // No search: a real cursor over all accounts, never the whole list at once.
+    const n1 = await page("limit=3");
+    const n2 = await page(`limit=3&cursor=${encodeURIComponent(n1.json.nextCursor)}`);
+    assert.equal(n1.json.accounts.length, 3); assert.ok(n1.json.nextCursor);
+    assert.ok(n2.json.accounts.every((a: any) => !n1.json.accounts.some((b: any) => b.uid === a.uid)), "the second page is different accounts");
     const none = await page(`q=no-such-person-${u}`);
     assert.deepEqual(none.json.accounts, []);
     const def = await page("");
@@ -431,8 +446,8 @@ describe("X28/X29/X31: deletion requests, bookings, accounts", () => {
     assert.ok((await page("limit=100000")).json.accounts.length <= 100, "the limit is capped");
     assert.ok(!def.json.accounts.some((a: any) => a.role === "platform"), "no HQ accounts in the list");
     const logged = (await rowsFor("platformAudit", "byUid", h.uid)).filter((x) => x.kind === "accounts_lookup");
-    assert.equal(logged.length, 6);
-    assert.ok(logged.some((x) => x.q === q && x.returned === 2 && x.matching === 5));
+    assert.equal(logged.length, 8);
+    assert.ok(logged.some((x) => x.q === q && x.returned === 2));
     assert.equal((await callB("GET", "/api/platform/accounts", owner.token)).status, 403);
   });
 });

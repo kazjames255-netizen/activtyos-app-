@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { FieldPath } from "firebase-admin/firestore";
 import { db, auth } from "../firebase";
 import type { BookingDoc } from "../lib/bookingDoc";
 import { takesStaffSeat } from "../lib/billing";
@@ -9,7 +10,7 @@ import { cachedCollection, invalidateCollection } from "../lib/platformReads";
 import { ttlCache } from "../lib/ttlCache";
 import { rateLimit } from "../lib/rateLimit";
 import { platformAudit, platformAuditBestEffort } from "../lib/platformAudit";
-import { cleanReason, MIN_REASON, maskBank, knownFeatureKeys } from "../lib/hqSafety";
+import { cleanReason, MIN_REASON, maskBank, knownFeatureKeys, truthyFlag } from "../lib/hqSafety";
 import { forgetSettings } from "../middleware/access";
 import { isOnTrial } from "../../../lib/providerFilters";
 import { classifyRisk, stateReason, isWatchedStatus, mapLimit, type RiskInput } from "../lib/atRisk";
@@ -22,34 +23,59 @@ export const platform = Router();
 // the act (see attachRole in middleware/role.ts for the actual override).
 type PortalKey = "company" | "freelancer" | "franchise" | "staff" | "custdash" | "platform";
 const portalForRole = (role: string): PortalKey => role === "parent" ? "custdash" : role === "company" || role === "franchise" || role === "freelancer" || role === "staff" || role === "platform" ? role : "custdash";
-// Search + paging: HQ never receives "every account at once" (a parent list is the most personal list there is). `?q=` matches name, email,
-// business and role; `?limit=` is 1-100 (default 50); `?cursor=` is the `nextCursor` of the previous page. Each lookup is written to the audit trail.
+// Paging is a REAL cursor query (never "read every user, slice in memory"), so a big account list costs one page of reads, not the whole collection:
+//   no `?q=`  : users in id order, `?cursor=` = the last id of the previous page;
+//   `?q=`     : the START of the login email (case-insensitive), ordered by email, `?cursor=` = "<email>\u0001<id>".
+// `?limit=` is 1-100 (default 50). Business names are not searched here (that would need another collection read): search by email, or open the
+// provider from Providers. Each lookup is written to the audit trail (platformAudit).
 platform.get("/accounts", async (req, res) => {
   if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
   const q = typeof req.query.q === "string" ? req.query.q.trim().toLowerCase().slice(0, 80) : "";
   const asked = Number(req.query.limit);
   const limit = Math.min(100, Math.max(1, Number.isFinite(asked) && asked > 0 ? Math.floor(asked) : 50));
   const cursor = typeof req.query.cursor === "string" ? req.query.cursor.slice(0, 400) : "";
-  const [usersSnap, tenantsSnap] = await Promise.all([cachedCollection("users"), cachedCollection("tenants")]);
-  const tenantName = new Map(tenantsSnap.docs.map((d) => [d.id, (d.data().name as string) ?? d.id]));
-  const accounts = usersSnap.docs.map((d) => {
-    const u = d.data() as { role?: string; tenantId?: string; franchiseId?: string; email?: string; name?: string; franchiseName?: string; franchiseArea?: string };
+  type U = { role?: string; tenantId?: string; franchiseId?: string; email?: string; name?: string; franchiseName?: string; franchiseArea?: string };
+  const picked: { id: string; u: U; email: string }[] = [];
+  let more = false;
+  let last: FirebaseFirestore.QueryDocumentSnapshot | null = null;
+  // Some rows are skipped (HQ accounts, rows with no email), so read in small batches until the page is full or the list ends (bounded).
+  for (let batch = 0; batch < 6 && picked.length <= limit; batch++) {
+    let query: FirebaseFirestore.Query = q
+      ? db.collection("users").where("email", ">=", q).where("email", "<=", `${q}\uf8ff`).orderBy("email").orderBy(FieldPath.documentId())
+      : db.collection("users").orderBy(FieldPath.documentId());
+    if (last) query = q ? query.startAfter(last.get("email"), last.id) : query.startAfter(last.id);
+    else if (cursor) {
+      if (q) { const [e, id] = cursor.split("\u0001"); query = query.startAfter(e, id ?? ""); } else query = query.startAfter(cursor);
+    }
+    const snap = await query.limit(limit + 1).get();
+    for (const d of snap.docs) {
+      const u = d.data() as U;
+      if (u.email && u.role !== "platform") picked.push({ id: d.id, u, email: u.email });
+    }
+    last = snap.docs[snap.docs.length - 1] ?? null;
+    if (snap.size < limit + 1) break;
+  }
+  if (picked.length > limit) more = true;
+  const page = picked.slice(0, limit);
+  const tIds = [...new Set(page.map((p) => p.u.tenantId).filter((x): x is string => !!x))];
+  const tSnaps = tIds.length ? await db.getAll(...tIds.map((id) => db.collection("tenants").doc(id))) : [];
+  const tenantName = new Map(tSnaps.map((d) => [d.id, (d.get("name") as string | undefined) ?? d.id]));
+  const accounts = page.map(({ id, u }) => {
     const role = u.role === "provider" ? "freelancer" : (u.role ?? "parent");
     const tName = u.tenantId ? tenantName.get(u.tenantId) : undefined;
     const frLabel = u.franchiseName ? (u.franchiseArea ? `${u.franchiseName} · ${u.franchiseArea}` : u.franchiseName) : undefined;
     const label = role === "parent" ? (u.name || u.email || "Parent") : (role === "franchise" ? (frLabel || tName) : tName) || u.name || u.email || "Account";
-    return { uid: d.id, email: u.email ?? "", name: u.name ?? "", role, label, provider: role === "parent" ? "" : (tName ?? ""), portal: portalForRole(role) };
-  }).filter((a) => a.email && a.role !== "platform");
-  const key = (a: { role: string; label: string; uid: string }) => `${a.role}\u0001${a.label.toLowerCase()}\u0001${a.uid}`;
-  accounts.sort((a, b) => (key(a) < key(b) ? -1 : 1));
-  const matching = q ? accounts.filter((a) => [a.label, a.email, a.name, a.provider, a.role].some((v) => v.toLowerCase().includes(q))) : accounts;
-  const after = cursor ? matching.filter((a) => key(a) > cursor) : matching;
-  const page = after.slice(0, limit);
-  const nextCursor = after.length > limit ? key(page[page.length - 1]) : null;
-  await platformAuditBestEffort(req, "accounts_lookup", { q, returned: page.length, matching: matching.length, paged: !!cursor });
-  res.json({ accounts: page, nextCursor, matching: matching.length });
+    return { uid: id, email: u.email ?? "", name: u.name ?? "", role, label, provider: role === "parent" ? "" : (tName ?? ""), portal: portalForRole(role) };
+  });
+  const tail = page[page.length - 1];
+  const nextCursor = more && tail ? (q ? `${tail.email}\u0001${tail.id}` : tail.id) : null;
+  await platformAuditBestEffort(req, "accounts_lookup", { q, returned: accounts.length, paged: !!cursor });
+  res.json({ accounts, nextCursor });
 });
 const impersonateSchema = z.object({ uid: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/, "Not an account id"), reason: z.string().max(2000).optional() });
+// The 10-a-minute limits here (open, bank reveal) are counted per API process (lib/rateLimit is in memory): with several instances the
+// effective ceiling is 10 x instances. Every open and reveal is also an audit row, so a flood is visible; a shared counter in Firestore would
+// cost a read+write on every attempt, so it is deliberately not used. Revisit if the API is ever scaled out.
 // POST /impersonate - HQ opens an account. A short reason is REQUIRED (stored in the audit row), at most 10 opens a minute per HQ user,
 // and the audit row is written BEFORE anything is handed back: if it cannot be written the account is not opened (503, not a silent 500).
 platform.post("/impersonate", rateLimit("hq-impersonate", 10, 60_000, (req) => req.user?.uid), async (req, res) => {
@@ -62,7 +88,7 @@ platform.post("/impersonate", rateLimit("hq-impersonate", 10, 60_000, (req) => r
   if (!target.exists) { res.status(404).json({ error: "No such account" }); return; }
   const t = target.data()!;
   if (parsed.data.uid === req.user!.uid || t.role === "platform") { res.status(400).json({ error: "An HQ account can't be opened this way." }); return; }
-  const status = t.deactivatedAt ? "closed" : t.disabled === true ? "disabled" : "active";
+  const status = t.deactivatedAt ? "closed" : truthyFlag(t.disabled) ? "disabled" : "active";
   try {
     await db.collection("impersonationLog").add({
       kind: "open", byUid: req.user!.uid, byEmail: req.user?.email ?? null, targetUid: parsed.data.uid, targetEmail: t.email ?? null, targetRole: t.role ?? "parent",

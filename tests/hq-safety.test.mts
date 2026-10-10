@@ -2,7 +2,8 @@
 //   X16 bank masking   X06 body hash / reason   X17 feature keys   X18 price rules   X26 duplicate cycles   X27 AI digest redaction
 import test from "node:test";
 import assert from "node:assert/strict";
-import { bodyHash, cleanReason, diffPlans, knownFeatureKeys, makesDuplicateCycle, maskAccountNumber, maskBank, maskSortCode, redactPersonal, validPrice } from "../server/src/lib/hqSafety.ts";
+import { createHash, createHmac } from "node:crypto";
+import { bodyHash, cleanReason, diffPlans, isFrozenAccount, truthyFlag, knownFeatureKeys, makesDuplicateCycle, maskAccountNumber, maskBank, maskSortCode, redactPersonal, validPrice } from "../server/src/lib/hqSafety.ts";
 
 test("X16: sort code and account number are masked to their last digits", () => {
   assert.equal(maskSortCode("12-34-34"), "**-**-34");
@@ -16,14 +17,37 @@ test("X16: sort code and account number are masked to their last digits", () => 
   assert.equal(maskBank(null), null);
 });
 
-test("X06: a body hash is short, stable, never the content, and empty for no body", () => {
-  const h = bodyHash({ child: "Ava", address: "1 Secret Street" })!;
-  assert.match(h, /^[0-9a-f]{12}$/);
-  assert.equal(h, bodyHash({ child: "Ava", address: "1 Secret Street" }));
-  assert.notEqual(h, bodyHash({ child: "Ava", address: "2 Secret Street" }));
+test("X06: a body hash is keyed (HMAC), full length, stable, never the content, and empty for no body", () => {
+  const mac = (k: string) => (s: string) => createHmac("sha256", k).update(s).digest("base64url");
+  const h = bodyHash({ child: "Ava", address: "1 Secret Street" }, mac("server-secret"))!;
+  assert.equal(h.length, 43, "the full digest, not a truncation");
+  assert.equal(h, bodyHash({ child: "Ava", address: "1 Secret Street" }, mac("server-secret")));
+  assert.notEqual(h, bodyHash({ child: "Ava", address: "2 Secret Street" }, mac("server-secret")));
+  assert.notEqual(h, bodyHash({ child: "Ava", address: "1 Secret Street" }, mac("another-secret")), "depends on the secret");
   assert.ok(!h.includes("Ava"));
-  assert.equal(bodyHash({}), null);
-  assert.equal(bodyHash(undefined), null);
+  // Without the secret an attacker cannot test guesses: the plain unsalted hashes of the same body do not match.
+  const body = { accountNumber: "12345678" };
+  const guess = createHash("sha256").update(JSON.stringify(body)).digest("hex");
+  const mine = bodyHash(body, mac("server-secret"))!;
+  assert.ok(!mine.startsWith(guess.slice(0, 12)) && Buffer.from(mine, "base64url").toString("hex") !== guess);
+  assert.equal(bodyHash({}, mac("k")), null);
+  assert.equal(bodyHash(undefined, mac("k")), null);
+});
+
+test("X06: invisible characters do not count towards the reason", () => {
+  assert.equal(cleanReason("\u200b\u200b\u200b\u200b\u200b\u200b"), null);
+  assert.equal(cleanReason("ab\u200bcd\u200e\u2060"), null, "four visible characters");
+  assert.equal(cleanReason("\u3164\u3164\u3164\u3164\u3164"), null);
+  assert.equal(cleanReason("a\u200bbcde"), "abcde");
+  assert.equal(cleanReason("fix\u00a0the  bill"), "fix the bill");
+});
+
+test("X08: any truthy-string disabled flag counts as disabled", () => {
+  for (const v of [true, "true", "TRUE", " true ", 1, "1", "yes"]) assert.ok(truthyFlag(v), String(v));
+  for (const v of [false, "false", "", 0, "0", null, undefined, "no"]) assert.ok(!truthyFlag(v), String(v));
+  assert.ok(isFrozenAccount({ disabled: "true" }));
+  assert.ok(isFrozenAccount({ deactivatedAt: "2026-10-01" }));
+  assert.ok(!isFrozenAccount({ disabled: "false" }));
 });
 
 test("X06: the reason for opening an account is 5 to 300 characters once trimmed", () => {

@@ -31,22 +31,34 @@ export function maskBank(b: BankLike | null | undefined): { bankName: string | n
 }
 
 // ── Impersonation audit ─────────────────────────────────────────────────────
-/** A short fingerprint of a request body (12 hex chars of SHA-256 over its JSON). Lets a reviewer tell "same request twice" without ever storing the content. null for no body. */
-export function bodyHash(body: unknown): string | null {
+/**
+ * A keyed fingerprint of a request body for the audit trail: lets a reviewer tell "same request twice" without storing the content.
+ * `mac` is the server's secret-keyed HMAC (lib/signing.sign), so the value cannot be brute-forced offline from a low-entropy body (an 8-digit
+ * account number) the way a plain unsalted hash can. The full digest is kept (no truncation). null for no body.
+ */
+export function bodyHash(body: unknown, mac: (s: string) => string): string | null {
   if (body == null) return null;
   if (typeof body === "object" && Object.keys(body as object).length === 0) return null;
   let s: string;
   try { s = typeof body === "string" ? body : JSON.stringify(body); } catch { return null; }
   if (!s || s === "{}") return null;
-  return createHash("sha256").update(s).digest("hex").slice(0, 12);
+  return mac(`hq-audit-body:${s}`);
 }
 export const MIN_REASON = 5;
 /** A reason for opening someone's account: trimmed, 5 to 300 characters. null when it is not acceptable. */
 export function cleanReason(v: unknown): string | null {
   if (typeof v !== "string") return null;
-  const r = v.replace(/\s+/g, " ").trim();
+  // Invisible characters (zero-width, bidi marks, control, filler letters) must not count towards the length: five zero-width spaces are not a reason.
+  const r = v.replace(/[\p{Cf}\p{Cc}\u034f\u115f\u1160\u3164\uffa0]/gu, (c) => (/\s/.test(c) ? " " : "")).replace(/\s+/g, " ").trim();
   return r.length >= MIN_REASON && r.length <= 300 ? r : null;
 }
+/** A flag stored as true / "true" / 1 reads as true (a string "false" or 0 as false): one reading of "disabled" for every HQ guard. */
+export function truthyFlag(v: unknown): boolean {
+  if (typeof v === "string") return /^(true|1|yes|on)$/i.test(v.trim());
+  return v === true || v === 1;
+}
+/** A switched-off or closed account: HQ may look but not change anything while acting as it. */
+export const isFrozenAccount = (u: { disabled?: unknown; deactivatedAt?: unknown }) => truthyFlag(u.disabled) || !!u.deactivatedAt;
 export const isReadMethod = (m: string) => m === "GET" || m === "HEAD" || m === "OPTIONS";
 
 // ── Validation ──────────────────────────────────────────────────────────────

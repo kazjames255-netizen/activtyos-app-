@@ -1,7 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
 import { db } from "../firebase";
 import { normalizeApiPath } from "../../../lib/accessMap";
-import { bodyHash, isReadMethod } from "../lib/hqSafety";
+import { bodyHash, isFrozenAccount, isReadMethod } from "../lib/hqSafety";
+import { sign } from "../lib/signing";
 
 // The six account types from the product spec, enforced server-side, now
 // with real tenancy:
@@ -167,7 +168,7 @@ async function applyImpersonation(req: Request, res: Response, realUser: NonNull
   const t = tSnap.data()!;
   if (normalizeRole(t.role) === "platform") return true; // HQ cannot act as another HQ account: the header is ignored, HQ stays HQ
   // A switched-off or closed account can be LOOKED at (that is often why support opens it) but nothing can be changed while acting as it.
-  if ((t.disabled === true || !!t.deactivatedAt) && !isReadMethod(req.method)) {
+  if (isFrozenAccount(t) && !isReadMethod(req.method)) {
     res.status(403).json({ error: "This account is switched off or closed, so HQ can look at it but not change anything.", code: "impersonation_target_frozen" });
     return false;
   }
@@ -185,7 +186,7 @@ async function applyImpersonation(req: Request, res: Response, realUser: NonNull
     try {
       const row = await db.collection("impersonationLog").add({
         kind: "request", byUid: realUser.uid, byEmail: realUser.email ?? null, targetUid: actAs, targetEmail: (t.email as string) ?? null, targetRole: t.role ?? "parent",
-        targetTenantId: (t.tenantId as string) ?? null, action: `${req.method} ${path}`, method: req.method, path, bodyHash: bodyHash(req.body), at: new Date().toISOString(),
+        targetTenantId: (t.tenantId as string) ?? null, action: `${req.method} ${path}`, method: req.method, path, bodyHash: bodyHash(req.body, sign), at: new Date().toISOString(),
       });
       res.on("finish", () => { void row.update({ status: res.statusCode }).catch(() => {}); });
     } catch (e) {

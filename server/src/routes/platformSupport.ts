@@ -322,15 +322,7 @@ platformSupport.put("/:id", async (req, res) => {
     if (parsed.data.duplicateOf === req.params.id) { res.status(400).json({ error: "A thread can't be a duplicate of itself" }); return; }
     const target = await db.collection("supportThreads").doc(parsed.data.duplicateOf).get();
     if (!target.exists) { res.status(404).json({ error: "The thread you marked this a duplicate of doesn't exist" }); return; }
-    // No rings: if the thread you point at is (directly or through others) already a duplicate of THIS one, both would drop out of the counts.
-    const dupOf: Record<string, string | null> = {};
-    let cur: string | null | undefined = parsed.data.duplicateOf;
-    for (let hops = 0; cur && hops < 50 && !(cur in dupOf); hops++) {
-      const d: FirebaseFirestore.DocumentSnapshot = cur === parsed.data.duplicateOf ? target : await db.collection("supportThreads").doc(cur).get();
-      dupOf[cur] = (d.get("duplicateOf") as string | null | undefined) ?? null;
-      cur = dupOf[cur];
-    }
-    if (makesDuplicateCycle(dupOf, req.params.id, parsed.data.duplicateOf)) { res.status(400).json({ error: "That would make two threads duplicates of each other", code: "duplicate_cycle" }); return; }
+    // The ring check itself runs INSIDE the write transaction below, so two people linking A->B and B->A at the same moment cannot both pass it.
   }
   // Only a category HQ actually has configured (or "" to clear) — a typo'd id would otherwise show up as its own raw-id bucket in Support review.
   if (parsed.data.category) {
@@ -352,7 +344,26 @@ platformSupport.put("/:id", async (req, res) => {
     res.status(400).json({ error: "Nothing to update" });
     return;
   }
-  await ref.update(patch);
+  if (parsed.data.duplicateOf) {
+    // No rings: if the thread you point at is (directly or through others) already a duplicate of THIS one, both would drop out of the counts.
+    // Read the chain and write the link in ONE transaction: a competing link that touches the same threads makes one of the two retry and see the ring.
+    const dupTarget = parsed.data.duplicateOf;
+    const ring = await db.runTransaction(async (tx) => {
+      const dupOf: Record<string, string | null> = {};
+      let cur: string | null | undefined = dupTarget;
+      for (let hops = 0; cur && hops < 50 && !(cur in dupOf); hops++) {
+        const d: FirebaseFirestore.DocumentSnapshot = await tx.get(db.collection("supportThreads").doc(cur));
+        dupOf[cur] = (d.get("duplicateOf") as string | null | undefined) ?? null;
+        cur = dupOf[cur];
+      }
+      if (makesDuplicateCycle(dupOf, req.params.id, dupTarget)) return true;
+      tx.update(ref, patch);
+      return false;
+    });
+    if (ring) { res.status(400).json({ error: "That would make two threads duplicates of each other", code: "duplicate_cycle" }); return; }
+  } else {
+    await ref.update(patch);
+  }
   res.json({ ok: true });
 });
 
