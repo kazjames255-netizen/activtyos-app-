@@ -19,6 +19,7 @@ import { backfillAccessReviews, backfillErasureDates } from "./lib/childRetentio
   const kids = await backfillErasureDates(apply);
   const files = await backfillAccessReviews(apply);
   console.log(`deleted children without an erasure date: ${kids.candidates} (${kids.alreadyPastDue} already past 30 days: their photos go on the next sweep)`);
+  console.log(`  of those: ${kids.withPlanFile} have a plan file that will be DELETED; ${kids.erasedNotAnonymised} had photos erased earlier and will now be anonymised`);
   console.log(`plan files with provider grants not yet in the 90-day review: ${files.candidates}`);
   if (!apply) console.log("Nothing was written.");
   process.exit(0);

@@ -6,7 +6,8 @@ import { skipTenant } from "./testTenant";
 
 // Two owner decisions of 10 Oct 2026 (UK GDPR Art 17 erasure, Art 5 storage limitation; solicitor to confirm):
 //
-//  1. Deleting a child removes or anonymises its PHOTOS and MOMENTS within 30 days. Deleting the child (DELETE /api/my/children/:id)
+//  1. Deleting a child removes or anonymises its PHOTOS and MOMENTS within 30 days; at the same moment the profile is ANONYMISED
+//     (doc id and links kept, name -> "Deleted child", everything else dropped) and the plan file is deleted outright. Deleting the child (DELETE /api/my/children/:id)
 //     stamps `erasureDueAt`; the daily sweep `childPhotoErasure` does the work once that date passes. What is NOT touched, because the
 //     provider must keep it: safeguarding concerns, accidents / incidents, registers, bookings, medication records.
 //       - a moment that shows only this child (or its work) is deleted with its photo file;
@@ -33,6 +34,56 @@ async function deleteImage(url: unknown): Promise<boolean> {
   if (!id) return false;
   await db.collection("images").doc(id).delete();
   return true;
+}
+
+export const DELETED_CHILD_LABEL = "Deleted child";
+
+/** What is left of a deleted child's profile: the same document id and links (parent, deletion dates) so bookings, registers, accident,
+ *  safeguarding and medication records still resolve to it, a neutral name and the birth YEAR only (statutory records may need an age
+ *  band). Every other field - dob, age, allergies, medical, SEND, contacts, collection password, likes, answers, notes, photo, consent,
+ *  plan link and any free text - is dropped because the replacement is an allow-list. */
+export function anonymisedChild(c: Record<string, unknown>): Record<string, unknown> {
+  const by = /^(\d{4})-/.exec(String(c.dob ?? ""));
+  return {
+    name: DELETED_CHILD_LABEL,
+    parentUid: c.parentUid ?? null,
+    archived: true,
+    ...(c.archivedAt ? { archivedAt: c.archivedAt } : {}),
+    ...(c.createdAt ? { createdAt: c.createdAt } : {}),
+    ...(by ? { birthYear: Number(by[1]) } : (typeof c.birthYear === "number" ? { birthYear: c.birthYear } : {})),
+    photoConsent: false,
+    photosErasedAt: new Date().toISOString(),
+    anonymisedAt: new Date().toISOString(),
+  };
+}
+
+/** Delete the child's plan (EHCP / SEND) file completely: the document, every stored chunk of the upload, and with it every provider
+ *  grant. Left alone if another (live) child still points at the same file. */
+async function deletePlanFile(childId: string, fileId: string | undefined): Promise<void> {
+  if (!fileId) return;
+  const others = await db.collection("children").where("sendPlanId", "==", fileId).get();
+  if (others.docs.some((o) => o.id !== childId && o.get("archived") !== true)) return;
+  const ref = db.collection("childFiles").doc(fileId);
+  const chunks = await ref.collection("chunks").get();
+  for (let i = 0; i < chunks.docs.length; i += 400) {
+    const batch = db.batch();
+    chunks.docs.slice(i, i + 400).forEach((c) => batch.delete(c.ref));
+    await batch.commit();
+  }
+  await ref.delete();
+}
+
+/** The provider's thin child list on the family's record (customers.children) names the child too: swap the name for the label. */
+async function anonymiseCrmEntries(childId: string, parentUid: string | undefined): Promise<void> {
+  if (!parentUid) return;
+  const email = String((await db.collection("users").doc(parentUid).get()).get("email") ?? "");
+  if (!email) return;
+  const recs = await whereEmail(db, "customers", "email", email);
+  for (const r of recs.docs) {
+    const kids = (r.get("children") ?? []) as Record<string, unknown>[];
+    if (!kids.some((k) => k?.childId === childId)) continue;
+    await r.ref.update({ children: kids.map((k) => (k?.childId === childId ? { name: DELETED_CHILD_LABEL, childId } : k)) });
+  }
 }
 
 export interface ErasureResult { momentsDeleted: number; momentsUntagged: number; photosDeleted: number }
@@ -75,33 +126,35 @@ export async function erasePhotosAndMoments(childId: string): Promise<ErasureRes
     res.momentsUntagged++;
   }
 
-  // The child's own profile photo, and any photo consent: gone with the photos.
+  // The child's own profile photo goes, then the profile itself is ANONYMISED and the plan file deleted (owner decisions 10 Oct).
   if (child.exists) {
     const own = child.get("photo");
-    const patch: Record<string, unknown> = { photoConsent: false, photosErasedAt: new Date().toISOString(), erasureDueAt: FieldValue.delete() };
-    if (own !== undefined) {
-      if (await deleteImage(own)) res.photosDeleted++;
-      patch.photo = FieldValue.delete();
-    }
-    await childRef.set(patch, { merge: true });
+    if (own !== undefined && (await deleteImage(own))) res.photosDeleted++;
+    await deletePlanFile(childId, child.get("sendPlanId") as string | undefined);
+    await anonymiseCrmEntries(childId, parentUid);
+    await childRef.set(anonymisedChild(child.data() as Record<string, unknown>)); // REPLACES the document: nothing not listed survives
   }
   return res;
 }
 
 /** ONE-OFF (server/src/childRetentionBackfill.ts, dry run by default): children deleted before this rule existed get a due date of
  *  (deleted at + 30 days). Those already past 30 days lose their photos on the next sweep, so take the count first. */
-export async function backfillErasureDates(apply: boolean): Promise<{ candidates: number; alreadyPastDue: number }> {
+export async function backfillErasureDates(apply: boolean): Promise<{ candidates: number; alreadyPastDue: number; withPlanFile: number; erasedNotAnonymised: number }> {
   const old = await db.collection("children").where("archived", "==", true).get();
-  let candidates = 0, alreadyPastDue = 0;
+  let candidates = 0, alreadyPastDue = 0, withPlanFile = 0, erasedNotAnonymised = 0;
   const nowIso = new Date().toISOString();
   for (const d of old.docs) {
-    if (d.get("erasureDueAt") || d.get("photosErasedAt") || !d.get("archivedAt")) continue;
+    if (d.get("anonymisedAt") || d.get("erasureDueAt")) continue;
+    // Photos were already erased (an earlier version of the sweep) but the profile was not anonymised: do that on the next sweep.
+    if (d.get("photosErasedAt")) { erasedNotAnonymised++; if (d.get("sendPlanId")) withPlanFile++; if (apply) await d.ref.set({ erasureDueAt: nowIso }, { merge: true }); continue; }
+    if (!d.get("archivedAt")) continue;
     const due = erasureDueFor(String(d.get("archivedAt")));
     candidates++;
+    if (d.get("sendPlanId")) withPlanFile++;
     if (due <= nowIso) alreadyPastDue++;
     if (apply) await d.ref.set({ erasureDueAt: due }, { merge: true });
   }
-  return { candidates, alreadyPastDue };
+  return { candidates, alreadyPastDue, withPlanFile, erasedNotAnonymised };
 }
 
 /** Daily sweep: every deleted child whose 30 days are up loses its photos and moments. Idempotent. */
