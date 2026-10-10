@@ -7,7 +7,8 @@ import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import type { PortalKey } from "@/lib/nav/config";
 import { notificationHref } from "@/lib/notification-href";
-import { agoLabel } from "@/lib/i18n/format";
+import { agoLabel, formatDay } from "@/lib/i18n/format";
+import { renderFull } from "@/features/bookings/addonWording";
 
 // ─────────────────────────────────────────────────────────────────────────
 // The notification bell — the in-app half of lib/notify.ts on the server.
@@ -23,7 +24,7 @@ interface Notification {
   title: string;
   body: string;
   /** A key + data written by the server: shown in the viewer's language; the stored English is the fallback (older bells). */
-  i18n?: { tk: string; tv: Record<string, string>; bk?: string; bv?: Record<string, string> };
+  i18n?: { tk: string; tv: Record<string, string>; bk?: string; bv?: Record<string, string>; more?: { k: string; v: Record<string, string> }[] };
   href?: string;
   readAt: string | null;
   at: string;
@@ -48,6 +49,8 @@ const CATEGORY_GLYPH: Record<string, string> = {
 export function Bell({ portal }: { portal: PortalKey }) {
   const router = useRouter();
   const t = useT();
+  // A message from the server: its key + data in the viewer's language (dates in the app language, a change written from the packed choices).
+  const shown = (key: string, vars: Record<string, string> = {}) => renderFull(t, { key, vars }, (iso) => formatDay(iso, { weekday: "short", day: "numeric", month: "short" }));
   const [items, setItems] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
@@ -133,11 +136,11 @@ export function Bell({ portal }: { portal: PortalKey }) {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline justify-between gap-2">
-                    <span className="truncate text-[12.5px] font-bold text-[var(--ink)]">{n.i18n?.tk ? t(n.i18n.tk, n.i18n.tv) : n.title}</span>
+                    <span className="line-clamp-2 break-words text-[12.5px] font-bold text-[var(--ink)]">{n.i18n?.tk ? shown(n.i18n.tk, n.i18n.tv) : n.title}</span>
                     <span className="flex-none text-[10.5px] text-[var(--ink-3)]">{agoLabel(t, n.at)}</span>
                   </span>
-                  <span className="mt-0.5 line-clamp-2 block text-[12px] leading-snug text-[var(--ink-2)]">
-                    {n.i18n?.bk ? t(n.i18n.bk, n.i18n.bv) : n.body}
+                  <span className="mt-0.5 line-clamp-4 block text-[12px] leading-snug text-[var(--ink-2)]">
+                    {n.i18n?.bk ? [{ k: n.i18n.bk, v: n.i18n.bv ?? {} }, ...(n.i18n.more ?? [])].map((x) => shown(x.k, x.v)).join(" ") : n.body}
                   </span>
                 </span>
                 {!n.readAt && (

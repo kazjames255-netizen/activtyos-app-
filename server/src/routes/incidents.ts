@@ -14,6 +14,7 @@ import { alertDsl, isSafeguardingLead, leadCovers, namesALead } from "../lib/dsl
 import { whereInChunks } from "../lib/firestoreIn";
 import { auditIncidentDeletion } from "../lib/incidentDeletionAudit";
 import { actorName } from "../lib/actorName";
+import { headInjuryBell, headInjuryEmail, isHeadInjury } from "../lib/headInjury";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Incidents & Accidents (Pupils) — the safeguarding log every OFSTED-
@@ -98,6 +99,8 @@ const logSchema = z.object({
   // Whether this record is shared with the parent (the "share with parent"
   // control). Accidents always inform; behaviour/safeguarding are opt-in per record.
   shareWithParent: z.boolean().optional(),
+  // A bump to the head: tick it, or name the head in the injury / body part. Either tells the family at once (lib/headInjury.ts).
+  headInjury: z.boolean().optional(),
   severity: z.enum(["minor", "moderate", "serious"]).default("minor"),
   parentNotified: z.boolean().default(false),
   parentNotifiedAt: z.string().max(25).optional(),
@@ -129,6 +132,54 @@ async function safeguardingSettings(tenantId: string, childId?: string | null) {
     notifyParentIncident: sg.notifyParentIncident === true,
     notifyStaffAcknowledged: sg.notifyStaffAcknowledged !== false,
   };
+}
+
+/** A head injury tells the family AT ONCE: bell + email from the server, whatever the accident switch says and whatever the family muted.
+ *  Once per report - `headInjuryNotifiedAt` is claimed in a transaction before sending, so an edit, a retry or two racing requests never send a second.
+ *  Returns true when the report is a head injury (so the caller skips the ordinary "accident recorded" message: this one replaces it). */
+async function tellHeadInjury(id: string): Promise<"sent" | "head" | "no"> {
+  try {
+    const ref = col.doc(id);
+    const first = await ref.get();
+    const rec = first.data();
+    if (!rec || !isHeadInjury(rec)) return "no";
+    if (rec.headInjuryNotifiedAt) return "head";
+    const tenantId = String(rec.tenantId);
+    const email = await parentEmailForChild(rec.childId as string | undefined);
+    if (!email) return "head"; // walk-in with no linked family: nobody to reach
+    const claimed = await db.runTransaction(async (tx) => {
+      const cur = await tx.get(ref);
+      if (!cur.exists || cur.get("headInjuryNotifiedAt")) return false;
+      tx.set(ref, { headInjuryNotifiedAt: new Date().toISOString() }, { merge: true });
+      return true;
+    });
+    if (!claimed) return "head";
+    const tenant = await db.collection("tenants").doc(tenantId).get();
+    const providerName = (tenant.get("name") as string) || "your activity provider";
+    const reach = (tenant.get("phone") as string) || (tenant.get("notifyEmail") as string) || (tenant.get("email") as string) || "";
+    let activity = String(rec.sessionLabel || "");
+    if (!activity && rec.listingId) {
+      const l = await db.collection("listings").doc(String(rec.listingId)).get();
+      if (l.exists && l.get("tenantId") === tenantId) activity = String(l.get("title") || l.get("name") || "");
+    }
+    activity = activity || String(rec.location || "") || providerName;
+    const v = { name: String(rec.childName), activity, when: String(rec.time || rec.date), contact: reach ? `${providerName} (${reach})` : providerName };
+    const bell = headInjuryBell(v);
+    const mail = headInjuryEmail(v);
+    await notify({
+      tenantId, to: { kind: "parent", email }, category: "accident", ignoreMute: true,
+      title: bell.title, body: bell.body, i18n: bell.i18n,
+      subject: mail.subject, emailHtml: mail.html,
+      href: "/custdash/accidents", ref: id,
+    });
+    if (!rec.parentNotifiedAt) {
+      await ref.set({ parentNotified: true, parentNotifiedAt: new Date().toISOString(), parentNotifiedHow: rec.parentNotifiedHow || "app" }, { merge: true });
+    }
+    return "sent";
+  } catch (e) {
+    console.error("[headInjury] failed:", (e as Error).message);
+    return "no";
+  }
 }
 
 const kindWord = (kind: string) => (kind === "accident" ? "accident" : kind === "safeguarding" ? "safeguarding concern" : "incident");
@@ -337,6 +388,7 @@ incidents.post("/", async (req, res) => {
   // Tell the parent. Only possible when the record is linked to a child — a
   // walk-in with no booking has nobody to reach, and that's not an error.
   void (async () => {
+    if ((await tellHeadInjury(ref.id)) !== "no") return; // a head injury has its own immediate message; it replaces the ordinary one
     const gates = await safeguardingSettings(scope.tenantId!, doc.childId);
     if (!sharesWithParent(doc, gates)) return;
     const email = await parentEmailForChild(doc.childId);
@@ -442,7 +494,9 @@ incidents.put("/:id", async (req, res) => {
   // Staff choose per edit whether the family is alerted or the record is just
   // quietly corrected on their profile — the stamp updates either way.
   void (async () => {
-    if (!changed.length || parsed.data.notifyParentOfEdit !== true) return;
+    // An edit that makes it a head injury (or a retry of one) tells the family once; tellHeadInjury is idempotent.
+    const headToldNow = (await tellHeadInjury(after.id)) === "sent";
+    if (headToldNow || !changed.length || parsed.data.notifyParentOfEdit !== true) return;
     const rec = after.data()!;
     const kind = String(rec.kind ?? "incident");
     const gates = await safeguardingSettings(String(rec.tenantId), rec.childId as string | undefined);
