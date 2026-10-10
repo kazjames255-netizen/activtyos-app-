@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { staffAddonFlag } from "../lib/rosterRules";
 import type { Role } from "../middleware/role";
 import type { BlockDoc } from "../lib/blockDomain";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
@@ -92,6 +93,10 @@ const scopeKey = (req: import("express").Request, tenantId: string) => `${tenant
 const stripPrivate = (groups: ReturnType<typeof kitForDay>, allowed: boolean) =>
   allowed ? groups : groups.map((g) => ({ ...g, children: g.children.map(({ email: _e, ...c }) => c) }));
 
+/** Staff never see "Not paid yet" (payment state): the flag is dropped from their copy. */
+const noPaymentFlag = (groups: ReturnType<typeof kitForDay>, role: Role) =>
+  role !== "staff" ? groups : groups.map((g) => ({ ...g, children: g.children.map(({ flag, ...c }) => { const f = staffAddonFlag(flag); return f ? { ...c, flag: f } : c; }) })) as typeof groups;
+
 const KIT_REMINDER_KEY = "kit-day-before";
 async function reminderOn(tenantId: string, auth: NonNullable<import("express").Request["auth"]>): Promise<boolean> {
   const n = ((await loadSettings(tenantId, auth.franchiseId ?? null)).notifications ?? {}) as Record<string, boolean | "bell">;
@@ -109,7 +114,7 @@ kit.get("/", async (req, res) => {
   const todays = (await scopedBlocks(auth, tenantId, date, date, req.query.franchiseId)).filter(({ block }) => !listingId || block.listingId === listingId);
   if (!todays.length) { res.json({ date, canTick: canTick(auth.role), groups: [], ticked: 0, total: 0 }); return; }
   const bookings = await bookingsOfBlocks(tenantId, todays);
-  const groups = stripPrivate(kitForDay(bookings, date, { name }), canTick(auth.role));
+  const groups = noPaymentFlag(stripPrivate(kitForDay(bookings, date, { name }), canTick(auth.role)), auth.role);
   const tickSnap = groups.length ? await ticksCol.where("tenantId", "==", tenantId).where("date", "==", date).get() : null;
   const ticks = new Map<string, { by?: string; at?: string }>();
   tickSnap?.docs.forEach((d) => ticks.set(String(d.get("key")), { by: d.get("by"), at: d.get("at") }));

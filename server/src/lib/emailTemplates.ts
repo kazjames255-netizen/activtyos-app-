@@ -6,8 +6,12 @@ import { moneyBreakdown } from "../../../features/bookings/walletBreakdown";
 import type { AddonRequest, Booking } from "../../../features/bookings/types";
 import { bellTitle, bellBody, paymentType } from "./bellText";
 import { BRAND } from "./brand";
+import { methodHow, recordedLine, methodNames, refundMethodInfo, unsentKinds } from "../../../features/bookings/refundMethod";
+import { enJoin, enTr } from "./refundWords";
 import { addonSentences } from "../../../features/bookings/addons";
-import { requestWhat } from "../../../features/bookings/addonRequests";
+import { decisionWording, enDay, plainTitle, renderFull } from "../../../features/bookings/addonWording";
+import { englishTitle, trFor } from "./extraWording";
+import { refundNeedsProviderTransfer } from "../../../features/bookings/helpers";
 
 /** The price lines of a booking email. With store credit: Price (the whole price), Paid from store credit, then what is still to pay (or Paid, once it is) - never the cash due labelled "Total". */
 function moneyLines(b: Booking, row: (label: string, value: string) => string): string {
@@ -202,19 +206,17 @@ export function bookingConfirmedSpec(b: Booking, providerName: string, bank?: Ba
 
 /** The provider's answer to a family's request to change or cancel an extra. Separate from the booking: it stands either way. */
 export function addonDecisionSpec(b: Booking, providerName: string, r: AddonRequest): CustomerEmailSpec {
-  const who = escapeHtml((r.child ?? "").trim().split(/\s+/)[0] || "your child");
   const approved = r.status === "approved";
-  const what = escapeHtml(requestWhat(r));
-  const money = approved && r.money && r.money.amount > 0
-    ? r.money.resolution === "charge" ? ` The difference of <b>${gbp(r.money.amount)}</b> is to pay.`
-      : r.money.resolution === "wallet" ? ` <b>${gbp(r.money.amount)}</b> has been added to your wallet.`
-      : r.money.resolution === "refund" ? ` <b>${gbp(r.money.amount)}</b> will be refunded.` : ""
-    : approved && r.kind === "cancel" && r.money && r.money.resolution === "none" ? " No refund is due for this extra." : "";
+  // The same plain sentences as the family's bell (features/bookings/addonWording.ts), in English: the email has no language setting yet.
+  const w = decisionWording(r, { ref: b.ref, listing: b.listing, awaitingTransfer: refundNeedsProviderTransfer(b), provider: providerName, ...(() => { const ks = unsentKinds(b); return ks.length ? { kinds: ks.join(","), methods: methodNames(ks, enTr, enJoin) } : {}; })() });
+  const tr = trFor("en");
+  const main = escapeHtml(renderFull(tr, w.body, enDay));
+  const rest = w.more.filter((x) => x.key !== "p7shell.xrReason").map((x) => escapeHtml(renderFull(tr, x, enDay))).join(" ");
   const why = !approved && r.declineReason ? `<p style="margin:12px 0;padding:10px 12px;border-left:3px solid #d9736b;background:#fbf1f1;border-radius:6px;font-size:14px">${escapeHtml(r.declineReason)}</p>` : "";
   return {
-    subject: `${approved ? "Extra request approved" : "Extra request declined"} — ${b.listing}`,
+    subject: `${englishTitle(w)} — ${plainTitle(b.listing)}`,
     title: approved ? "Your request was approved" : "Your request was declined",
-    body: `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} ${approved ? "approved" : "couldn't approve"} your request for ${who} to ${what}.${money}</p>${why}<p style="font-size:13px;color:#6a6785">Your booking itself is unchanged.</p>`,
+    body: `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} ${approved ? "approved" : "couldn't approve"} your request. ${main}${rest ? ` ${rest}` : ""}</p>${why}<p style="font-size:13px;color:#6a6785">Your booking itself is unchanged.</p>`,
   };
 }
 
@@ -248,7 +250,13 @@ export function refundApprovedSpec(b: Booking, providerName: string): CustomerEm
         // A voucher / Tax-Free Childcare / cash booking: the app can't send it
         // back, and it was never on a card — don't say it's going there.
         ? `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} approved the refund for this booking${amt ? ` (<b>${amt}</b>)` : ""}.
-           ${b.voucherScheme ? `It will be returned through <b>${escapeHtml(b.voucherScheme)}</b>, the way you paid.` : /bank|transfer|bacs/i.test(b.method ?? "") ? `${escapeHtml(providerName)} will send it to you <b>by bank transfer</b>. We'll email you again as soon as it has been sent.` : "They'll return it the way you paid."} If you have questions, reply to this email.</p>`
+           ${(() => {
+             // Names the way(s) the family actually paid (cash, bank transfer, voucher, a mix): the app cannot move that money, the provider sends it.
+             const ks = unsentKinds(b);
+             if (!ks.length) return b.voucherScheme ? `It will be returned through <b>${escapeHtml(b.voucherScheme)}</b>, the way you paid.` : "They'll return it the way you paid.";
+             const scheme = b.voucherScheme && ks.includes("voucher") ? ` (<b>${escapeHtml(b.voucherScheme)}</b>)` : "";
+             return `${escapeHtml(recordedLine(ks, providerName, amt ? b.cancel!.amount!.toFixed(2).replace(/^/, "£") : "", enTr, enJoin).replace(/\s{2,}/g, " "))}${scheme}. We'll email you again as soon as it has been sent.`;
+           })()} If you have questions, reply to this email.</p>`
         : `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} approved the refund for this booking.
          ${amt ? `Amount: <b>${amt}</b>. It usually reaches your original payment method within 5–10 working days, depending on your bank.` : ""}</p>`,
   };
@@ -258,12 +266,13 @@ export function refundApprovedSpec(b: Booking, providerName: string): CustomerEm
 export function refundSentSpec(b: Booking, providerName: string): CustomerEmailSpec {
   const amt = b.cancel?.amount ? gbp(b.cancel.amount) : "";
   const on = b.cancel?.refundSentAt ? new Date(b.cancel.refundSentAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/London" }) : "";
-  const how = b.voucherScheme ? `through <b>${escapeHtml(b.voucherScheme)}</b>` : /bank|transfer|bacs/i.test(b.method ?? "") ? "<b>by bank transfer</b>" : "the way you paid";
+  const ks = unsentKinds(b);
+  const how = ks.length ? `<b>${escapeHtml(methodHow(ks, enTr, enJoin))}</b>${b.voucherScheme && ks.includes("voucher") ? ` (${escapeHtml(b.voucherScheme)})` : ""}` : b.voucherScheme ? `through <b>${escapeHtml(b.voucherScheme)}</b>` : "the way you paid";
   return {
     subject: `Your refund has been sent — ${b.listing}`,
     title: "Your refund has been sent",
     body: `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} has sent your refund${amt ? ` of <b>${amt}</b>` : ""} ${how}${on ? ` on <b>${escapeHtml(on)}</b>` : ""}.
-       Bank transfers usually arrive the same day, but can take up to 2 working days. If it hasn't arrived by then, reply to this email.</p>`,
+       ${ks.length === 1 && ks[0] === "cash" ? "If you haven't received it, reply to this email." : ks.includes("bank") || !ks.length ? "Bank transfers usually arrive the same day, but can take up to 2 working days. If it hasn't arrived by then, reply to this email." : "If it hasn't reached you, reply to this email."}</p>`,
   };
 }
 
@@ -313,8 +322,9 @@ export function cancelMoneyLine(b: Booking, providerName: string, paid: number):
     if (c.refundTo === "wallet")
       return { full: `${a} will be added to your wallet as credit once ${providerName} approves it.`, short: `${a} wallet credit pending` };
     const offline = !!b.voucherScheme || /voucher|tax-?free|tfc|childcare|haf|cash|bank|transfer/i.test(b.method ?? "");
+    const ks = refundMethodInfo(b).kinds;
     return offline
-      ? { full: `A refund of ${a} is pending and will be returned the way you paid once ${providerName} approves it.`, short: `${a} refund pending` }
+      ? { full: ks.length ? `A refund of ${a} is pending. Once ${providerName} approves it, they will send it ${methodHow(ks, enTr, enJoin)}.` : `A refund of ${a} is pending and will be returned the way you paid once ${providerName} approves it.`, short: `${a} refund pending` }
       : { full: `A refund of ${a} is pending and goes back to your payment method once ${providerName} approves it.`, short: `${a} refund pending` };
   }
   if ((b.refundLog ?? []).some((r) => /wallet/i.test(`${r.source ?? ""} ${r.label ?? ""}`)))

@@ -5,7 +5,7 @@ import { canSee, canSeeStudent, canWriteRow, okId, registerTopicRef, requireEdit
 import { nameList, notifyFamilies } from "../../lib/hubNotify";
 import { activeMembers, visibleGroups } from "../../lib/hubGroups";
 import { cleanVideos, videosOut, type StoredVideo } from "../../lib/hubRules";
-import { deleteRoom, ensureRoom, joinWindow, mintToken, roomExpiry, roomNameFor, setRoomExpiry, MAX_OVERRUN_MS, STAY_EXTENSION_MS, STAY_PROMPT_MS, VideoError, videoConfigured, windowState } from "../../lib/hubVideo";
+import { deleteRoom, ensureRoom, joinWindow, mintToken, roomExpiry, roomNameFor, setRoomExpiry, MAX_OVERRUN_MS, STAY_EXTENSION_MS, STAY_PROMPT_MS, VIDEO_OFF, VideoError, videoConfigured, windowState } from "../../lib/hubVideo";
 import { rateLimit } from "../../lib/rateLimit";
 import { deleteBoardForLesson } from "./boardsApi";
 import { eligibleStudents, isParent, lessonsCol, notesCol, nowIso, tenantEnrolments, visibleTopic } from "./teachingCommon";
@@ -508,7 +508,7 @@ hubLessonsApi.post("/lessons/:id/join", rateLimit("hub-join", 30), async (req, r
   if (!isOwner && waitingForTutor(lesson)) { res.status(409).json({ error: "Your tutor ended the lesson — you can rejoin once they reopen it.", code: "waiting_for_tutor" }); return; }
 
   // ── video ──
-  if (!videoConfigured()) { res.status(503).json({ error: "Video lessons aren't available right now.", code: "video_unavailable" }); return; }
+  if (!videoConfigured()) { res.status(VIDEO_OFF.status).json({ error: VIDEO_OFF.message, code: VIDEO_OFF.code }); return; }
   try {
     // The room closes at the scheduled end + a short prompt window, or later if "Stay on the call" pushed it.
     // Coming back AFTER the cut-off counts as staying: the room gets a fresh 15 minutes rather than shutting on you.

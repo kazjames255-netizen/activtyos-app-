@@ -57,10 +57,12 @@ export class VideoError extends Error {
   constructor(public status: number, public code: string, message: string) { super(message); }
 }
 
+/** What a family or tutor is told when no video key is set on the server (DAILY_API_KEY): a plain "not switched on yet", not a 503 error screen. */
+export const VIDEO_OFF = { status: 409, code: "video_not_switched_on", message: "Live lessons are not switched on yet. Your tutor will share another way to join." } as const;
 export const videoConfigured = () => !!process.env.DAILY_API_KEY?.trim();
 const key = () => {
   const k = process.env.DAILY_API_KEY?.trim();
-  if (!k) throw new VideoError(503, "video_unavailable", "Video lessons aren't available right now.");
+  if (!k) throw new VideoError(VIDEO_OFF.status, VIDEO_OFF.code, VIDEO_OFF.message);
   return k;
 };
 

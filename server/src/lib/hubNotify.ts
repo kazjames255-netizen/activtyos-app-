@@ -1,6 +1,7 @@
 import { db } from "../firebase";
 import { notify } from "./notify";
 import type { EnrolmentDoc } from "./hubCore";
+import { scrubText } from "../oak/noOak";
 
 // Learning Hub → the family's bell + email (category "learning", which a parent
 // can mute — the bell entry is still written, only the email is suppressed:
@@ -44,6 +45,12 @@ export function hubHref(o: { tab?: string; childId?: string | null; open?: { kin
   return q ? `${HREF}?${q}` : HREF;
 }
 
+/** OWNER RULE: the content publisher's name never reaches a family, in the bell or the email (a lesson title can carry it from older
+ *  imports). The API guard (oak/noOakResponse.ts) only covers responses; bell and email text is built here, so it is scrubbed here. */
+export function scrubNotice<T extends { title: string; body: string }>(c: T): T {
+  return { ...c, title: scrubText(c.title) || "New in My Classroom", body: scrubText(c.body) };
+}
+
 export async function notifyFamilies(n: FamilyNotice): Promise<number> {
   try {
     const snap = await db.collection("hubEnrolments").where("tenantId", "==", n.tenantId).get();
@@ -63,7 +70,7 @@ export async function notifyFamilies(n: FamilyNotice): Promise<number> {
     }
     let sent = 0;
     for (const [email, who] of [...byParent].slice(0, MAX_RECIPIENTS)) {
-      const c = n.compose(who.names);
+      const c = scrubNotice(n.compose(who.names));
       const href = n.tab || n.open ? hubHref({ tab: n.tab, childId: who.childIds.length === 1 ? who.childIds[0] : null, open: n.open }) : who.childIds.length === 1 ? hubHref({ childId: who.childIds[0] }) : HREF;
       await notify({ tenantId: n.tenantId, to: { kind: "parent", email }, category: "learning", title: c.title, body: c.body, href, ...(n.ref ? { ref: n.ref } : {}) });
       sent++;

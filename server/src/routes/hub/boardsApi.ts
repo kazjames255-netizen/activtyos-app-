@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { db } from "../../firebase";
 import { canSeeStudent, canWriteRow, okId, requireEdit, resolveCtx, scopedChildren, type HubCtx } from "../../lib/hubCore";
+import { boardForViewer, boardIsStale } from "../../lib/hubBoardRules";
 import { signImageUrl } from "../../lib/signing";
 import { imagesCol, isParent, lessonsCol, nowIso } from "./teachingCommon";
 
@@ -174,11 +175,13 @@ hubBoardsApi.get("/lessons/:id/board", async (req, res) => {
     return;
   }
   const base = `${req.protocol}://${req.get("host")}/api/images`;
-  const pages = (snap.get("pages") as BoardPage[] | undefined) ?? emptyBoard().pages as BoardPage[];
+  const stored = (snap.get("pages") as BoardPage[] | undefined) ?? emptyBoard().pages as BoardPage[];
+  // A family sees the tutor's work and their OWN child's drawings, never another child's (owner decision, 10 Oct 2026).
+  const pages = readOnly ? boardForViewer(stored, new Set(scopedChildren(ctx).map((c) => c.childId))) : stored;
   res.json({ lessonId: lesson.id, pages: withUrls(base, pages), updatedAt: snap.get("updatedAt") ?? null, updatedBy: snap.get("updatedByName") ?? null, readOnly });
 });
 
-// PUT /lessons/:id/board {pages} — tutor only; last write wins. Bad elements are repaired or dropped (`dropped` says how many), never a reason to refuse the whole board.
+// PUT /lessons/:id/board {pages, baseUpdatedAt} — tutor only; a save from an older copy than the stored one is refused 409 board_stale (no silent last-write-wins). Bad elements are repaired or dropped (`dropped` says how many), never a reason to refuse the whole board.
 hubBoardsApi.put("/lessons/:id/board", async (req, res) => {
   const ctx = await resolveCtx(req, res);
   if (!ctx) return;
@@ -217,11 +220,24 @@ hubBoardsApi.put("/lessons/:id/board", async (req, res) => {
   }));
   const drew = [...new Set(clean.flatMap((p) => p.elements.flatMap((e) => (e.cid ? [e.cid] : []))))];
   const updatedAt = nowIso();
+  const base = isObj(req.body) && typeof req.body.baseUpdatedAt === "string" ? req.body.baseUpdatedAt : null;
   try {
-    await boardsCol.doc(lesson.id).set({
-      tenantId: ctx.tenantId, franchiseId: lesson.franchiseId, lessonId: lesson.id,
-      pages: clean, childIds: drew, updatedAt, updatedBy: ctx.uid, updatedByName: ctx.name || "Your tutor",
+    // Compare-and-set: a save made from an older copy (a second tab, a second tutor) is refused instead of silently overwriting.
+    const stale = await db.runTransaction(async (tx) => {
+      const ref = boardsCol.doc(lesson.id);
+      const cur = await tx.get(ref);
+      const storedAt = cur.exists && cur.get("tenantId") === ctx.tenantId ? ((cur.get("updatedAt") as string | undefined) ?? null) : null;
+      if (boardIsStale(storedAt, base)) return true;
+      tx.set(ref, {
+        tenantId: ctx.tenantId, franchiseId: lesson.franchiseId, lessonId: lesson.id,
+        pages: clean, childIds: drew, updatedAt, updatedBy: ctx.uid, updatedByName: ctx.name || "Your tutor",
+      });
+      return false;
     });
+    if (stale) {
+      res.status(409).json({ error: "Someone else saved this board since you opened it. Reload to see their changes before you save yours.", code: "board_stale" });
+      return;
+    }
   } catch (e) {
     // Firestore's 1 MiB document limit counts stored bytes (every number is 8), which the JSON-length check above can't see.
     if (/exceeds the maximum allowed size|too large|INVALID_ARGUMENT/i.test(e instanceof Error ? e.message : String(e))) {

@@ -7,6 +7,10 @@ import { useRealtime } from "@/lib/realtime";
 import { PlatformPricingApp } from "./PlatformPricingApp";
 import { useT } from "@/lib/i18n/provider";
 import { H, hq } from "./hqText";
+import {
+  STATUS_TABS, SORT_KEYS, classify, isOnTrial, isTestAccount, matchesSearch, sortProviders, tiles, trialDaysLeft,
+  type ProviderLike, type SortKey, type StatusTab,
+} from "@/lib/providerFilters";
 
 interface Provider {
   id: string; name: string; type: string; createdAt: string | null; ownerEmail: string | null;
@@ -40,6 +44,29 @@ const FILTERS: { id: string; label: string }[] = [
 ];
 
 interface Summary { total: number; mrr: number; trialing: number; active: number }
+/** Per-tenant row from /api/platform/subscriptions (already fetched for the tiles): status, price and trial end with the same fallbacks the tiles use. */
+interface SubRow { id: string; status: string; price: number | null; plan: string | null; trialEndsAt: string | null }
+
+const TAB_LABEL: Record<StatusTab, string> = {
+  all: H("All"), trial: H("Trial started"), endingSoon: H("Trial ending soon"), trialEnded: H("Trial ended"),
+  active: H("Active"), pastDue: H("Payment failed"), cancelled: H("Cancelled"), noCard: H("No card"),
+};
+const SORT_LABEL: Record<SortKey, string> = { newest: H("Newest"), trialEnding: H("Trial ending soonest"), name: H("Name"), value: H("Monthly value") };
+const daysText = (d: number) => (d <= 0 ? hq("ends today") : d === 1 ? hq("ends in 1 day") : hq("ends in {n} days", { n: d }));
+
+// Tab/filter state lives in the page URL (?st=&kind=&q=&sort=&test=1) so a refresh keeps it.
+function readUrl() {
+  const q = typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search);
+  const st = q.get("st") as StatusTab | null;
+  const sort = q.get("sort") as SortKey | null;
+  return {
+    st: st && STATUS_TABS.includes(st) ? st : ("all" as StatusTab),
+    kind: q.get("kind") ?? "all",
+    q: q.get("q") ?? "",
+    sort: sort && SORT_KEYS.includes(sort) ? sort : ("newest" as SortKey),
+    showTest: q.get("test") === "1",
+  };
+}
 const feeLabel = (sub: Record<string, unknown>) => (sub.price != null ? hq(sub.cadence === "year" ? "{amount}/yr" : "{amount}/mo", { amount: gbp(sub.price as number) }) : null);
 
 /** platform/providers — every provider (full signup record + subscription) plus
@@ -48,17 +75,30 @@ export function ProvidersApp() {
   useT(); // re-render on language change (labels are translated at render time)
   const [tab, setTab] = useState<"providers" | "pricing">("providers");
   const [providers, setProviders] = useState<Provider[] | null>(null);
-  const [summary, setSummary] = useState<Summary | null>(null);
+  const [subRows, setSubRows] = useState<Record<string, SubRow>>({});
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
-  const [filter, setFilter] = useState<string>("all");
+  const [init] = useState(readUrl);
+  const [filter, setFilter] = useState<string>(init.kind);
+  const [stTab, setStTab] = useState<StatusTab>(init.st);
+  const [search, setSearch] = useState(init.q);
+  const [sort, setSort] = useState<SortKey>(init.sort);
+  const [showTest, setShowTest] = useState(init.showTest);
+
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const put = (k: string, v: string, def: string) => (v === def ? q.delete(k) : q.set(k, v));
+    put("st", stTab, "all"); put("kind", filter, "all"); put("q", search.trim(), ""); put("sort", sort, "newest"); put("test", showTest ? "1" : "0", "0");
+    const qs = q.toString();
+    window.history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}${window.location.hash}`);
+  }, [stTab, filter, search, sort, showTest]);
 
   const load = useCallback(() => {
     Promise.all([
       apiGet<{ providers: Provider[] }>("/api/platform/providers"),
-      apiGet<{ summary: Summary }>("/api/platform/subscriptions"),
+      apiGet<{ rows: SubRow[] }>("/api/platform/subscriptions"),
     ])
-      .then(([p, s]) => { setProviders(p.providers); setSummary(s.summary); setError(null); })
+      .then(([p, s]) => { setProviders(p.providers); setSubRows(Object.fromEntries(s.rows.map((r) => [r.id, r]))); setError(null); })
       .catch((e) => setError(e instanceof Error ? e.message : hq("Failed to load providers")));
   }, []);
   useEffect(load, [load]);
@@ -80,13 +120,38 @@ export function ProvidersApp() {
   if (error) return <div className="text-[var(--ink)]">{tabs}<div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div></div>;
   if (!providers) return <div className="text-[var(--ink)]">{tabs}<div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{hq("Loading providers…")}</div></div>;
 
+  // Everything below is worked out from the lists already loaded (no extra reads): merge the subscription row (status / price / trial end,
+  // the same numbers the tiles use) with the provider's own record (email, card), then filter, sort and total the visible set.
+  const now = new Date();
+  const enriched = providers.map((p) => {
+    const r = subRows[p.id];
+    const sub = p.subscription ?? {};
+    return {
+      p,
+      f: {
+        id: p.id, name: p.name, ownerEmail: p.ownerEmail, contactEmail: p.contactEmail, createdAt: p.createdAt,
+        status: r?.status ?? (sub.status as string) ?? "none",
+        trialEndsAt: r?.trialEndsAt ?? (sub.trialEndsAt as string | null) ?? null,
+        hasCard: !!sub.cardLast4,
+        price: r?.price ?? (sub.price as number | null) ?? null,
+      } as ProviderLike,
+    };
+  });
+  const pool = showTest ? enriched : enriched.filter((e) => !isTestAccount(e.f));
+  const hidden = enriched.length - pool.length;
+  const summary = tiles(pool.map((e) => e.f));
+  const inKind = pool.filter((e) => matchesSearch(e.f, search) && (filter === "all" || kindOf(e.p) === filter));
+  const tabCount = (t: StatusTab) => inKind.filter((e) => classify(e.f, now).has(t)).length;
+  const shown = sortProviders(inKind.filter((e) => classify(e.f, now).has(stTab)).map((e) => e.f), sort, now);
+  const byId = new Map(enriched.map((e) => [e.p.id, e]));
+
   return (
     <div className="text-[var(--ink)]">
       {tabs}
-      <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">{hq("Every tenant on the platform — {n}, what they’re on and the revenue it adds up to. Click a row for the full signup record and subscription.", { n: providers.length })}</p>
+      <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">{hq("Every tenant on the platform — {n}, what they’re on and the revenue it adds up to. Click a row for the full signup record and subscription.", { n: pool.length })}</p>
 
       {summary && (
-        <div className="mb-5 grid gap-3 sm:grid-cols-4">
+        <div className="mb-1 grid gap-3 sm:grid-cols-4">
           {([[hq("Providers"), String(summary.total)], [hq("Monthly recurring"), hq("{amount}/mo", { amount: gbp(summary.mrr) })], [hq("On trial"), String(summary.trialing)], [hq("Active"), String(summary.active)]] as [string, string][]).map(([k, v]) => (
             <div key={k} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
               <div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{k}</div>
@@ -96,11 +161,41 @@ export function ProvidersApp() {
         </div>
       )}
 
+      <div className="mb-5 mt-1.5 flex flex-wrap items-center gap-3 text-[12px] text-[var(--ink-3)]">
+        <label className="flex cursor-pointer items-center gap-2 font-semibold text-[var(--ink-2)]">
+          <input type="checkbox" role="switch" checked={!showTest} onChange={(e) => setShowTest(!e.target.checked)} className="h-4 w-4 accent-[#1d3a8f]" />
+          {hq("Hide test accounts")}
+        </label>
+        {hidden > 0 && <span>{hq("excluding {n} test accounts", { n: hidden })}</span>}
+      </div>
+
       <InviteProviders />
 
-      <div className="mb-3 mt-6 flex flex-wrap gap-2">
+      <div className="mb-3 mt-6 flex flex-wrap items-center gap-2">
+        <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={hq("Search name, email or tenant id…")} aria-label={hq("Search name, email or tenant id…")}
+          className="min-w-[220px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
+        <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label={hq("Sort by")}
+          className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12.5px] font-semibold text-[var(--ink)]">
+          {SORT_KEYS.map((k) => <option key={k} value={k}>{hq(SORT_LABEL[k])}</option>)}
+        </select>
+      </div>
+
+      <div className="mb-2 flex flex-wrap gap-2">
+        {STATUS_TABS.map((t) => {
+          const on = stTab === t;
+          return (
+            <button key={t} type="button" onClick={() => setStTab(t)}
+              className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors"
+              style={on ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
+              {hq(TAB_LABEL[t])} <span className={on ? "text-white/70" : "text-[var(--ink-3)]"}>{tabCount(t)}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mb-3 flex flex-wrap gap-2">
         {FILTERS.map((f) => {
-          const n = f.id === "all" ? providers.length : providers.filter((p) => kindOf(p) === f.id).length;
+          const n = f.id === "all" ? pool.filter((e) => matchesSearch(e.f, search)).length : pool.filter((e) => matchesSearch(e.f, search) && kindOf(e.p) === f.id).length;
           const on = filter === f.id;
           return (
             <button key={f.id} type="button" onClick={() => setFilter(f.id)}
@@ -113,9 +208,13 @@ export function ProvidersApp() {
       </div>
 
       <div className="flex flex-col gap-2">
-        {providers.filter((p) => filter === "all" || kindOf(p) === filter).map((p) => {
+        {shown.length === 0 && <div className="py-8 text-center text-[12.5px] text-[var(--ink-3)]">{hq("No providers match")}</div>}
+        {shown.map((f) => {
+          const p = byId.get(f.id)!.p;
           const sub = p.subscription ?? {};
-          const status = (sub.status as string) ?? "none";
+          const status = f.status;
+          const left = isOnTrial(f, now) ? trialDaysLeft(f.trialEndsAt, now) : null;
+          const planName = (sub.plan as string) ?? subRows[p.id]?.plan ?? null;
           const sm = SM[status] ?? SM.none;
           const isOpen = open === p.id;
           return (
@@ -125,9 +224,16 @@ export function ProvidersApp() {
                 <div className="min-w-0">
                   <div className="text-[14.5px] font-extrabold">{p.name}</div>
                   <div className="text-[11.5px] text-[var(--ink-3)]">{p.ownerEmail ?? "—"} · {hq("since {date}", { date: fmt(p.createdAt).replace(", 2026", "") })}</div>
+                  {status === "trialing" && f.trialEndsAt && (
+                    <div className="text-[11.5px] font-semibold text-[#1d3a8f]">
+                      {isOnTrial(f, now) ? `${hq("Trial ends")} ${fmt(f.trialEndsAt)}${left != null ? ` · ${daysText(left)}` : ""}` : `${hq("Trial ended")} ${fmt(f.trialEndsAt)}`}
+                      {!f.hasCard && ` · ${hq("No card")}`}
+                    </div>
+                  )}
                 </div>
                 <div className="ms-auto flex items-center gap-2">
-                  {feeLabel(sub) && <span className="rounded-full bg-[#f4f6fb] px-2.5 py-0.5 text-[11px] font-bold tabular-nums text-[var(--ink-2)]">{feeLabel(sub)}</span>}
+                  {planName && <span className="rounded-full bg-[#f4f6fb] px-2.5 py-0.5 text-[11px] font-bold text-[var(--ink-2)]">{hq(planName.charAt(0).toUpperCase() + planName.slice(1))}</span>}
+                  {f.price != null && <span className="rounded-full bg-[#f4f6fb] px-2.5 py-0.5 text-[11px] font-bold tabular-nums text-[var(--ink-2)]">{feeLabel({ ...sub, price: f.price }) ?? ""}</span>}
                   <span className="rounded-full bg-[#eaf0fc] px-2.5 py-0.5 text-[11px] font-bold text-[#1d3a8f]">{hq(kindOf(p).charAt(0).toUpperCase() + kindOf(p).slice(1))}</span>
                   <span className="rounded-full px-2.5 py-0.5 text-[11px] font-bold" style={{ background: sm.bg, color: sm.fg }}>{hq(sm.label)}</span>
                   <span className={`text-[13px] transition-transform ${isOpen ? "rotate-90" : ""} text-[var(--ink-3)]`}>▸</span>

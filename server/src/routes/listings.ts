@@ -9,6 +9,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { librarySnap, libraryDocId, loadSettings } from "../lib/tenantLibrary";
 import { videoModeDefault } from "../lib/onlineRules";
 import { DEFAULT_POLICY, policyById, policyWording, type NamedPolicy } from "../../../lib/cancellation";
+import { staffListingView } from "../lib/rosterRules";
 import { canWrite } from "../middleware/role";
 import { isFranchise, visibleToFranchise } from "../lib/franchiseScope";
 import { blockSummary, type BlockDoc } from "../lib/blockDomain";
@@ -27,6 +28,16 @@ import { accessFor, subscriptionState } from "../middleware/subscription";
 
 export const listings = Router();
 // Any listing write (create, edit, publish, archive, delete) makes the cached browse feed stale: drop it.
+// STAFF see no money: every listing a staff token is sent (mine list, browse feed, direct link) goes through the allow-list in lib/rosterRules.ts.
+listings.use((req, res, next) => {
+  if (req.auth?.role !== "staff") { next(); return; }
+  const json = res.json.bind(res);
+  res.json = ((body: unknown) => {
+    const one = (x: unknown) => (x && typeof x === "object" && "id" in (x as object) ? staffListingView(x as Record<string, unknown>) : x);
+    return json(Array.isArray(body) ? body.map(one) : one(body));
+  }) as typeof res.json;
+  next();
+});
 listings.use((req, res, next) => { if (req.method !== "GET") res.on("finish", () => clearBrowseCache()); next(); });
 
 const col = db.collection("listings");

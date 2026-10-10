@@ -1259,6 +1259,7 @@ T("DI wallet", async () => {
     try {
       await uiPayStage(pg, LW, kk, 0, "5 days");
       await pg.getByText("£30.00").first().waitFor({ timeout: 20_000 });
+      await pg.getByRole("radio", { name: /Use part of it/ }).click(); // checkout ASKS before spending credit
       await pg.locator('input[type="range"]').fill("10");
       await pg.waitForTimeout(1200);
       const due = await dueNow(pg); eq(due, 80, "Due now with £10 of wallet");
@@ -1280,6 +1281,7 @@ T("DI wallet", async () => {
       await uiPayStage(pg, LW, kk, 0, "5 days");
       // week 0 is taken by the DI-039 booking for another child; fine (different child)
       await pg.getByText("£30.00").first().waitFor({ timeout: 20_000 });
+      await pg.getByRole("radio", { name: /Use my credit/ }).click(); // checkout ASKS before spending credit
       await pg.waitForTimeout(1000);
       const due = await dueNow(pg); eq(due, 60, "Due now £60");
       const shot = await snap(pg, "DI-038");
@@ -1290,7 +1292,7 @@ T("DI wallet", async () => {
       eq(await bal(W1), 0, "wallet now empty");
       const led = JSON.stringify(await ok(W1, "GET", "/api/my/wallet"));
       truthy(led.includes(row.ref), "ledger spend row carries the booking ref: " + led.slice(0, 300));
-      return { note: `wallet £30 spent automatically: Due now £${due}; booking ${row.ref} walletApplied ${row.walletApplied}, amount £${row.amount}; wallet £0; ledger has a spend row with ${row.ref}`, shot };
+      return { note: `wallet £30 spent after choosing 'Use my credit': Due now £${due}; booking ${row.ref} walletApplied ${row.walletApplied}, amount £${row.amount}; wallet £0; ledger has a spend row with ${row.ref}`, shot };
     } finally { await pg.close().catch(() => {}); }
   });
   await check("DI-041", "parent", async () => {

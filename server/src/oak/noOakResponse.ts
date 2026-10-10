@@ -3,7 +3,9 @@
 // response is checked (cheap regex pre-test) and scrubbed only when it matches. Covers notes, lessons, homework,
 // search results, exports/print HTML and preview emails, for tutor, parent and kid alike.
 import type { Request, Response, NextFunction } from "express";
-import { BRAND_RE, mentionsOak, scrubDeep, scrubText } from "./noOak";
+import { BRAND_RE, mentionsOak, scrubPayload, scrubText } from "./noOak";
+
+export { scrubPayload }; // lives in noOak.ts now (the web app's i18n route uses it too)
 
 const QUICK = /oak|thenational\.academy|\bOGL\b|government licen/i;
 
@@ -11,29 +13,6 @@ const QUICK = /oak|thenational\.academy|\bOGL\b|government licen/i;
 export function scrubHtml(html: string): string {
   if (!QUICK.test(html) || (!BRAND_RE.test(html) && !/\boak\b/i.test(html))) return html;
   return html.replace(/>([^<>]+)</g, (m, t: string) => (mentionsOak(t) || /thenational\.academy|oaknational/i.test(t) ? `>${scrubText(t)}<` : m));
-}
-
-/** JSON-ish value: deep scrub (drops brand slides, brand sentences, brand links). Returns the same object when clean. */
-export function scrubPayload<T>(v: T): T {
-  let s: string;
-  try { s = JSON.stringify(v); } catch { return v; }
-  if (!s || !QUICK.test(s)) return v;
-  return dropAttribution(scrubDeep(v).value) as T;
-}
-
-/** `source.attribution` / `source.licence` are provenance (skipped by scrubDeep as internal), but they hold the credit line
- *  verbatim, so they never leave the API either. */
-function dropAttribution(x: unknown): unknown {
-  if (Array.isArray(x)) return x.map(dropAttribution);
-  if (x && typeof x === "object") {
-    const o: Record<string, unknown> = {};
-    for (const [k, y] of Object.entries(x)) {
-      if ((k === "attribution" || k === "licence") && typeof y === "string" && (BRAND_RE.test(y) || /OGL/.test(y))) continue;
-      o[k] = dropAttribution(y);
-    }
-    return o;
-  }
-  return x;
 }
 
 export function noOakResponse(_req: Request, res: Response, next: NextFunction): void {

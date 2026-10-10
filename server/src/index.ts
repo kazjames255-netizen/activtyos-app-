@@ -104,6 +104,7 @@ import { payments, bookingPayPublic } from "./routes/payments";
 import { me, tenants } from "./routes/tenants";
 import { twoFa } from "./routes/twoFa";
 import { ai } from "./routes/ai";
+import { aiRateLimit } from "./lib/aiGuards";
 import { stripeWebhook } from "./routes/stripeWebhook";
 import { installProcessHandlers, record } from "./lib/monitor";
 import { enforceSubscription } from "./middleware/subscription";
@@ -411,7 +412,7 @@ app.use("/api/platform/test-tracker", testTracker);
 app.use("/api/support/report", supportReport);
 app.use("/api/platform", platform);
 app.use("/api/analytics", analytics);
-app.use("/api/ai", ai);
+app.use("/api/ai", aiRateLimit, ai); // 20 a minute and 150 a day per user (lib/aiGuards.ts); every call can read ~21 collections and costs a model call
 
 // Surface async route errors as JSON 500s rather than hanging the request.
 // (Express identifies error middleware by its 4-arg signature, so the unused

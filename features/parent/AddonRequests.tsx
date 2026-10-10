@@ -6,6 +6,8 @@ import { useT } from "@/lib/i18n/provider";
 import { formatDay } from "@/lib/i18n/format";
 import { money } from "@/features/bookings/helpers";
 import { requestTargets } from "@/features/bookings/addonRequests";
+import { doneLineMsg, extraNameOf, headingMsg, pendingLineMsg, renderFull, type Msg } from "@/features/bookings/addonWording";
+import { parseAddonLabel } from "@/features/bookings/addons";
 import type { AddonRequest, Booking } from "@/features/bookings/types";
 
 // A family asks to CHANGE (size, colour...) or CANCEL extras. Never automatic and not the same as cancelling the booking: the request goes to
@@ -25,7 +27,6 @@ interface Line {
 }
 interface Options { cutoffDays: number; lines: Line[]; history: AddonRequest[] }
 
-const first = (n: string) => n.trim().split(/\s+/)[0] || "Child";
 const WHOLE = "*";
 
 export function AddonRequests({ booking, providerName, onChanged }: { booking: Booking; providerName?: string; onChanged?: () => void }) {
@@ -45,6 +46,7 @@ export function AddonRequests({ booking, providerName, onChanged }: { booking: B
   const tenantQ = booking.tenantId ? `?tenantId=${encodeURIComponent(booking.tenantId)}` : "";
   const base = `/api/my/bookings/${encodeURIComponent(booking.ref)}`;
   const dayText = (d: string) => formatDay(d, { weekday: "short", day: "numeric", month: "short" });
+  const say = (m: Msg) => renderFull(t, m, dayText);
 
   const load = () => apiGet<Options>(`${base}/addon-options${tenantQ}`).then(setData).catch((e) => setError(e instanceof Error ? e.message : String(e)));
   useEffect(() => { if (open) void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [open, booking.ref, (booking.addonRequests ?? []).length]);
@@ -83,6 +85,9 @@ export function AddonRequests({ booking, providerName, onChanged }: { booking: B
   const pendingRequests = Array.from(new Map((data?.lines ?? []).filter((l) => l.pending).map((l) => [l.pending!.id, l.pending!])).values());
   const askable = (data?.lines ?? []).filter((l) => l.canCancel && !l.pending);
   const changeable = (data?.lines ?? []).filter((l) => l.canChange && !l.pending);
+  // ONE extra that is not asked about a day at a time: the button names it ("Cancel tshirty (Child B)"). Otherwise "Cancel days or extras".
+  const lone = askable.length === 1 && !askable[0].splittable ? askable[0] : null;
+  const decided = (data?.history ?? []).filter((r) => r.status === "approved" || r.status === "declined").slice(-3);
   const pendingLines = new Set(pendingRequests.flatMap((r) => requestTargets(r).map((x) => x.key)));
   const blocked = (data?.lines ?? []).filter((l) => !l.pending && !l.canCancel && !pendingLines.has(l.key));
 
@@ -93,7 +98,7 @@ export function AddonRequests({ booking, providerName, onChanged }: { booking: B
       ) : (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
           <div className="flex items-center justify-between gap-2">
-            <div className="text-[13px] font-extrabold">🎁 {t("p8lst.arTitle")}</div>
+            <div className="text-[13px] font-extrabold" data-testid="addon-heading">🎁 {say(headingMsg((data?.lines ?? (booking.addonLines ?? [])).map((l) => ("name" in l && l.name ? l.name : parseAddonLabel(l.label).name))))}</div>
             <button type="button" onClick={() => { setOpen(false); reset(); setSent(false); }} className="text-[12px] font-bold text-[var(--ink-3)]">{t("p8lst.arBack")}</button>
           </div>
           <p className="mt-1 text-[12px] text-[var(--ink-3)]">{t("p8lst.arIntro")}</p>
@@ -104,23 +109,31 @@ export function AddonRequests({ booking, providerName, onChanged }: { booking: B
           {pendingRequests.map((r) => (
             <div key={r.id} className="mt-2.5 rounded-lg border border-dashed border-[var(--line)] p-2.5" data-testid="addon-pending-request">
               <div className="flex flex-wrap items-center gap-2 text-[12.5px] font-semibold text-[var(--amber)]">
-                <span>⏳ {t("p8lst.arPending", { provider })}</span>
+                <span data-testid="addon-pending-line">⏳ {say(pendingLineMsg(r, provider))}</span>
                 <button type="button" disabled={busy} onClick={() => withdraw(r.id)} className={btn}>{t("p8lst.arWithdraw")}</button>
               </div>
               <ul className="mt-1.5 space-y-0.5 text-[12.5px] text-[var(--ink-2)]">
-                {r.kind === "change"
-                  ? <li><b>{r.label}</b> → {r.toLabel}</li>
-                  : requestTargets(r).map((x) => (
-                    <li key={x.key}><b>{x.label}</b> <span className="text-[var(--ink-3)]">· {first(x.child)}{x.days?.length ? ` · ${t("p8lst.arDaysList", { days: x.days.map(dayText).join(", ") })}` : ""}</span></li>
-                  ))}
+                {r.kind === "cancel" && requestTargets(r).map((x) => (
+                  <li key={x.key}><b>{parseAddonLabel(x.label).name}</b> <span className="text-[var(--ink-3)]">· {x.child.trim()}{x.days?.length ? ` · ${t("p8lst.arDaysList", { days: x.days.map(dayText).join(", ") })}` : ""}</span></li>
+                ))}
               </ul>
             </div>
           ))}
 
+          {decided.length > 0 && (
+            <ul className="mt-2.5 space-y-0.5 text-[12.5px] text-[var(--ink-2)]" data-testid="addon-done-lines">
+              {decided.map((r) => (
+                <li key={r.id}><b>{extraNameOf(r) || requestTargets(r).map((x) => parseAddonLabel(x.label).name).join(", ")}</b> · {say(doneLineMsg(r))}{r.status === "declined" && r.declineReason ? ` · ${r.declineReason}` : ""}</li>
+              ))}
+            </ul>
+          )}
+
           {data && mode === "menu" && !change && (
             <div className="mt-2.5 space-y-2.5">
               {askable.length > 0 && (
-                <button type="button" className={btn} data-testid="addon-open-cancel" onClick={() => { setSent(false); setError(null); setMode("cancel"); }}>{t("p8lst.arCancelHead")}</button>
+                lone
+                  ? <button type="button" className={btn} data-testid="addon-open-cancel" onClick={() => { setSent(false); setError(null); setSel({ [lone.key]: [WHOLE] }); setMode("cancel"); }}>{t("p7shell.xrBtnCancel", { name: lone.name, child: lone.child.trim() })}</button>
+                  : <button type="button" className={btn} data-testid="addon-open-cancel" onClick={() => { setSent(false); setError(null); setMode("cancel"); }}>{t("p8lst.arCancelHead")}</button>
               )}
               {changeable.length > 0 && (
                 <div>
@@ -128,7 +141,7 @@ export function AddonRequests({ booking, providerName, onChanged }: { booking: B
                   <div className="flex flex-wrap gap-2">
                     {changeable.map((l) => (
                       <button key={l.key} type="button" className={btn} onClick={() => { setSent(false); setError(null); setChange({ key: l.key, answers: { ...l.current }, note: "" }); }}>
-                        {t("p8lst.arChange")}: {l.name} · {first(l.child)}
+                        {t("p7shell.xrBtnChange", { name: l.name, child: l.child.trim() })}
                       </button>
                     ))}
                   </div>
@@ -136,7 +149,7 @@ export function AddonRequests({ booking, providerName, onChanged }: { booking: B
               )}
               {blocked.map((l) => (
                 <div key={l.key} className="text-[12px] text-[var(--ink-3)]">
-                  <b>{l.label}</b> · {first(l.child)} — {l.block === "past" ? t("p8lst.arPast") : l.block === "cutoff" ? t("p8lst.arCutoff", { date: l.until ? dayText(l.until) : "" }) : ""}
+                  <b>{l.label}</b> · {l.child.trim()} — {l.block === "past" ? t("p8lst.arPast") : l.block === "cutoff" ? t("p8lst.arCutoff", { date: l.until ? dayText(l.until) : "" }) : ""}
                 </div>
               ))}
             </div>
@@ -150,7 +163,7 @@ export function AddonRequests({ booking, providerName, onChanged }: { booking: B
                 const openDays = (l.days ?? []).filter((d) => d.state === "none");
                 return (
                   <div key={l.key} className="mt-2.5 border-t border-dashed border-[var(--line)] pt-2.5" data-testid="addon-line">
-                    <div className="text-[13px]"><b>{l.label}</b> <span className="text-[var(--ink-3)]">· {first(l.child)} · {money(l.price)}</span></div>
+                    <div className="text-[13px]"><b>{l.label}</b> <span className="text-[var(--ink-3)]">· {l.child.trim()} · {money(l.price)}</span></div>
                     {l.splittable && (l.days?.length ?? 0) > 0 ? (
                       <div className="mt-1.5">
                         <label className="mb-1 flex cursor-pointer items-center gap-2 text-[12.5px] font-bold">
@@ -198,7 +211,7 @@ export function AddonRequests({ booking, providerName, onChanged }: { booking: B
             if (!l) return null;
             return (
               <div className="mt-2.5 space-y-2" data-testid="addon-change-form">
-                <div className="text-[13px]"><b>{l.label}</b> <span className="text-[var(--ink-3)]">· {first(l.child)}</span></div>
+                <div className="text-[13px]"><b>{l.name}</b> <span className="text-[var(--ink-3)]">· {l.child.trim()}</span></div>
                 {l.changeDays && l.days && l.changeDays.length > 0 && l.changeDays.length < l.days.length && (
                   <div className="text-[12px] text-[var(--ink-3)]">{t("p8lst.arDaysList", { days: l.changeDays.map(dayText).join(", ") })}</div>
                 )}

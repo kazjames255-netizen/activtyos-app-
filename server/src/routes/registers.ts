@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { childExtrasForDay, staffSafeNote } from "../lib/rosterRules";
+import { childExtrasForDay, staffAddonFlag, staffSafeNote } from "../lib/rosterRules";
 import { splitOneOffLines } from "../lib/splitSiblings";
 import { addonFlag, kidOf, type SplitBooking } from "../../../features/bookings/addons";
 import { z } from "zod";
@@ -77,6 +77,8 @@ const todayIso = () => ukToday();
 // attendance taken so far. Platform passes ?tenantId=.
 registers.get("/", async (req, res) => {
   const auth = req.auth!;
+  // Staff never see "Not paid yet" (payment state); "Awaiting approval" stays.
+  const shownFlag = (b: { status: string; pay?: string }) => (auth.role === "staff" ? staffAddonFlag(addonFlag(b)) : addonFlag(b));
   if (auth.role === "parent") {
     res.status(403).json({ error: "Requires an operator or staff account" });
     return;
@@ -249,7 +251,7 @@ registers.get("/", async (req, res) => {
         // This child's extras for THIS day only: a sibling's T-shirt, or a lunch bought for other days, must not show here.
         addons: childExtrasForDay(shownLines.get(b.ref) ?? b.addonLines, b.addons, r.name, date, { bookingDays: b.days, kid: kidOf(b, r.name) }, auth.role !== "staff"),
         // A booking that is not paid yet, or still waits for approval, still shows its extras: the register labels it ("Not paid yet" / "Awaiting approval").
-        ...(addonFlag(b) ? { addonFlag: addonFlag(b) } : {}),
+        ...(shownFlag(b) ? { addonFlag: shownFlag(b) } : {}),
         bookingStatus: b.status,
         seats: 1,
         children: [{ name: r.name, age: r.age }],

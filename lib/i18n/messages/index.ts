@@ -56,6 +56,7 @@ import p7pol from "./areas/p7pol";
 import p7bk from "./areas/p7bk";
 import p7nav from "./areas/p7nav";
 import p7shell from "./areas/p7shell";
+import rfm from "./areas/rfm";
 
 import p8pub from "./areas/p8pub";
 import p9fr from "./areas/p9fr";
@@ -87,7 +88,7 @@ const BASE: Record<LocaleCode, Namespaces> = {
 // area namespace -> its per-locale dictionaries.
 // The Teaching Hub catalogues (hub*) are NOT here: they are ~half of all message text and only the hub needs them, so they live in ./hub
 // (served per-locale by app/i18n/hub/[locale]/route.ts and fetched by lib/i18n/hubMessages.ts). A NEW hub area: add it to ./hub.
-const AREAS: Record<string, ByLocale> = { common, dashboard, parent, customers, meals, setup, team, registers, schedule, tasks, money, marketing, comms, workforce, listings, care, franchise, account, feed, staffp, chrome, p7login, p7parent, words, p7shell, p7nav, p7bk, p7pol, p7bkl, p7bd, p7dash, p7med, p7inc, p7pub, p7cl, p7bw, p7be, p7pg, p7ck, p7tc, p7tk, p7ho, p8pub, p8par, p9fr, p9jr, p9tx, p9em, fpay };
+const AREAS: Record<string, ByLocale> = { common, dashboard, parent, customers, meals, setup, team, registers, schedule, tasks, money, marketing, comms, workforce, listings, care, franchise, account, feed, staffp, chrome, p7login, p7parent, words, p7shell, rfm, p7nav, p7bk, p7pol, p7bkl, p7bd, p7dash, p7med, p7inc, p7pub, p7cl, p7bw, p7be, p7pg, p7ck, p7tc, p7tk, p7ho, p8pub, p8par, p9fr, p9jr, p9tx, p9em, fpay };
 
 const LOCALE_CODES: LocaleCode[] = ["en", "pl", "ro", "ur", "pa", "bn", "ar", "pt", "es", "fr", "cy"];
 

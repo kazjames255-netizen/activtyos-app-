@@ -4,7 +4,7 @@ import { db } from "../firebase";
 import { hubCached, patchHub } from "./hubCache";
 import { mdExcerpt, readMinutes } from "./hubText";
 import type { AssessmentDoc, QuestionDoc, TopicDoc } from "../routes/hub/shared";
-import { OWNER_SOURCE_TENANT_IDS, SHARED_LIBRARY_TENANT_ID, type EnrolmentDoc } from "./hubCore";
+import { ownsSharedSource, SHARED_LIBRARY_TENANT_ID, type EnrolmentDoc } from "./hubCore";
 
 // SHARED LIBRARY: every content index below (topics/questions/notes/assessments/flashcards) is
 // the union of a tenant's OWN rows plus `SHARED_LIBRARY_TENANT_ID`'s (the platform curriculum,
@@ -13,12 +13,12 @@ import { OWNER_SOURCE_TENANT_IDS, SHARED_LIBRARY_TENANT_ID, type EnrolmentDoc } 
 // tenant. Read-only from a tenant's side: write routes still require an exact `tenantId` match
 // (see lib/hubCore.ts canReadContent), so a shared row can never be patched here either.
 //
-// EXCEPT the two owner tenants the library was itself promoted FROM (`OWNER_SOURCE_TENANT_IDS`):
+// EXCEPT the owner tenants the library was itself promoted FROM (`tenants/{id}.ownsSharedSource`, see hubCore.ownsSharedSource):
 // they already own this exact content under their own tenantId, so merging the shared copy back in
 // for them doubled every count (own + an id-prefixed duplicate of the same rows) and roughly doubled
 // every cold-build time — see the constant's own comment for the confirmed numbers.
 async function withShared<T>(tenantId: string, ownFn: (tenantId: string) => Promise<T>, merge: (own: T, shared: T) => T): Promise<T> {
-  if (tenantId === SHARED_LIBRARY_TENANT_ID || OWNER_SOURCE_TENANT_IDS.has(tenantId)) return ownFn(tenantId);
+  if (tenantId === SHARED_LIBRARY_TENANT_ID || (await ownsSharedSource(tenantId))) return ownFn(tenantId);
   const [own, shared] = await Promise.all([ownFn(tenantId), ownFn(SHARED_LIBRARY_TENANT_ID)]);
   return merge(own, shared);
 }

@@ -93,7 +93,7 @@ export function lessonTiming(l: Pick<Lesson, "startsAt" | "durationMins" | "stat
   return { phase, startMs, endMs, opensMs, closesMs, early: now < startMs, inProgress: now >= startMs && now <= endMs, rejoin };
 }
 
-export type JoinFailure = "not_open" | "ended" | "unavailable" | "forbidden" | "waiting" | "child" | "other";
+export type JoinFailure = "not_open" | "ended" | "unavailable" | "not_switched_on" | "forbidden" | "waiting" | "child" | "other";
 
 /** Map a failed POST /join to a friendly state. The API's `code` is authoritative; status + message are only the fallback for
  *  an older server or a proxy error that carries no code. */
@@ -105,6 +105,7 @@ export function classifyJoinError(status: number | undefined, message: string, c
     case "outside_join_window": return "ended"; // the window only ever closes now — there is no "too early"
     case "lesson_closed": return "ended";
     case "video_unavailable": return "unavailable";
+    case "video_not_switched_on": return "not_switched_on"; // the server has no video key: say so plainly (live lessons are not switched on yet)
   }
   if (status === 503 || /video_unavailable|unavailable/i.test(message)) return "unavailable";
   if (status === 410 || /\bended\b|cancel|has closed/i.test(message)) return "ended";

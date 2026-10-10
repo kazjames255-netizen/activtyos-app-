@@ -110,3 +110,29 @@ export function sanitiseForImport<T>(v: T, label: string): T {
   assertNoOak(r.value, label);
   return r.value as T;
 }
+
+// ── render-time scrub of a whole value (API responses, the i18n bundles, bell / email texts) ──────────────────────────────────────────
+const QUICK = /oak|thenational\.academy|\bOGL\b|government licen/i;
+
+/** JSON-ish value: deep scrub (drops brand slides, brand sentences, brand links). Returns the same object when clean. */
+export function scrubPayload<T>(v: T): T {
+  let s: string;
+  try { s = JSON.stringify(v); } catch { return v; }
+  if (!s || !QUICK.test(s)) return v;
+  return dropAttribution(scrubDeep(v).value) as T;
+}
+
+/** `source.attribution` / `source.licence` are provenance (skipped by scrubDeep as internal), but they hold the credit line
+ *  verbatim, so they never leave the API either. */
+function dropAttribution(x: unknown): unknown {
+  if (Array.isArray(x)) return x.map(dropAttribution);
+  if (x && typeof x === "object") {
+    const o: Record<string, unknown> = {};
+    for (const [k, y] of Object.entries(x)) {
+      if ((k === "attribution" || k === "licence") && typeof y === "string" && (BRAND_RE.test(y) || /OGL/.test(y))) continue;
+      o[k] = dropAttribution(y);
+    }
+    return o;
+  }
+  return x;
+}

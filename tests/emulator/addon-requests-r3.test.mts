@@ -25,7 +25,7 @@ const walletBal = async () => r2(((await (await walletDoc()).get()).data()?.bala
 async function mk(tag: string, addons: any[], o: { wallet?: number; pay?: number | "full"; listing?: string } = {}) {
   await setWallet(o.wallet ?? 0);
   const child = `${tag} ${uniq()}`;
-  const b = await bookWithAddons({ parent: "A", listing: o.listing ?? "LK", children: [{ name: child, days: "all", addons }] });
+  const b = await bookWithAddons({ parent: "A", listing: o.listing ?? "LK", children: [{ name: child, days: "all", addons }], walletCap: o.wallet ?? 0 }); // checkout now only spends credit it is told to
   assert.equal(b.status, 201, JSON.stringify(b.json));
   const ref = b.refs[0];
   if (o.pay === "full") assert.equal((await operatorAction(ref, "paid")).status, 200);

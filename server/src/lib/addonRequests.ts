@@ -70,7 +70,7 @@ export async function buildAddonRequest(b: Booking, input: NewRequestInput, toda
   const qty = parseAddonLabel(line.label).qty;
   const toLabel = labelWithAnswers(def.name, qty, line.perDay, merged);
   // A change of choice keeps the price AS BOOKED: it is never worked out again from the provider's current library price.
-  return { ...base, key, child: line.child, label: line.label, price: round2(line.price), kind: "change", to: Object.fromEntries(merged.map((m) => [m.label, m.value])), toLabel, priceDiff: 0 };
+  return { ...base, key, child: line.child, label: line.label, price: round2(line.price), kind: "change", from: current, to: Object.fromEntries(merged.map((m) => [m.label, m.value])), toLabel, priceDiff: 0 };
 }
 
 function buildCancelRequest(b: Booking, input: NewRequestInput, base: { id: string; status: "pending"; createdAt: string; note?: string }, today: string, cutoffDays: number): AddonRequest {
@@ -108,7 +108,8 @@ function buildCancelRequest(b: Booking, input: NewRequestInput, base: { id: stri
       const block = addonRequestBlock(b, { key: t.key, days: line.days }, today, cutoffDays);
       if (block === "past") throw new AddonRequestError(409, "That session has already happened.");
       if (block === "cutoff") throw new AddonRequestError(409, cutoffText(cutoffDays));
-      targets.push({ key: t.key, child: line.child, label: line.label, name, price: round2(line.price) });
+      const when = line.days?.length === 1 ? line.days : b.days?.length === 1 ? b.days : undefined;
+      targets.push({ key: t.key, child: line.child, label: line.label, name, ...(when ? { when: [...when] } : {}), price: round2(line.price) });
     }
   }
   const total = round2(targets.reduce((n, t) => n + t.price, 0));

@@ -352,6 +352,7 @@ export function CallRoom({ lesson, state, isTutor, tutorLabel, placement, onMini
       not_open: { icon: "hourglass", title: tx("hublive.aStage_notOpen") },
       ended: { icon: "flag", title: tx("hublive.aStage_finished") },
       unavailable: { icon: "camOff", title: tx("hublive.aStage_videoUnavail") },
+      not_switched_on: { icon: "camOff", title: tx("hublive.aStage_notSwitchedOn") },
       forbidden: { icon: "lock", title: tx("hublive.aStage_forbidden") },
       waiting: { icon: "hourglass", title: tx("hublive.aKit_waiting") },
       child: { icon: "lock", title: tx("hublive.aLobby_whichChild") },

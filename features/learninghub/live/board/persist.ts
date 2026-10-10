@@ -20,6 +20,7 @@ export function useBoardPersistence(ctrl: BoardController | null, o: { lessonId:
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const savedVer = useRef(-1);
+  const baseAt = useRef<string | null>(null); // the server's updatedAt of the copy we hold: sent with every save so a stale save is refused (409), never a silent overwrite
   const inflight = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const path = `/api/learning-hub/lessons/${o.lessonId}/board${withQs(o.qs, {})}`;
@@ -32,6 +33,7 @@ export function useBoardPersistence(ctrl: BoardController | null, o: { lessonId:
       try {
         const doc = await get<BoardDoc>(path);
         if (dead) return;
+        baseAt.current = doc.updatedAt ?? null;
         // A live sync that already landed is fresher than the saved copy: keep it, just refresh the picture links.
         let kept = 0;
         if (!ctrl.loaded) kept = ctrl.loadSaved(doc.pages);
@@ -64,14 +66,17 @@ export function useBoardPersistence(ctrl: BoardController | null, o: { lessonId:
     if (!pages) { setState("toobig"); setError(bt("bErrBig", "This board is too big to save. Clear a page or delete some long drawings.")); return; }
     inflight.current = true; setState("saving");
     try {
-      const body = JSON.stringify({ pages });
+      const body = JSON.stringify({ pages, baseUpdatedAt: baseAt.current });
       // Leaving the page: `keepalive` lets the request outlive it (browsers cap those bodies at 64 KB, so only small boards use it).
-      await api(path, { method: "PUT", body, ...(leaving && body.length < 60_000 ? { keepalive: true } : {}) });
+      const saved = await api<{ updatedAt?: string }>(path, { method: "PUT", body, ...(leaving && body.length < 60_000 ? { keepalive: true } : {}) });
+      if (saved?.updatedAt) baseAt.current = saved.updatedAt;
       savedVer.current = ver; setState(ctrl.saveVersion === ver ? "saved" : "saving"); setError(null);
     } catch (e) {
       const big = e instanceof ApiError && e.status === 413;
+      const stale = e instanceof ApiError && e.status === 409;
       setState(big ? "toobig" : "error");
-      setError(e instanceof Error ? e.message : bt("bErrSave", "Couldn't save the board"));
+      setError(stale ? bt("bErrStale", "Someone else saved this board since you opened it. Reload to see their changes before you save yours.") : e instanceof Error ? e.message : bt("bErrSave", "Couldn't save the board"));
+      if (stale && timer.current) clearTimeout(timer.current);
     } finally { inflight.current = false; }
   }, [ctrl, o.isTutor, path]);
 
