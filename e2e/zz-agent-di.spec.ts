@@ -346,6 +346,7 @@ test("wallet (DI-038..041)", async () => {
     const k = await newKid();
     await toPay(p, { passes: [{ pass: "5 days", week: 1 }], kids: [k.name] });
     await hasText(p, "£30.00");
+    await p.getByRole("radio", { name: /Use part of it/ }).click(); // checkout ASKS: nothing is applied until the parent chooses
     await p.locator('input[type="range"]').fill("10");
     await hasText(p, "£20.00"); // credit left in wallet
     expect(await dueNow(p)).toBe(80);
@@ -361,20 +362,22 @@ test("wallet (DI-038..041)", async () => {
     const k = await newKid();
     await toPay(p, { passes: [{ pass: "5 days", week: 2 }], kids: [k.name] });
     await hasText(p, "£30.00");
+    await p.getByRole("radio", { name: /Use my credit/ }).click(); // checkout ASKS before spending credit
     expect(await dueNow(p)).toBe(60);
     await shot(p, "DI-038");
-    const r = await book(aTok, [{ pass: "5 days", week: 2, kid: k }]);
+    const r = await book(aTok, [{ pass: "5 days", week: 2, kid: k }], { walletCap: 30 });
     near(r.wallet, 30); near(r.amount, 60);
     expect(await balance(aTok)).toBe(0);
     await viewBooking(p, r.refs[0]);
     await shot(p, "DI-038-booking");
-    return `wallet £30 auto-applied at checkout: Due now £60.00; booking ${r.refs[0]} walletApplied £${r.wallet}, wallet now £0`;
+    return `wallet £30 applied after choosing 'Use my credit' at checkout: Due now £60.00; booking ${r.refs[0]} walletApplied £${r.wallet}, wallet now £0`;
   });
   void walletLine;
   await check("DI-040", p, async () => {
     credit(pA.email, 100);
     const k = await newKid();
     await toPay(p, { passes: [{ pass: "1 day", week: 0 }], kids: [k.name] });
+    await p.getByRole("radio", { name: /Use my credit/ }).click(); // checkout ASKS before spending credit
     expect(await dueNow(p)).toBe(0);
     await shot(p, "DI-040-pay");
     const phone = p.getByPlaceholder("e.g. 07700 900123");

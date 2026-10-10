@@ -11,6 +11,7 @@ import { librarySnap, loadSettings } from "../lib/tenantLibrary";
 import { checkCode, normaliseCode, reservedEmails, type DiscountCodeDoc } from "../lib/discountCodes";
 import { redeemCodesInTx, releaseDiscountCodes, type CodeToRedeem } from "../lib/discountRedemptions";
 import { creditWallet, creditWalletOnceInTx, spendWalletInTx, walletEntryRef, walletRef, walletsForFamily } from "../lib/wallet";
+import { noteInstantWalletCredit } from "../lib/refundSplit";
 import { notify } from "../lib/notify";
 import { notifyFamilyCancelledFor } from "../lib/familyCancelNotice";
 import { shouldNotifyCancelled, shouldReleaseDiscountCodes, voucherEmailAnnouncesBasket } from "../lib/bookingGuards";
@@ -199,10 +200,10 @@ const basketSchema = z.object({
   // Refused (403) from anyone who isn't an operator booking for a family.
   overrideTotal: z.number().nonnegative().max(100000).optional(),
   overrideReason: z.string().trim().max(200).optional(),
-  // How much of their wallet the family chose to spend on this basket. Absent =
-  // spend it all (the default). Capped server-side at the real balance, so a
-  // stale/oversized value can never overdraw the wallet.
-  walletCap: z.number().nonnegative().optional(),
+  // How much of their wallet credit the family CHOSE to spend on this basket (checkout asks; 9 Oct 2026). Absent/null = do NOT use any:
+  // credit is never applied silently. Capped server-side at the real balance and at each booking's amount, so a stale/oversized
+  // value can never overdraw the wallet.
+  walletCap: z.number().nonnegative().nullish(),
   // The booker's phone, captured at checkout (required client-side when they
   // have none on file). Lands on the family record if it hasn't got one yet.
   phone: z.string().trim().max(40).optional(),
@@ -1741,10 +1742,10 @@ my.post("/bookings", async (req, res) => {
       const checkoutId = randomUUID();
       const created: Booking[] = [];
       // Credit is drawn down as the bookings are built, so it lands on the
-      // earliest places taken and never on a waitlisted one. The family may cap
-      // how much they spend (keep some for another time) — honoured here, but
-      // never above what they actually hold.
-      const walletCap = "walletCap" in input && typeof input.walletCap === "number" ? input.walletCap : walletHeld;
+      // earliest places taken and never on a waitlisted one. Only what the family
+      // explicitly chose to spend (walletCap) is used - an omitted/null walletCap
+      // means none - and never above what they actually hold.
+      const walletCap = "walletCap" in input && typeof input.walletCap === "number" ? input.walletCap : 0;
       let walletLeft = round2(Math.max(0, Math.min(walletHeld, walletCap)));
       const walletSpends: { ref: string; amount: number; reason: string }[] = [];
       priced.forEach((p, i) => {
@@ -2650,7 +2651,7 @@ async function partialCancel(
     if (record.log) (b.refundLog = b.refundLog ?? []).push(record.log);
     if (resolution === "wallet") {
       // Instant and final - nothing for the provider to approve.
-      if (value > 0) b.pay = "Partially refunded";
+      if (value > 0) { b.pay = "Partially refunded"; noteInstantWalletCredit(b, value); }
     } else {
       // A request: the money only moves when the provider approves it, exactly like a whole-booking cancel.
       // A second release while the first is still awaiting approval ADDS to it (CN-022) - overwriting lost the earlier day's pending refund.

@@ -330,7 +330,7 @@ export interface BookResult extends Res { total: number | null; refs: string[]; 
  *   Everything passes through unchecked, so refusals (blank answer, unknown add-on...) come back as status 400 with the reason.
  * Returns { status, json, total (sum of the amounts returned), refs, booking (first), addonLines }.
  */
-export async function bookWithAddons(o: { parent: RoleKey | string; listing: string; children: ChildSel[]; code?: string; method?: string }): Promise<BookResult> {
+export async function bookWithAddons(o: { parent: RoleKey | string; listing: string; children: ChildSel[]; code?: string; method?: string; walletCap?: number }): Promise<BookResult> {
   const I = ids();
   const l = I.listings[o.listing] ?? Object.values(I.listings).find((x) => x.id === o.listing);
   if (!l) throw new Error(`Unknown listing ${o.listing}`);
@@ -348,7 +348,7 @@ export async function bookWithAddons(o: { parent: RoleKey | string; listing: str
     };
   });
   const { token } = await tokenFor(o.parent);
-  const r = await call("POST", "/api/my/bookings", token, { listingId: l.id, blockId: l.blockId, method: o.method ?? "Bank transfer", items, ...(o.code ? { discountCode: o.code } : {}) });
+  const r = await call("POST", "/api/my/bookings", token, { listingId: l.id, blockId: l.blockId, method: o.method ?? "Bank transfer", items, ...(o.code ? { discountCode: o.code } : {}), ...(o.walletCap !== undefined ? { walletCap: o.walletCap } : {}) });
   const list: any[] = Array.isArray(r.json) ? r.json : Array.isArray(r.json?.bookings) ? r.json.bookings : r.json && !r.json.error ? [r.json.booking ?? r.json] : [];
   const amounts = list.map((b) => Number(b.amount ?? b.total)).filter((n) => Number.isFinite(n));
   return {

@@ -314,7 +314,7 @@ export function isUnreconciled(b: Booking): boolean {
   const isCard = /card/i.test(b.method ?? "") && !b.voucherScheme;
   if (isCard) return false;                                   // settles via Stripe
   const outstanding = Math.max(0, (b.amount ?? 0) - (b.amountPaid ?? 0));
-  const settled = (b.pay === "Paid" || b.pay === "Funded") && outstanding <= 0;
+  const settled = (b.pay === "Paid" || b.pay === "Funded" || b.pay === "Partially refunded") && outstanding <= 0 && !(b.pay === "Partially refunded" && refundAwaitingTransfer(b)); // part-refunded = a day gone, the rest paid
   return !settled && ((b.amount ?? 0) > 0 || !!b.voucherScheme);
 }
 
@@ -648,11 +648,13 @@ export function altDates(k: Kid, block?: BlockAvail | null): { iso: string; labe
  * "Paid" takes the larger of amount/amountPaid: a joint sibling booking stores
  * amountPaid 0 even once it's been paid in full.
  */
-export function paidSoFar(b: Pick<Booking, "pay" | "amount" | "amountPaid" | "walletApplied">): number {
+export function paidSoFar(b: Pick<Booking, "pay" | "amount" | "amountPaid" | "walletApplied" | "cashHeld">): number {
   // "Refunded" / "Partially refunded" were paid before they were refunded —
   // the refund is taken off separately (refundableSoFar), not by the status.
   const settled = b.pay === "Paid" || b.pay === "Refund pending" || b.pay === "Refunded" || b.pay === "Partially refunded";
-  const cash = settled ? Math.max(b.amount ?? 0, b.amountPaid ?? 0) : Math.max(0, b.amountPaid ?? 0);
+  // A settled label on a booking whose cash in hand is KNOWN (cashHeld, kept when a cancel or refund settled a part-paid booking) says nothing about the price:
+  // the cash is what was really received, not `amount` (which a cancelled day lowers but a part-paid family never paid).
+  const cash = settled ? Math.max(b.cashHeld != null ? 0 : b.amount ?? 0, b.amountPaid ?? 0, b.cashHeld ?? 0) : Math.max(0, b.amountPaid ?? 0);
   return Math.round((cash + Math.max(0, b.walletApplied ?? 0)) * 100) / 100;
 }
 
@@ -668,6 +670,19 @@ export function refundableSoFar(b: Booking): number {
   const logged = (b.refundLog || []).reduce((t, x) => t + (/^refund approved/i.test(x.label || "") ? 0 : x.amount || 0), 0);
   const given = logged + Math.max(0, b.refundedApproved ?? 0);
   return Math.round(Math.max(0, paidSoFar(b) - given) * 100) / 100;
+}
+
+/**
+ * THE one overpaid rule (Reconciliation, the booking chip, the add-payment reply): money held that the booking no longer costs AND that has not
+ * already been handed back or promised back.
+ *   overpaid = max(0, paid (every method + wallet applied) - price (amount + wallet still counted) - refunds already given or promised)
+ * "Given" = refundLog (wallet credit, released days, "Refunded in Stripe"), refundedApproved (approved bank/cash/card refunds, even while the transfer is
+ * still awaited) and a refund request still pending (cancel.refund "pending"). A refund bigger than the surplus clamps at 0, never negative.
+ */
+export function overpaidOf(b: Booking): number {
+  const gross = (b.amount ?? 0) + Math.max(0, (b.walletApplied ?? 0) - (b.walletRelieved ?? 0));
+  const pending = b.cancel?.refund === "pending" ? Math.max(0, b.cancel.amount ?? 0) : 0;
+  return Math.round(Math.max(0, refundableSoFar(b) - pending - gross) * 100) / 100;
 }
 
 /** A refund the provider has agreed to give but not yet sent: a cancellation
