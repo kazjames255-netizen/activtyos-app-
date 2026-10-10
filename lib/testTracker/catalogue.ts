@@ -21,7 +21,7 @@ function k(id: string, title: string, accounts: AccountKind[], setup: string, st
 const STD = "The Standard test camp built in LT-001 (Mon to Fri for 3 weeks, 10 places PER DAY (never more than 10 children on any one day), Automatic approval, Public, Standard cancellation policy, every payment method ticked; passes '1 day' £20, '3 days' £54 any 3 days in one week, '5 days' £90 any 5 days in one week)";
 const AUTO_RULE = "Automatic discount rule (features/listings/discounts.ts, same code prices the server): 1) multi-person rule (percentage only for new rules) applies to EVERY child on a covered line when the number of children in the WHOLE checkout is more than the rule's number (price method: child pays the set price; subtract: min(price, amount) off each child; percent: price x % off each child); best single rule wins. 2) multi-session rule on the already-reduced total when sessions (days x children) is more than its number; best single rule wins. 3) early bird on the reduced total if today (UK date) is on or before its date; best single rule wins. Total never below £0.";
 const CODE_RULE = "Discount code rule (server/src/lib/discountCodes.ts): comes off AFTER automatic discounts and BEFORE add-ons. Percent = pass subtotal x %; amount = fixed £ off the whole order; per child = £ x number of booked child lines; never more than the subtotal (or the code's own cap); minimum spend is tested against the pass subtotal after automatic discounts; several codes ADD their amounts (they do not compound) unless one is marked 'Can't be used with any other code'.";
-const WALLET_RULE = "Wallet rule (server/src/routes/my.ts): credit is spent automatically AFTER every discount, up to the balance and up to the slider amount (walletCap); amount due = booking total minus wallet used; if nothing is due the payment shows Funded.";
+const WALLET_RULE = "Wallet rule (server/src/routes/my.ts): credit is spent only when checkout asks (walletCap; omitted = none) AFTER every discount, up to the balance and the booking total; amount due = booking total minus wallet used; if nothing is due the payment shows Funded.";
 const REFUND_RULE = "Refund rule (lib/cancellation.ts + features/bookings/helpers.ts): refund = amount paid so far (card/cash received plus wallet used, minus refunds already given) x the percentage of the first band whose notice is met. Standard policy: 168 hours or more = 100%, 48 hours or more = 50%, less = 0%. Flexible: 24 hours = 100%, else 0%. Strict: 336 hours = 100%, 168 hours = 50%, else 0%. No refunds: always 0%. Notice is counted from midnight at the start of the FIRST session date. If the provider cancels (We cancelled it) the refund is 100% whatever the policy says.";
 const PLACES_RULE = "Places rule: each child on a pass takes ONE place however many days the pass has. With capacity 'Whole listing' places left = capacity minus children booked (Confirmed, Approval needed, Offered); with 'Per day' it is counted per date.";
 const NOMONEY = "No money should move. Booking total, Money in, wallet balance and dashboard income stay unchanged.";
@@ -389,12 +389,12 @@ k("DI-037", "Cancel a membership", PAR, "Joined a tier.",
   ["Memberships > Cancel membership and confirm."],
   ["Perks stop at the end of the month; credit already received stays."],
   "Wallet balance unchanged; the percent member code becomes inactive.", "Member code active false.", 2),
-k("DI-038", "Wallet credit spent automatically at checkout", PAR, "Parent has £30 wallet credit with this provider.",
-  ["Book '5 days' (£90) and look at the payment step."],
-  ["It shows wallet used £30 and Due now £60."],
+k("DI-038", "Checkout asks before using wallet credit", PAR, "Parent has £30 wallet credit with this provider.",
+  ["Book '5 days' (£90) and look at the payment step.", "Note the Pay button is off with 'Choose whether to use your £30 credit'; choose 'Use my credit'."],
+  ["The card 'You have £30 credit with <provider>' appears above the payment methods; after choosing, wallet used £30 and Due now £60."],
   WALLET_RULE + " £90 - £30 = £60 due.", "Booking walletApplied 30; wallet balance 0; ledger spend row with the booking ref.", 1),
 k("DI-039", "Use only part of the wallet (slider)", PAR, "Parent has £30 wallet.",
-  ["Use 'How much wallet credit to use' to choose £10."],
+  ["Choose 'Use part of it' and set £10 with the slider."],
   ["Due now = £80."],
   "£90 - £10 = £80; remaining wallet £20.", "walletApplied 10; balance 20.", 2),
 k("DI-040", "Wallet covers the whole booking", PAR, "Wallet £100.",

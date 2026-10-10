@@ -446,6 +446,8 @@ test.describe("Part 2: the parent checkout screen with the HMRC link switched on
     await dialog.getByRole("button", { name: "Back to your booking" }).click();
     await expect(page.getByText("✓ linked").first()).toBeVisible();
     const amount = page.getByLabel("Amount from Tax-Free Childcare");
+    // Checkout ASKS before spending wallet credit: choose to use it, so the amount due below is the £30 after credit.
+    await page.getByRole("radio", { name: /Use my credit/ }).click();
     await amount.fill("10");
     await expect(page.getByText(/Balance\s*£25\.00/)).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(/example figure/)).toHaveCount(0);

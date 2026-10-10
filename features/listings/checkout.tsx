@@ -14,6 +14,7 @@
 
 import { addonCost } from "./addonCost";
 import { tfcReady } from "@/lib/tfcReady";
+import { clampPart, defaultPart, walletAppliedFor, walletCapToSend, walletChoiceMissing, walletChoiceRequired, walletCoversWhole, walletLeftAfter, type WalletChoice } from "./walletChoice";
 import { GenderQuickAdd } from "@/features/common/GenderQuickAdd";
 import { HowItWorks } from "@/components/HowItWorks";
 import { joinListNow, uiDate } from "@/lib/i18n/format";
@@ -997,10 +998,10 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // it at booking time (authoritative); here we just preview the reduction so
   // the parent sees what they'll actually owe. Zero until the backend lands.
   const [walletBalance, setWalletBalance] = useState(0);
-  // How much of the wallet to spend on THIS booking. null = use all (the
-  // default auto-apply); a number = the family chose to spend less and keep the
-  // rest for another time.
-  const [walletUse, setWalletUse] = useState<number | null>(null);
+  // The family is ASKED whether to spend their credit (9 Oct 2026): null = not answered yet (nothing applied, paying blocked),
+  // "use" = all that can come off, "part" = the slider amount, "keep" = none.
+  const [walletChoice, setWalletChoice] = useState<WalletChoice>(null);
+  const [walletPart, setWalletPart] = useState(0);
   useEffect(() => {
     if (!parentMode || !tenantId) {
       setWalletBalance(0);
@@ -1190,7 +1191,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // owed after codes). Auto-apply spends all of it; the family can dial it back.
   // Joining a waiting list spends nothing (the server leaves the wallet alone for a queued place), so don't show credit as used.
   const walletAvail = b.waitlistOnly ? 0 : Math.min(walletBalance, afterCode);
-  const walletApplied = walletUse === null ? walletAvail : Math.max(0, Math.min(walletUse, walletAvail));
+  const walletApplied = walletAppliedFor(walletChoice, walletPart, walletAvail);
+  const walletAsk = walletChoiceRequired(parentMode, walletAvail);
+  const walletUnanswered = walletChoiceMissing(parentMode, walletAvail, walletChoice);
   const amountDue = Math.max(0, afterCode - walletApplied);
   // What makes a pass valid depends on how it was sold.
   //
@@ -1879,26 +1882,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                   <span style={{ color: tk.muted }}>{tr("p8lst.ck8WalletCredit", { amt: money(walletBalance) })}</span>
                   <b style={{ color: walletApplied > 0 ? tk.accent : tk.muted }}>−{money(walletApplied)}</b>
                 </div>
-                {/* Auto-applied in full, but the family can spend less and keep
-                    the rest for another time. */}
-                <div className="mt-1 flex items-center gap-1.5">
-                  {([["All", walletAvail], ["None", 0]] as const).map(([label, amt]) => {
-                    const on = label === "All" ? walletApplied === walletAvail : walletApplied === 0;
-                    return (
-                      <button key={label} type="button" onClick={() => setWalletUse(label === "All" ? null : 0)}
-                        className={`px-2 py-[3px] text-[10.5px] font-bold ${tk.round}`}
-                        style={on ? { background: tk.accent, color: "#0a0a0a" } : { border: `1px solid ${tk.line}`, color: tk.muted }}>
-                        {label === "All" ? tr("p8lst.ck8WalletAll") : tr("p8lst.ck8WalletNone")}
-                      </button>
-                    );
-                  })}
-                  <input type="range" min={0} max={walletAvail} step={0.01} value={walletApplied}
-                    onChange={(e) => setWalletUse(parseFloat(e.target.value))} aria-label={tr("p7ck.walletAria")}
-                    className="h-1.5 flex-1 cursor-pointer" style={{ accentColor: tk.accent }} />
-                </div>
-                {walletApplied < walletAvail && (
+                {walletChoice !== null && walletApplied < walletBalance && (
                   <div className="mt-0.5 text-[10.5px]" style={{ color: tk.muted }}>
-                    {tr("p8lst.ck8WalletStays", { amt: money(walletBalance - walletApplied) })}
+                    {tr("p8lst.ck8WalletStays", { amt: money(walletLeftAfter(walletBalance, walletApplied)) })}
                   </div>
                 )}
               </div>
@@ -2281,6 +2267,46 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           style={{ borderColor: tk.line, color: tk.ink }}>
           {/* A waiting-list join is not "free": say what it will cost IF a place opens. */}
           <Rich text={b.waitlistOnly ? tr("p7ck.waitPayHead", { amt: money(waitOfferAmt) }) : tr("p7ck.freeHead")} />
+        </div>
+      )}
+
+      {ckStage === "pay" && walletAsk && (
+        <div className={`mt-3 border-2 px-3 py-3 ${tk.round}`} data-ui="wallet-ask" role="radiogroup" aria-label={tr("p8lst.ck8WalletAskHead", { amt: money(walletBalance), provider: (ckSettings.providerName ?? "").trim() || tr("p8lst.ck8YourProvider") })}
+          style={{ borderColor: walletUnanswered ? tk.accent : tk.line, background: tk.inputBg }}>
+          <div className="text-[14px] font-extrabold" style={{ color: tk.ink }}>
+            👛 {tr("p8lst.ck8WalletAskHead", { amt: money(walletBalance), provider: (ckSettings.providerName ?? "").trim() || tr("p8lst.ck8YourProvider") })}
+          </div>
+          {walletCoversWhole(walletAvail, afterCode) && (
+            <div className="mt-0.5 text-[12px]" style={{ color: tk.muted }}>{tr("p8lst.ck8WalletCoversWhole")}</div>
+          )}
+          <div className="mt-2 grid gap-2">
+            {([
+              ["use", tr("p8lst.ck8WalletAskUse", { amt: money(walletAvail) })],
+              ["keep", tr("p8lst.ck8WalletAskKeep")],
+              ...(walletAvail > 0.02 ? [["part", tr("p8lst.ck8WalletAskPart")]] : []),
+            ] as [Exclude<WalletChoice, null>, string][]).map(([k, label]) => {
+              const on = walletChoice === k;
+              return (
+                <button key={k} type="button" role="radio" aria-checked={on} data-ui={`wallet-${k}`}
+                  onClick={() => { setWalletChoice(k); if (k === "part") setWalletPart((p) => (p > 0 ? clampPart(p, walletAvail) : defaultPart(walletAvail))); }}
+                  className={`w-full border px-3 py-3 text-left text-[13.5px] font-bold ${tk.round}`}
+                  style={on ? { background: tk.accent, color: tk.accentInk, borderColor: tk.accent } : { borderColor: tk.line, color: tk.ink }}>
+                  {on ? "● " : "○ "}{label}
+                </button>
+              );
+            })}
+          </div>
+          {walletChoice === "part" && (
+            <div className="mt-2">
+              <div className="text-[12px] font-bold" style={{ color: tk.ink }}>{tr("p8lst.ck8WalletPartAmt", { amt: money(walletApplied) })}</div>
+              <input type="range" min={0} max={walletAvail} step={0.01} value={walletApplied}
+                onChange={(e) => setWalletPart(parseFloat(e.target.value))} aria-label={tr("p7ck.walletAria")}
+                className="mt-1 h-1.5 w-full cursor-pointer" style={{ accentColor: tk.accent }} />
+            </div>
+          )}
+          {walletChoice === null && (
+            <div className="mt-2 text-[12px] font-bold" style={{ color: tk.accent }}>{tr("p8lst.ck8WalletChoose", { amt: money(walletBalance) })}</div>
+          )}
         </div>
       )}
 
@@ -2908,7 +2934,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       )}
 
       {ckStage === "pay" && <button className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}
-        disabled={(!parentMode && !b.parent) || (parentMode && !phoneOk) || (homeVisit && (askSaved || (savedIncomplete && useSaved !== false) || !serviceAddress.postcode.trim() || pcState.status === "bad" || pcState.status === "checking" || (useSaved !== true && !visitLineHasHouse(serviceAddress.address)))) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || existingClashes.length > 0 || ticketAgeBlocks || !!booking?.busy || (method === "voucher" && !!chosenVoucher && refKids.some((c) => !(voucherRefs[c.name] ?? "").trim())) || (method === "tfc" && roster.some((c) => !(voucherRefs[c.name] ?? "").trim()))}
+        disabled={(!parentMode && !b.parent) || walletUnanswered || (parentMode && !phoneOk) || (homeVisit && (askSaved || (savedIncomplete && useSaved !== false) || !serviceAddress.postcode.trim() || pcState.status === "bad" || pcState.status === "checking" || (useSaved !== true && !visitLineHasHouse(serviceAddress.address)))) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || existingClashes.length > 0 || ticketAgeBlocks || !!booking?.busy || (method === "voucher" && !!chosenVoucher && refKids.some((c) => !(voucherRefs[c.name] ?? "").trim())) || (method === "tfc" && roster.some((c) => !(voucherRefs[c.name] ?? "").trim()))}
         onClick={() => {
           b.setChild(Object.values(b.assign).filter(Boolean).join(", "));
           // With an onBook handler the confirm actually books — the parent
@@ -2949,7 +2975,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             phone: parentMode ? phone.trim() || undefined : undefined,
             // Only sent when the family chose to spend LESS than their full
             // balance — otherwise the server auto-applies it all (authoritative).
-            walletCap: walletUse === null ? undefined : walletApplied,
+            walletCap: walletCapToSend(parentMode, walletChoice, walletPart, walletAvail),
             serviceAddress: homeVisit && serviceAddress.postcode.trim() ? serviceAddress : undefined,
             // Operator-only: the agreed total, applied by the server after discounts (never honoured for a parent's own booking).
             overrideTotal: !parentMode && b.totalOverride !== null ? b.totalOverride : undefined,
@@ -2962,6 +2988,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         }}>
         {booking?.busy ? tr("p7ck.ctaBooking")
           : !parentMode && !b.parent ? tr("p7ck.findParentFirst")
+          : walletUnanswered ? tr("p8lst.ck8WalletChoose", { amt: money(walletBalance) })
           : parentMode && !phoneOk ? tr("p7ck.ctaAddPhone")
           : homeVisit && askSaved ? tr("p7ck.ctaConfirmAddr")
           : homeVisit && (!serviceAddress.postcode.trim() || pcState.status === "bad") ? tr("p7ck.ctaVisitAddr")

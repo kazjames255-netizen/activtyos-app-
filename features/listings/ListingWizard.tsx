@@ -1,5 +1,6 @@
 "use client";
 
+import { walletRemaining } from "./walletChoice";
 import { deliveryLabel } from "./delivery";
 import { dateLocale as dl, joinListNow, uiDate } from "@/lib/i18n/format";
 import { addonLinesFor } from "@/features/bookings/helpers";
@@ -823,17 +824,16 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
       // just ONE of them, or they'd come off each block's subtotal (and count as
       // extra redemptions). They apply to the first — the server re-validates.
       let codesSent = false;
-      // A capped wallet spend is a total for the whole basket, so — like codes —
-      // it rides on just the FIRST block's POST; later blocks send 0 so the
-      // family never spends more than they chose. Undefined = auto-apply all
-      // (omit it entirely and let the server draw it down across the blocks).
-      let walletSent = false;
+      // The chosen wallet spend is a total for the whole basket: every block's POST carries what is still unspent of it (never more than
+      // the family chose). Undefined = the caller did not ask (no credit used).
+      let walletSpent = 0;
       let tfcSent = false;
       for (const [blockId, items] of byBlock) {
         const sendCodes = discountCodes && discountCodes.length > 0 && !codesSent;
         if (sendCodes) codesSent = true;
-        const walletThisPost = walletCap === undefined ? undefined : walletSent ? 0 : walletCap;
-        if (walletCap !== undefined) walletSent = true;
+        // Each POST offers what is still unspent of the chosen total (the server clamps it per booking and to the balance), so the credit
+        // is spread across the blocks exactly as the checkout screen computed it.
+        const walletThisPost = walletCap === undefined ? undefined : walletRemaining(walletCap, walletSpent);
         const tfcThisPost = tfc && !tfcSent; if (tfcThisPost) tfcSent = true;
         const res = await apiPost<{ bookings: { ref: string; status?: string }[]; total: number; bank?: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }; voucher?: { scheme: string; details: { label: string; value: string }[] } }>("/api/my/bookings", {
           listingId: listing.id,
@@ -871,6 +871,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
           }),
         });
         refs.push(...res.bookings.map((x) => x.ref));
+        walletSpent += (res.bookings as { walletApplied?: number }[]).reduce((n, x) => n + (Number(x.walletApplied) || 0), 0);
         // the server's own verdict: an auto-confirm listing still holds the place for approval when, say, a child is outside the listing's age range
         if (res.bookings.some((x) => x.status === "Approval needed")) heldForApproval = true;
         if ((res.bookings as { cardHold?: { state?: string } }[]).some((x) => x.cardHold?.state === "awaiting")) holdCard = true;

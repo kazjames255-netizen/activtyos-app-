@@ -173,8 +173,15 @@ export function withdrawnWording(r: RequestLike, ctx: { ref: string }): Wording 
 
 type Decided = RequestLike & Pick<AddonRequest, "status" | "declineReason" | "money">;
 
+type DecisionCtx = { ref: string; listing: string; awaitingTransfer?: boolean; provider?: string; /** offline kinds the refund is paid back by, comma-joined ("cash,bank"), and their English names */ kinds?: string; methods?: string };
+/** ONE rule for a refund the provider has only RECORDED: "<provider> will send it", naming the method for offline money (same sentence as the booking's own refund line, rfm.parentRec). */
+function recordedMsg(amt: string, ctx: DecisionCtx): Msg {
+  const provider = ctx.provider?.trim() || "your provider";
+  return ctx.kinds ? { key: "rfm.parentRec", vars: { provider, amt, kinds: ctx.kinds, methods: ctx.methods ?? "" } } : m("MRefundRecorded", { amt, provider });
+}
+
 /** What the family hears when the provider answers. The money sentence follows the REAL outcome (wallet / refund / nothing / difference to pay). */
-export function decisionWording(r: Decided, ctx: { ref: string; listing: string; awaitingTransfer?: boolean; provider?: string }): Wording {
+export function decisionWording(r: Decided, ctx: DecisionCtx): Wording {
   const listing = plainTitle(ctx.listing);
   const base = { listing, ref: ctx.ref };
   const approved = r.status === "approved";
@@ -183,7 +190,7 @@ export function decisionWording(r: Decided, ctx: { ref: string; listing: string;
     const more: Msg[] = [];
     if (approved) {
       if (r.money?.resolution === "charge" && r.money.amount > 0) more.push(m("MCharge", { amt: gbpText(r.money.amount) }));
-      else if ((r.money?.resolution === "wallet" || r.money?.resolution === "refund") && r.money.amount > 0) more.push(r.money.resolution === "wallet" ? m("MWallet", { amt: gbpText(r.money.amount) }) : ctx.awaitingTransfer ? m("MRefundRecorded", { amt: gbpText(r.money.amount), provider: ctx.provider?.trim() || "your provider" }) : m("MRefund", { amt: gbpText(r.money.amount) }));
+      else if ((r.money?.resolution === "wallet" || r.money?.resolution === "refund") && r.money.amount > 0) more.push(r.money.resolution === "wallet" ? m("MWallet", { amt: gbpText(r.money.amount) }) : ctx.awaitingTransfer ? recordedMsg(gbpText(r.money.amount), ctx) : m("MRefund", { amt: gbpText(r.money.amount) }));
     } else if (r.declineReason?.trim()) more.push(m("Reason", { reason: r.declineReason.trim() }));
     return approved
       ? { title: m("TOkChange", { name: nm }), body: m("BOkChange", { who: whoText(r), name: nm, ...base, ...packDeltas(r) }), more }
@@ -196,7 +203,7 @@ export function decisionWording(r: Decided, ctx: { ref: string; listing: string;
     const mo = r.money;
     if (mo && mo.amount > 0 && (mo.resolution === "wallet" || mo.resolution === "refund")) more.push(mo.resolution === "wallet" ? m("MWallet", { amt: gbpText(mo.amount) })
       // A bank / cash / voucher refund is only RECORDED until the provider confirms they sent it: never "on its way" before that.
-      : ctx.awaitingTransfer ? m("MRefundRecorded", { amt: gbpText(mo.amount), provider: ctx.provider?.trim() || "your provider" }) : m("MRefund", { amt: gbpText(mo.amount) }));
+      : ctx.awaitingTransfer ? recordedMsg(gbpText(mo.amount), ctx) : m("MRefund", { amt: gbpText(mo.amount) }));
     else more.push(m("MNone"));
   } else if (r.declineReason?.trim()) more.push(m("Reason", { reason: r.declineReason.trim() }));
   return approved

@@ -97,7 +97,7 @@ test("reminder timing: first after 3 days, then once per 3-day period", () => {
 test("family emails: approval says it will be sent by bank transfer, and ONLY the second email says it has been sent", () => {
   const b = offline({ refundTransfer: "awaiting" });
   const approved = refundApprovedSpec(b, "APF");
-  assert.match(approved.body, /by bank transfer/); assert.match(approved.body, /email you again/); assert.doesNotMatch(approved.body, /has sent your refund|was sent on/);
+  assert.match(approved.body, /will send your £0\.30 bank transfer refund/); assert.match(approved.body, /email you again/); assert.doesNotMatch(approved.body, /has sent your refund|was sent on/);
   const sent = refundSentSpec(offline({ refundTransfer: "sent", refundSentAt: "2026-10-07T18:00:00Z" }), "APF");
   assert.match(sent.subject, /has been sent/); assert.match(sent.body, /by bank transfer/); assert.match(sent.body, /7 October 2026/); assert.match(sent.body, /£0\.30/);
 });

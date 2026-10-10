@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useT } from "@/lib/i18n/provider";
+import { useI18n, useT } from "@/lib/i18n/provider";
+import { joinList } from "@/lib/i18n/listFormat";
+import { methodNames, type OfflineKind } from "@/features/bookings/refundMethod";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import type { PortalKey } from "@/lib/nav/config";
@@ -49,8 +51,11 @@ const CATEGORY_GLYPH: Record<string, string> = {
 export function Bell({ portal }: { portal: PortalKey }) {
   const router = useRouter();
   const t = useT();
+  const { locale } = useI18n();
+  // A refund bell that names the offline method(s) ("cash", "bank transfer and cash") carries the kinds; the names are written in the reader's language here.
+  const bodyVars = (v?: Record<string, string>) => (v?.kinds ? { ...v, methods: methodNames(v.kinds.split(",") as OfflineKind[], t, (x) => joinList(x, locale)) } : v);
   // A message from the server: its key + data in the viewer's language (dates in the app language, a change written from the packed choices).
-  const shown = (key: string, vars: Record<string, string> = {}) => renderFull(t, { key, vars }, (iso) => formatDay(iso, { weekday: "short", day: "numeric", month: "short" }));
+  const shown = (key: string, vars: Record<string, string> = {}) => renderFull(t, { key, vars: bodyVars(vars) ?? vars }, (iso) => formatDay(iso, { weekday: "short", day: "numeric", month: "short" }));
   const [items, setItems] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
