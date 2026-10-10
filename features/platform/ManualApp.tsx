@@ -815,6 +815,11 @@ function Page1() {
       </Section>
 
       <Section>
+        <H2>Providers and billing page</H2>
+        <Lede>Tabs for trial started, ending soon (7 days), ended, active, payment failed, cancelled and no card. Search by name, email or tenant id; sort by newest, trial end, name or value. Test accounts are hidden by default and the tiles say how many were left out.</Lede>
+      </Section>
+
+      <Section>
         <H2>The emails a new provider gets</H2>
         <Lede>The day 1, 3 and 5 emails go to freelancer and company owners in their first six days. Every one checks at send time and is skipped if the provider has already done the thing, so a reminder never arrives after the action it reminds about, and the series stops once a listing is live. Each has an unsubscribe link; billing emails are always sent.</Lede>
         <Card className="p-4"><EmailTimeline /></Card>
