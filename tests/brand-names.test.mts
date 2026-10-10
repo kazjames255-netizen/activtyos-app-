@@ -50,7 +50,23 @@ test("brand: no customer-facing file contains an old product name", () => {
 test("brand: the logo assets exist and carry the three lane colours", () => {
   const svg = readFileSync(root + "public/brand/mark.svg", "utf8");
   for (const c of ["#ff6f91", "#18b9a4", "#8a6cf2"]) assert.ok(svg.includes(c), `mark.svg has ${c}`);
-  for (const f of ["public/brand/logo-light.svg", "public/brand/logo-dark.svg", "public/brand/icon-192.png", "public/brand/icon-512.png", "app/favicon.ico", "app/apple-icon.png", "app/opengraph-image.png"]) {
+  for (const f of ["public/brand/logo-light.svg", "public/brand/logo-dark.svg", "public/brand/mark-bare-dark.svg", "public/brand/mark-bare-light.svg", "public/brand/icon-192.png", "public/brand/icon-512.png", "app/favicon.ico", "app/apple-icon.png", "app/opengraph-image.png"]) {
     assert.ok(files.includes(f) || readFileSync(root + f).length > 0, f);
   }
+});
+
+test("brand: the lockup is the bare mark with a two-tone wordmark (Activity white / Lane amber on dark; deep amber on light)", () => {
+  const dark = readFileSync(root + "public/brand/logo-dark.svg", "utf8");
+  const light = readFileSync(root + "public/brand/logo-light.svg", "utf8");
+  assert.ok(!/<rect[^>]*rx=/.test(dark + light), "no tile in the lockups");
+  assert.match(dark, /fill="#ffffff">Activity[\s\S]*fill="#ffb02e">Lane/);
+  assert.match(light, /fill="#14378f">Activity[\s\S]*fill="#c77700">Lane/);
+  const pages = files.filter((f) => /^public\/(v2\/)?[a-z0-9-]+\.html$/.test(f) && readFileSync(root + f, "utf8").includes('class="brand"'));
+  assert.ok(pages.length > 30);
+  for (const f of pages) assert.ok(readFileSync(root + f, "utf8").includes("mark-bare-dark.svg"), f + " uses the onDark lockup");
+});
+
+test("brand: deep amber on light passes 3:1 on white", () => {
+  const lum = (h: string) => { const c = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  assert.ok(1.05 / (lum("#c77700") + 0.05) >= 3);
 });

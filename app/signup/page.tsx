@@ -9,11 +9,10 @@ import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { post as apiPost, get as apiGet, api, rawErrorMessage } from "@/lib/api";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
-import { AUTH_LIGHT, AosMark } from "@/components/auth/AuthBrand";
+import { AUTH_LIGHT, AuthLogo } from "@/components/auth/AuthBrand";
 import { useI18n, tNow } from "@/lib/i18n/provider";
 import { safeNext } from "@/lib/safe-next";
 import { isRTL } from "@/lib/i18n/config";
-import { BRAND as BRAND_NAME } from "@/lib/i18n/config";
 import { TERMS_VERSION } from "@/lib/legal";
 
 type AccountType = "parent" | "freelancer" | "company" | "franchise";
@@ -668,11 +667,8 @@ function Hero({ emoji, eyebrow, title, lede, steps, step }: { emoji: string; eye
       className="px-7 pb-7 pt-6 text-white"
       style={{ background: "radial-gradient(120% 160% at 15% -30%, rgba(120,170,255,.5) 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)" }}
     >
-      <div className="mb-4 flex items-center gap-2.5">
-        <AosMark />
-        <span className="text-[19px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-          <span style={{ color: "#fff" }}>{BRAND_NAME}</span>
-        </span>
+      <div className="mb-4">
+        <AuthLogo variant="onDark" />
       </div>
       {typeof step === "number" && steps && (
         <div className="mb-4 flex items-center gap-1.5" aria-label={eyebrow}>

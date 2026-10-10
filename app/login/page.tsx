@@ -11,7 +11,7 @@ import { fetchRoleHome } from "@/lib/roles";
 import { ApiError, get as apiGet, isTwoFaRequired, post as apiPost, rawErrorMessage, withTimeout } from "@/lib/api";
 import { FieldLabel, Input } from "@/components/ui";
 import { useI18n } from "@/lib/i18n/provider";
-import { AUTH_LIGHT, AosMark, AosWordmark } from "@/components/auth/AuthBrand";
+import { AUTH_LIGHT, AuthLogo } from "@/components/auth/AuthBrand";
 import { uiDate } from "@/lib/i18n/format";
 
 function LoginForm() {
@@ -229,9 +229,8 @@ function LoginForm() {
       className="relative w-full max-w-[720px] overflow-hidden rounded-[22px] bg-[var(--surface)] p-12 shadow-[0_24px_70px_-24px_rgba(20,30,90,.28)]"
       style={{ borderInlineStart: "4px solid #1d3a8f" }}
     >
-      <div className="mb-5 flex items-center gap-2.5">
-        <AosMark />
-        <AosWordmark className="text-[19px] font-extrabold" />
+      <div className="mb-5">
+        <AuthLogo />
       </div>
       <h1 className="text-[34px] font-extrabold tracking-[-0.01em]" style={{ fontFamily: "var(--ff-display)", color: "var(--ink)" }}>
         {t("p7login.signIn")}

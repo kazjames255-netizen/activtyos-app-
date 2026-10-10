@@ -79,7 +79,7 @@ import {
   emailWaitlistJoined,
   emailVoucherInstructions,
   newBookingProviderEmail,
-  aosLogoAttachment,
+  aosLogoAttachments,
   type NewBookingAttendee,
 } from "../lib/emails";
 import { auth as fbAuth } from "../firebase";
@@ -3499,7 +3499,7 @@ export function notifyProviderNewBooking(ctx: ProviderNoticeCtx): void {
       // Hero image — embed inline (cid) so it renders even from a localhost/
       // dev URL a mail client's image proxy can't reach (same as the logo).
       // The bytes live in the `images` collection (see routes/uploads.ts).
-      const attachments = [aosLogoAttachment()];
+      const attachments = [...aosLogoAttachments()];
       let heroCid: string | undefined;
       const rawSrc = (listing as { images?: { src?: string }[] }).images?.[0]?.src;
       const imgId = rawSrc?.match(/\/api\/images\/([^/?#]+)/)?.[1];

@@ -854,3 +854,11 @@
 .logo img{width:36px;height:36px;display:block}
 .wrap .pf-bar .mk,.pf-bar .mk{background:none!important;border-radius:0}
 .pf-bar .mk img{width:26px;height:26px;display:block}
+
+/* ActivityLane lockup: bare mark + "Activity" white + "Lane" amber, on the blue bar and the dark footer */
+.brand .brand-mark{height:44px;width:auto;display:block;flex:none}
+.brand .brand-name,.wrap header.nav .brand .brand-name,.wrap > footer .brand .brand-name{color:#fff;font-weight:800;font-size:22px;letter-spacing:-.02em;white-space:nowrap}
+.brand .brand-name b{color:#ffb02e;font-weight:800}
+.pf-bar .mk img{width:auto!important;height:26px!important}
+@media(max-width:560px){.brand .brand-mark{height:40px}.brand .brand-name{font-size:19px}}
+@media(max-width:420px){.brand .brand-name{font-size:17px}.brand .brand-mark{height:36px}}
