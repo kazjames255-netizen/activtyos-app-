@@ -12,6 +12,9 @@ import { siteRecordFilter } from "../lib/siteScope";
 import { isPlainStaff, type Role } from "../middleware/role";
 import { whereInChunks } from "../lib/firestoreIn";
 import { actorName } from "../lib/actorName";
+import { doseWasGiven } from "../lib/medDose";
+import { medReaskBell, medReaskEmail } from "../lib/healthBells";
+import { createHash } from "node:crypto";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Medication (Pupils) — two records, because real practice is two things:
@@ -272,14 +275,36 @@ medications.put("/:id", async (req, res) => {
   // A consent the PARENT gave in their portal stays attributed to them: the
   // provider can't rewrite whose name or date is on it.
   if (before.source === "parent") { delete patch.consentBy; delete patch.consentDate; }
+  // Consent is to THIS medicine, dose and route. Changing any of them on a consented record clears the consent and asks the parent again
+  // (owner decision on health run H12, 10 Oct 2026); a change of case or spacing is not a change. Other fields (notes, storage, dates) keep it.
+  const same = (a: unknown, b: unknown) => String(a ?? "").trim().toLowerCase().replace(/\s+/g, " ") === String(b ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  const detailsChanged = before.consentGranted === true && (["name", "dose", "route"] as const).some((k) => patch[k] !== undefined && !same(patch[k], before[k]));
+  if (detailsChanged) patch.consentGranted = false;
   const grantChanged = typeof patch.consentGranted === "boolean" && patch.consentGranted !== (before.consentGranted === true);
   await own.snap.ref.set({
     ...patch,
-    ...(grantChanged ? consentStamp(req, patch.consentGranted ? "consent recorded by provider" : "consent removed by provider") : {}),
+    ...(grantChanged ? consentStamp(req, detailsChanged ? "consent cleared: medicine name, dose or route changed" : patch.consentGranted ? "consent recorded by provider" : "consent removed by provider") : {}),
+    ...(detailsChanged ? { consentClearedAt: new Date().toISOString() } : {}),
     updatedAt: new Date().toISOString(),
   }, { merge: true });
   const after = await own.snap.ref.get();
   res.json({ id: after.id, ...after.data() });
+  if (detailsChanged) {
+    void (async () => {
+      const now = after.data()!;
+      const email = await parentEmailForChild(now.childId as string | undefined);
+      if (!email) return;
+      const tenant = await db.collection("tenants").doc(String(now.tenantId)).get();
+      const v = { name: String(now.childName), med: String(now.name), provider: (tenant.get("name") as string) || "Your provider" };
+      const bell = medReaskBell(v);
+      const mail = medReaskEmail(v);
+      await notify({
+        tenantId: String(now.tenantId), to: { kind: "parent", email }, category: "medication", ignoreMute: true,
+        title: bell.title, body: bell.body, i18n: bell.i18n, subject: mail.subject, emailHtml: mail.html,
+        href: "/custdash/medication", ref: after.id,
+      });
+    })().catch((e) => console.error("[medication] re-consent notice failed:", (e as Error).message));
+  }
 });
 
 // DELETE /api/medications/:id — operators only, and only for a record entered
@@ -410,6 +435,8 @@ medications.post("/:id/administer", async (req, res) => {
     childId = await resolveChildId(auth.tenantId, String(med.childName));
     if (childId) void own.snap.ref.set({ childId }, { merge: true });
   }
+  const medRef = own.snap.ref;
+  const ref = adminCol.doc();
   const doc = {
     ...parsed.data,
     tenantId: auth.tenantId,
@@ -421,12 +448,44 @@ medications.post("/:id/administer", async (req, res) => {
     administeredByName: await actorName(req),
     createdAt: new Date().toISOString(),
   };
-  const ref = await adminCol.add(doc);
+  // ATOMIC with the consent: the checks above ran on a read that can be stale by the time the dose is written, so a parent's withdrawal (or a
+  // second identical tap) could land in between (health run H15, H25b). The dose is written in a transaction that re-reads the medication
+  // document - which a withdrawal, a consent change and every other dose all write - so they cannot interleave.
+  const fingerprint = createHash("sha1").update(JSON.stringify([doc.administeredBy, parsed.data.date, parsed.data.time ?? "", parsed.data.doseGiven, parsed.data.given ?? null, parsed.data.witnessedBy ?? "", parsed.data.notes ?? ""])).digest("hex").slice(0, 20);
+  type Outcome = { kind: "ok" } | { kind: "replay"; id: string } | { kind: "refuse"; status: number; error: string; code?: string };
+  const outcome: Outcome = await db.runTransaction(async (tx): Promise<Outcome> => {
+    const cur = await tx.get(medRef);
+    const m = cur.data();
+    if (!cur.exists || !m) return { kind: "refuse", status: 404, error: "Medication not found" };
+    if (!m.consentGranted) return { kind: "refuse", status: 409, error: "No parental consent on file for this medication — can't record a dose." };
+    if (m.archived) return { kind: "refuse", status: 409, error: "This medication is archived." };
+    if (m.expiryDate && String(m.expiryDate) < parsed.data.date) return { kind: "refuse", status: 409, error: `${m.name} expired on ${m.expiryDate} — check the medication before recording a dose.` };
+    const last = m.lastDose as { id?: string; atMs?: number; key?: string } | undefined;
+    if (!parsed.data.confirmDuplicate && last?.atMs && Date.now() - last.atMs <= MED_DUP_WINDOW_MS) {
+      // The very same dose from the same person a moment ago: a double-tap or a retry. Hand back the first record, write nothing.
+      if (last.key === fingerprint && last.id) return { kind: "replay", id: last.id };
+      return { kind: "refuse", status: 409, code: "possible_duplicate", error: `A dose of ${med.name} was just recorded a moment ago — is this a genuine second dose? Confirm to record it anyway.` };
+    }
+    const at = new Date();
+    doc.createdAt = at.toISOString();
+    tx.set(ref, doc);
+    tx.set(medRef, { lastDose: { id: ref.id, atMs: at.getTime(), key: fingerprint } }, { merge: true });
+    return { kind: "ok" };
+  });
+  if (outcome.kind === "refuse") {
+    res.status(outcome.status).json({ error: outcome.error, ...(outcome.code ? { code: outcome.code } : {}) });
+    return;
+  }
+  if (outcome.kind === "replay") {
+    const first = await adminCol.doc(outcome.id).get();
+    res.status(200).json({ id: outcome.id, ...(first.data() ?? doc), replayed: true });
+    return;
+  }
   res.status(201).json({ id: ref.id, ...doc });
 
   // Tell the parent their child was given (or missed) their medicine.
   void (async () => {
-    const given = parsed.data.given ?? !/^\s*not\s+given/i.test(parsed.data.doseGiven);
+    const given = doseWasGiven(parsed.data.doseGiven, parsed.data.given);
     const gates = safety;
     if (!(given ? gates.informParentGiven : gates.informParentMissed)) return;
     const email = await parentEmailForChild(childId);
@@ -545,7 +604,28 @@ medications.post("/authorise", async (req, res) => {
     recordedByName: parentName,
     createdAt: new Date().toISOString(),
   };
-  const ref = await medsCol.add(doc);
+  // The same medicine, dose, route and schedule for the same child at the same provider is ONE authorisation: a double-tap or a retry (30 parallel
+  // calls used to store 30 records and ring 30 bells - health run H10). A lock document per fingerprint, read and written in one transaction,
+  // makes the second call hand back the first record. After a withdrawal the lock points at an archived record, so a fresh authorisation is allowed.
+  const norm = (v: unknown) => String(v ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  const lockId = createHash("sha1").update(JSON.stringify([input.tenantId, input.childId, norm(input.name), norm(input.dose), norm(input.route), norm(input.schedule)])).digest("hex");
+  const lockRef = db.collection("medAuthLocks").doc(lockId);
+  const ref = medsCol.doc();
+  const existing = await db.runTransaction(async (tx) => {
+    const lock = await tx.get(lockRef);
+    const prevId = lock.exists ? (lock.get("medId") as string | undefined) : undefined;
+    if (prevId) {
+      const prev = await tx.get(medsCol.doc(prevId));
+      if (prev.exists && prev.get("archived") !== true && !prev.get("consentWithdrawnAt") && prev.get("consentGranted") === true) return { id: prev.id, data: prev.data()! };
+    }
+    tx.set(ref, doc);
+    tx.set(lockRef, { medId: ref.id, tenantId: input.tenantId, childId: input.childId, at: doc.createdAt });
+    return null;
+  });
+  if (existing) {
+    res.status(200).json({ id: existing.id, ...existing.data, duplicate: true });
+    return;
+  }
   res.status(201).json({ id: ref.id, ...doc });
 
   // A self-serve authorisation is easy for a provider to miss — it arrives

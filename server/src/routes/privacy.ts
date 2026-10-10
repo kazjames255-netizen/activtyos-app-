@@ -44,7 +44,7 @@ async function gather(req: import("express").Request) {
     email ? db.collection("notifications").where(auth.role === "parent" ? "email" : "toEmail", "==", email).get() : Promise.resolve(none),
     db.collection("deletionRequests").where("uid", "==", uid).get(),
   ]);
-  out.notifications = bell.docs.map((d) => { const n = d.data(); return { id: d.id, tenantId: n.tenantId, category: n.category, title: n.title, body: n.body, at: n.at, readAt: n.readAt ?? null }; });
+  out.notifications = bell.docs.map((d) => { const n = d.data(); return { id: d.id, tenantId: n.tenantId, category: n.category, title: n.title, body: n.body, ref: n.ref ?? null, at: n.at, readAt: n.readAt ?? null }; });
   out.deletionRequests = delReqs.docs.map(strip);
   if (auth.role === "staff" && auth.tenantId) {
     // A member of staff's OWN records with the provider — what their own
@@ -152,9 +152,15 @@ async function gather(req: import("express").Request) {
     // them; nothing marked confidential unless shared.
     out.incidents = incidents.map(strip).filter((r) => {
       const x = r as { kind?: string; shareWithParent?: boolean; confidential?: boolean; subject?: string };
+      if (x.confidential === true) return false; // confidential ALWAYS wins over sharing (health run H50)
       if (x.shareWithParent === true) return true;
       return x.kind === "accident" && !x.confidential && x.subject !== "staff";
     });
+    // An alert that was sent about a confidential record carries no text in the export either (older ones were sent with the record's wording).
+    const confidentialIds = new Set(incidents.filter((d) => d.get("confidential") === true).map((d) => d.id));
+    if (confidentialIds.size && Array.isArray(out.notifications)) {
+      out.notifications = (out.notifications as { ref?: string | null }[]).map((n) => (n.ref && confidentialIds.has(n.ref) ? { ...n, title: "A record was made", body: "" } : n));
+    }
     out.tripConsents = trips.map((d) => {
       const t = d.data() as { destination?: string; date?: string; tenantId?: string; attendees?: { childId?: string; n?: string; consent?: string; consentAt?: string; consentBy?: string }[] };
       return { tripId: d.id, tenantId: t.tenantId, destination: t.destination, date: t.date, children: (t.attendees ?? []).filter((a) => a.childId && kidSet.has(a.childId)) };

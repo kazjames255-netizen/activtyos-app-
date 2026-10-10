@@ -15,6 +15,7 @@ import { whereInChunks } from "../lib/firestoreIn";
 import { auditIncidentDeletion } from "../lib/incidentDeletionAudit";
 import { actorName } from "../lib/actorName";
 import { headInjuryBell, headInjuryEmail, isHeadInjury } from "../lib/headInjury";
+import { recordMadeBell, recordMadeEmail } from "../lib/healthBells";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Incidents & Accidents (Pupils) — the safeguarding log every OFSTED-
@@ -114,6 +115,7 @@ const logSchema = z.object({
 /** Latest day an event may be dated: tomorrow in UTC, so a provider whose local day is
  *  ahead of UTC (or a late-night entry) is never refused, but a typo year is. */
 const latestEventDay = () => new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+const CONFIDENTIAL_SHARE_MSG = "A confidential record can't be shared with the parent. Untick one of the two.";
 const FUTURE_DATE_MSG = "That date is in the future. Pick today or an earlier day.";
 const KINDS = ["accident", "incident", "safeguarding"] as const;
 const isKind = (v: unknown): v is (typeof KINDS)[number] => typeof v === "string" && (KINDS as readonly string[]).includes(v);
@@ -182,6 +184,23 @@ async function tellHeadInjury(id: string): Promise<"sent" | "head" | "no"> {
   }
 }
 
+/** A confidential ACCIDENT: the family is told that a record was made and who to contact - no text from it (bell, email, nothing else).
+ *  A confidential concern or incident tells nobody. */
+async function tellRecordMade(id: string, rec: { kind?: string; subject?: string; childId?: string | null; childName?: string; tenantId?: string }, gates: { notifyParentAccident: boolean }) {
+  if (rec.kind !== "accident" || rec.subject === "staff" || !gates.notifyParentAccident) return;
+  const email = await parentEmailForChild(rec.childId ?? undefined);
+  if (!email || !rec.tenantId) return;
+  const tenant = await db.collection("tenants").doc(rec.tenantId).get();
+  const v = { name: String(rec.childName ?? ""), provider: (tenant.get("name") as string) || "your activity provider" };
+  const bell = recordMadeBell(v);
+  const mail = recordMadeEmail(v);
+  await notify({
+    tenantId: rec.tenantId, to: { kind: "parent", email }, category: "accident",
+    title: bell.title, body: bell.body, i18n: bell.i18n, subject: mail.subject, emailHtml: mail.html,
+    href: "/custdash/accidents", ref: id,
+  });
+}
+
 const kindWord = (kind: string) => (kind === "accident" ? "accident" : kind === "safeguarding" ? "safeguarding concern" : "incident");
 // "An accident" / "An incident" / "A safeguarding concern" (it used to say "An safeguarding concern").
 const anWord = (word: string) => `${/^[aeiou]/i.test(word) ? "An" : "A"} ${word}`;
@@ -190,11 +209,14 @@ const anWord = (word: string) => `${/^[aeiou]/i.test(word) ? "An" : "A"} ${word}
  *  to share it. Internal behaviour notes, safeguarding concerns, confidential
  *  records and concerns about staff stay off their side entirely. */
 const parentMaySee = (x: { kind?: unknown; shareWithParent?: unknown; confidential?: unknown; subject?: unknown }) =>
-  x.shareWithParent === true || (x.kind === "accident" && x.confidential !== true && x.subject !== "staff");
+  x.confidential !== true && (x.shareWithParent === true || (x.kind === "accident" && x.subject !== "staff")); // confidential ALWAYS wins over sharing
 // Whether a record should reach the parent: accidents always (per settings),
 // behaviour when the setting is on OR staff ticked share, safeguarding only
 // when staff explicitly chose to share (it's confidential by default).
-function sharesWithParent(rec: { kind?: string; shareWithParent?: boolean; subject?: string }, gates: { notifyParentAccident: boolean; notifyParentIncident: boolean }) {
+function sharesWithParent(rec: { kind?: string; shareWithParent?: boolean; subject?: string; confidential?: boolean }, gates: { notifyParentAccident: boolean; notifyParentIncident: boolean }) {
+  // A confidential record is never shared, whatever else is ticked (health run H50). The family of a confidential ACCIDENT is told only that a
+  // record exists (tellRecordMade below), never what it says.
+  if (rec.confidential === true) return false;
   // A concern about a member of staff reaches a family only when the DSL chose to share it.
   if (rec.subject === "staff") return rec.shareWithParent === true;
   if (rec.kind === "accident") return gates.notifyParentAccident;
@@ -287,7 +309,7 @@ incidents.get("/", async (req, res) => {
     // Behaviour records reach the parent only when staff chose "share with parent".
     list = list.filter((x) => x.kind !== "safeguarding" || x.shareWithParent === true);
     list = list.filter((x) => x.kind !== "incident" || x.shareWithParent === true);
-    list = list.filter((x) => !x.confidential || x.shareWithParent === true);
+    list = list.filter((x) => !x.confidential);
     list = list.filter((x) => x.subject !== "staff" || x.shareWithParent === true);
     if (isKind(req.query.kind)) list = list.filter((x) => x.kind === req.query.kind);
     // Attach the owning provider's "require acknowledgement" flag so the parent
@@ -355,6 +377,7 @@ incidents.post("/", async (req, res) => {
     return;
   }
   if (parsed.data.date > latestEventDay()) { res.status(400).json({ error: FUTURE_DATE_MSG }); return; }
+  if (parsed.data.confidential === true && parsed.data.shareWithParent === true) { res.status(400).json({ error: CONFIDENTIAL_SHARE_MSG, code: "confidential_not_shareable" }); return; }
   // Only a child this provider actually has — else the record lands on another
   // provider's child (their parent is emailed; the dossier hands their family back).
   if (parsed.data.childId && !(await childVisibleTo({ ...req.auth!, tenantId: scope.tenantId }, parsed.data.childId))) {
@@ -390,6 +413,7 @@ incidents.post("/", async (req, res) => {
   void (async () => {
     if ((await tellHeadInjury(ref.id)) !== "no") return; // a head injury has its own immediate message; it replaces the ordinary one
     const gates = await safeguardingSettings(scope.tenantId!, doc.childId);
+    if (doc.confidential === true) { await tellRecordMade(ref.id, doc, gates); return; }
     if (!sharesWithParent(doc, gates)) return;
     const email = await parentEmailForChild(doc.childId);
     if (!email) return;
@@ -481,6 +505,14 @@ incidents.put("/:id", async (req, res) => {
   // Screens hold the SIGNED photo link; compare and store the bare one, or a
   // re-save would read as a changed photo (and email the family) every time.
   barePhotos(parsed.data);
+  {
+    const was = own.snap.data()!;
+    const conf = parsed.data.confidential ?? was.confidential === true;
+    const share = parsed.data.shareWithParent ?? was.shareWithParent === true;
+    if (conf && share && (parsed.data.confidential === true || parsed.data.shareWithParent === true)) { res.status(400).json({ error: CONFIDENTIAL_SHARE_MSG, code: "confidential_not_shareable" }); return; }
+    // An older record stored with both flags: confidential wins, so the share flag is cleared with whatever else is saved.
+    if (conf && share) parsed.data.shareWithParent = false;
+  }
   // Only a real change is an edit. Re-saving an unchanged form must not send
   // the family a second "this was updated" email.
   const before = own.snap.data()!;
@@ -500,7 +532,7 @@ incidents.put("/:id", async (req, res) => {
     const rec = after.data()!;
     const kind = String(rec.kind ?? "incident");
     const gates = await safeguardingSettings(String(rec.tenantId), rec.childId as string | undefined);
-    if (!sharesWithParent({ kind, shareWithParent: rec.shareWithParent === true, subject: rec.subject as string | undefined }, gates)) return;
+    if (!sharesWithParent({ kind, shareWithParent: rec.shareWithParent === true, subject: rec.subject as string | undefined, confidential: rec.confidential === true }, gates)) return;
     const email = await parentEmailForChild(rec.childId as string | undefined);
     if (!email) return;
     const word = kindWord(kind);
@@ -609,7 +641,8 @@ incidents.post("/:id/note", async (req, res) => {
         href: "/company/incidents", ref: snap.id,
       });
     } else {
-      // Only email the parent when the record is one they can see.
+      // Only email the parent when the record is one they can see (never a confidential one).
+      if (data.confidential === true) return;
       if (data.kind === "safeguarding" && data.shareWithParent !== true) return;
       if (data.kind === "incident" && data.shareWithParent !== true) return;
       if (data.subject === "staff" && data.shareWithParent !== true) return;
