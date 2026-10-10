@@ -684,6 +684,15 @@ listings.put("/:id", async (req, res) => {
       return;
     }
   }
+  // Money already SETTLED for the old franchise must not move: refuse a reassignment that would take bookings out of a settled period.
+  if ("franchiseId" in patch && ((patch.franchiseId as string | null) ?? null) !== ((own.snap.data()!.franchiseId as string | null | undefined) ?? null)) {
+    const oldFid = (own.snap.data()!.franchiseId as string | null | undefined) ?? null;
+    if (oldFid) {
+      const { reassignBlockedBySettlement } = await import("../lib/franchisePayoutsData");
+      const msg = await reassignBlockedBySettlement(req.auth!.tenantId!, own.snap.id, oldFid);
+      if (msg) { res.status(409).json({ error: msg }); return; }
+    }
+  }
   await own.snap.ref.update(patch);
   // Reassigning a listing to another franchise (or back to head office) moves its EXISTING bookings with it: bookings
   // carry their own franchiseId (the franchise Bookings / Families / register lists filter on it), so without this the

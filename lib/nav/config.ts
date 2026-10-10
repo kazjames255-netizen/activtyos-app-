@@ -116,7 +116,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "invoices", legacyView: "admin-invoices", label: "Invoices", hidden: true, icon: null, badge: null },
         { view: "reconciliation", legacyView: "admin-reconciliation", label: "Reconciliation", icon: { type: "glyph", value: "⇄" }, badge: null },
         { view: "inventory", legacyView: "admin-inventory", label: "Inventory", icon: { type: "glyph", value: "📦" }, badge: null },
-        { view: "splitfees", legacyView: "admin-splitfees", label: "Split fees", highlight: true, icon: { type: "glyph", value: "％" }, badge: null },
+        { view: "splitfees", legacyView: "admin-splitfees", label: "Franchise payouts", highlight: true, icon: { type: "glyph", value: "％" }, badge: null },
       ],
     },
     {

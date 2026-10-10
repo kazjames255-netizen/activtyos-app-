@@ -9,6 +9,7 @@ import { notifyPaymentReceived, bookingDocId } from "../routes/bookings";
 import { blockCountDelta, bookingSeats, heldPlaces, placesDelta, placesDeltaIsZero, applyPlacesDelta, type BlockDoc } from "./blockDomain";
 import { applyRowAction } from "../../../features/bookings/mutations";
 import type { Booking } from "../../../features/bookings/types";
+import { clearKitCache } from "./kitCache";
 
 // ─────────────────────────────────────────────────────────────────────────
 // CARD HOLD — manual-approval listings paid by card.
@@ -140,7 +141,7 @@ export type CaptureResult = { ok: true } | { ok: false; error: string };
  * The provider approved these bookings: take the money. `rows` are the bookings being approved (already Confirmed in the DB).
  * Rows of the same card are captured together; a sibling still waiting loses its hold (see the header note).
  */
-export async function captureHolds(rows: Booking[]): Promise<CaptureResult> {
+async function captureHoldsInner(rows: Booking[]): Promise<CaptureResult> {
   if (!stripe) return { ok: false, error: "Card payments aren't connected" };
   const byIntent = new Map<string, Booking[]>();
   for (const b of rows) if (b.cardHold?.state === "held" && b.cardHold.intentId) byIntent.set(b.cardHold.intentId, [...(byIntent.get(b.cardHold.intentId) ?? []), b]);
@@ -225,7 +226,7 @@ export async function captureHolds(rows: Booking[]): Promise<CaptureResult> {
  * These bookings were declined / cancelled / withdrawn: let the family's card go. Only when nothing else still waits on the same card -
  * a sibling still pending keeps the authorisation.
  */
-export async function releaseHolds(rows: Booking[]): Promise<void> {
+async function releaseHoldsInner(rows: Booking[]): Promise<void> {
   const byIntent = new Map<string, Booking[]>();
   for (const b of rows) if ((b.cardHold?.state === "held" || b.cardHold?.state === "awaiting") && b.cardHold.intentId) byIntent.set(b.cardHold.intentId, [...(byIntent.get(b.cardHold.intentId) ?? []), b]);
   for (const [intentId, group] of byIntent) {
@@ -351,4 +352,11 @@ export async function holdCanceledByStripe(paymentId: string): Promise<void> {
     if (b.status === "Approval needed" && (b.cardHold?.state === "held" || b.cardHold?.state === "awaiting"))
       await systemDecline(b, "The card hold lapsed before the provider approved, so no payment was taken.", "expired");
   }
+}
+
+export async function captureHolds(...a: Parameters<typeof captureHoldsInner>): ReturnType<typeof captureHoldsInner> {
+  try { return await captureHoldsInner(...a); } finally { clearKitCache(); }
+}
+export async function releaseHolds(...a: Parameters<typeof releaseHoldsInner>): ReturnType<typeof releaseHoldsInner> {
+  try { return await releaseHoldsInner(...a); } finally { clearKitCache(); }
 }

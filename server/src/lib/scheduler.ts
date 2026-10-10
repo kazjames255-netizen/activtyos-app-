@@ -84,6 +84,7 @@ async function claimSweep(name: string, everyMs: number): Promise<boolean> {
 }
 
 import { beat, record } from "./monitor";
+import { clearKitCache } from "./kitCache";
 
 const timers: NodeJS.Timeout[] = [];
 
@@ -94,7 +95,7 @@ export function sweep(name: string, everyMs: number, fn: () => Promise<void>): v
   const tick = async () => {
     if (!(await withReadLabel(`sweep:${name}:claim`, () => claimSweep(name, everyMs)))) return;
     try {
-      await withReadLabel(`sweep:${name}`, fn);
+      try { await withReadLabel(`sweep:${name}`, fn); } finally { clearKitCache(); } // a sweep may have written money: never serve a stale payouts figure after it
       // Proof of life: the watchdog compares this against the interval, so a
       // scheduler that quietly stops is noticed instead of being silent.
       void beat(name);

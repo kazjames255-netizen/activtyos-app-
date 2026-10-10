@@ -8,6 +8,7 @@ import Link from "next/link";
 import { get as apiGet } from "@/lib/api";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
+import { FranchiseStatement } from "@/features/franchise/FranchisePayouts";
 import { useT, tNow } from "@/lib/i18n/provider";
 
 // "**bold**" markers in a catalogue string -> <b>.
@@ -41,6 +42,8 @@ export function FranchiseRoyaltiesApp() {
           <p className="mt-1.5 text-[12.5px] leading-[1.5] text-white/85">{t("franchise.royaltiesLede")} <b>{basisLabel}</b>.</p>
           <span className="mt-2 inline-block rounded-full bg-white/20 px-2.5 py-0.5 text-[10.5px] font-extrabold">{t("p9jr.setByHeadOffice")}</span>
         </div>
+
+        <FranchiseStatement />
 
         <div className="mb-3 inline-flex gap-1 rounded-xl border border-[var(--line)] bg-white p-1">
           {([["1m", t("p8fr.royLastMonth")], ["3m", t("franchise.threeMonths")], ["6m", t("franchise.sixMonths")], ["12m", t("franchise.twelveMonths")], ["all", t("p8fr.finAllTime")]] as const).map(([k, label]) => (

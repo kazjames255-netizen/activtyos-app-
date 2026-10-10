@@ -6,6 +6,7 @@ import { notify } from "./notify";
 import { withBusyRetry } from "./busyRetry";
 import { resolvePendingCancel } from "./pendingRefund";
 import { ukToday } from "./ukDate";
+import { clearKitCache } from "./kitCache";
 import { bookingDocId } from "../routes/bookings";
 import { cashReceivedOf, refundableSoFar } from "../../../features/bookings/helpers";
 import type { Booking } from "../../../features/bookings/types";
@@ -141,7 +142,7 @@ const isOurs = (r: Stripe.Refund) => {
  * Record one Stripe refund in the books (see the rules above). `account` is the connected account the event came from
  * (event.account) or, for the reconcile path, the payment's own account; null for the platform account.
  */
-export async function applyStripeRefund(refundIn: Stripe.Refund, account: string | null, source: "webhook" | "reconcile" = "webhook", alreadyFresh = false): Promise<SyncResult> {
+async function applyStripeRefundInner(refundIn: Stripe.Refund, account: string | null, source: "webhook" | "reconcile" = "webhook", alreadyFresh = false): Promise<SyncResult> {
   if (!refundIn?.id || typeof refundIn.id !== "string") { console.error("[stripe-refund] an event with a refund that has no id — ignored"); return "ignored"; }
   // Webhook events are snapshots: re-read the refund. (The reconcile path just listed it from Stripe.)
   const refund = source === "webhook" && !alreadyFresh ? await freshRefund(refundIn, account) : refundIn;
@@ -306,4 +307,9 @@ export async function syncRefundsForTenant(tenantId: string, opts: { from?: stri
     }));
   }
   return out;
+}
+
+/** Record one Stripe refund; afterwards forget the cached money figures (payouts, add-on orders) so nothing reads the old totals. */
+export async function applyStripeRefund(...a: Parameters<typeof applyStripeRefundInner>): ReturnType<typeof applyStripeRefundInner> {
+  try { return await applyStripeRefundInner(...a); } finally { clearKitCache(); }
 }
