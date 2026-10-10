@@ -881,6 +881,16 @@ function Page3() {
           </ul>
           <p className="m-0 mt-3 text-[13.5px] font-bold text-[var(--ink-2)]">Owner decision. No code change now.</p>
         </Card>
+        <Card className="mt-4 p-4">
+          <h3 className="m-0 mb-2 text-[18px] font-extrabold text-[var(--ink)]" style={display}>Who pays the card fee?</h3>
+          <ul className="m-0 grid gap-2 pl-5">
+            <li className={li}>Today the provider pays Stripe&apos;s card fee. The platform takes no cut of bookings.</li>
+            <li className={li}>A provider cannot pass the fee on or add a surcharge.</li>
+            <li className={li}>Adding one would be a new feature and needs a proper check first: UK rules limit surcharging on consumer card payments.</li>
+            <li className={li}>Options for later: absorb it (today), fold it into the listing price, or a platform fee.</li>
+          </ul>
+          <p className="m-0 mt-3 text-[13.5px] font-bold text-[var(--ink-2)]">Owner decision. No code change now.</p>
+        </Card>
       </Section>
     </>
   );

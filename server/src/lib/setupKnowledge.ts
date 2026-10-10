@@ -32,7 +32,7 @@ export const SETUP_KNOWLEDGE = `SET-UP, BILLING AND GETTING PAID KNOWLEDGE (code
 
 TWO SEPARATE MONEY FLOWS (always keep them apart)
 - Flow 1, the PLAN: the provider pays the platform a monthly plan fee, by card, billed through the platform's own Stripe.
-- Flow 2, BOOKINGS: parents pay the provider. Card payments go straight into the provider's OWN Stripe account and then to their own bank. The platform takes NO cut or commission of bookings and never holds the money. The provider pays Stripe's card-processing fees (set on the connected account; the exact rate is Stripe's, see their dashboard).
+- Flow 2, BOOKINGS: parents pay the provider. Card payments go straight into the provider's OWN Stripe account and then to their own bank. The platform takes NO cut or commission of bookings and never holds the money. The provider pays Stripe's card-processing fees (set on the connected account; the exact rate is Stripe's, see their dashboard). A provider cannot pass the card fee on to parents or add a surcharge.
 - The plan card can differ from the payout bank account (separate on purpose).
 - Sign-up itself asks NO money questions (no plan picker, no bank, no Stripe). Those come later: the plan at Go live, getting paid in Billing & payouts.
 
