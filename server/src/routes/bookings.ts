@@ -1,6 +1,6 @@
 import { withMoney } from "../../../features/bookings/walletBreakdown";
 import { resolvePendingCancel, alreadyRefundedWarning } from "../lib/pendingRefund";
-import { splitRefundByMethod } from "../lib/refundSplit";
+import { splitRefundByMethod, walletShareFor, noteInstantWalletCredit } from "../lib/refundSplit";
 import { refPrefixFor } from "../lib/bookingRef";
 import { stopOpenPayments } from "../lib/checkoutIntent";
 import { randomUUID } from "node:crypto";
@@ -24,12 +24,17 @@ import { creditWallet, creditWalletOnceInTx, walletEntryRef, walletRef } from ".
 import { captureHolds, releaseHolds } from "../lib/cardHold";
 import { RESEND_COOLDOWN_MS, remindersPatch, reminderDateLabel, resendWaitSeconds } from "../lib/invoiceResend";
 import { AddonRequestError, addonCutoffDays, approveAddonRequest, declineAddonRequest } from "../lib/addonRequests";
-import { requestWhat } from "../../../features/bookings/addonRequests";
+import { decisionWording } from "../../../features/bookings/addonWording";
+import { bellText } from "../lib/extraWording";
 import { blocksBulkCancel } from "../lib/bulkCancelRules";
 import { loadSettings } from "../lib/tenantLibrary";
 import { bookingInSite, staffSiteScope } from "../lib/siteScope";
 import { registerRows } from "../lib/registerRows";
-import { bookingKids, kidActiveDays, money, realPhone, refundableSoFar, receivedOf, cashReceivedOf, refundTransferAmount, refundAwaitingTransfer } from "../../../features/bookings/helpers";
+import { bookingKids, kidActiveDays, money, realPhone, refundableSoFar, overpaidOf, receivedOf, cashReceivedOf, refundTransferAmount, refundAwaitingTransfer, refundNeedsProviderTransfer } from "../../../features/bookings/helpers";
+import { kindOfMethod, paidOfflineParts, splitOverParts, unsentKinds, methodHow, methodNames } from "../../../features/bookings/refundMethod";
+import { enJoin, enTr } from "../lib/refundWords";
+/** Offline refund kinds (cash / bank / voucher) to name in the add-on decision wording: none for card or wallet money. */
+const recordedKinds = (b: Booking): { kinds?: string; methods?: string } => { const ks = b.cancel?.refundVia === "card" ? [] : unsentKinds(b); return ks.length ? { kinds: ks.join(","), methods: methodNames(ks, enTr, enJoin) } : {}; };
 import { notify } from "../lib/notify";
 import { notifyFamilyCancelled } from "../lib/familyCancelNotice";
 import { approveBlockedMessage, declineBlockedMessage, nudgeBlockedMessage, canMarkPaid, paidBlockedMessage, shouldEmailConfirmed, shouldNotifyCancelled, cardHeldBlocksPayment, CARD_HELD_MESSAGE, isFirstHeldApproval, shouldAskToPayAfterApproval, shouldReleaseDiscountCodes } from "../lib/bookingGuards";
@@ -74,6 +79,7 @@ import {
   applyRowAction,
   buildBooking,
   markRefundRecorded,
+  rememberCashHeld,
 } from "../../../features/bookings/mutations";
 import { attachChildcareRefs, childcareOf, isChildcare, paymentRecordsOf, type ChildcareBooking, type ChildcarePayment } from "../lib/childcare";
 
@@ -906,6 +912,8 @@ bookings.post("/:ref/actions", async (req, res) => {
       const creditKey = `rel_${ref.id}_prov_${action.type}_${"ki" in action ? action.ki : ""}_${"date" in action ? action.date : ""}_${"requestId" in action ? action.requestId : ""}`.replace(/\//g, "_").slice(0, 1400);
       const credit = !!rel0 && rel0.resolution === "wallet" && rel0.amount > 0 && !!b.tenantId;
       const [walletSnap, entrySnap] = credit ? await Promise.all([tx.get(walletRef(b.tenantId!, b.email)), tx.get(walletEntryRef(creditKey))]) : [null, null];
+      // The wallet already got back its share of what was credited (so a later refund of this booking splits over what is really left).
+      if (credit) noteInstantWalletCredit(b, rel0.amount);
       tx.set(ref, toDoc(b));
       if (blockUpdate) tx.update(blockUpdate.ref, { ...blockUpdate.counts });
       if (moveUpdate) tx.update(moveUpdate.ref, { ...moveUpdate.counts });
@@ -962,9 +970,14 @@ bookings.post("/:ref/actions", async (req, res) => {
         res.status(502).json({ error: `The refund didn't go through: ${why}. Nothing was marked refunded — try again, or refund it in Stripe directly.` });
         return;
       }
+      // The wallet credit for THIS approval is credited in the same transaction that writes the refund record, under an id that is the same for a retry
+      // of this approval and different for the next one: it can never be credited twice (and never without the record).
+      const cents = (n: number) => Math.round(n * 100);
+      const walletKey = `wref_${ref.id}_${cents(updated.refundedApproved ?? 0)}_${cents(updated.walletRefunded ?? 0)}_${cents(moved.owed)}`.replace(/\//g, "_").slice(0, 1400);
+      const cashPart = Math.round(Math.max(0, moved.owed - moved.walletCredit) * 100) / 100;
       // refundedAt: when the money actually moved (cancel.on is when it was
       // asked for) — Reconciliation's "refunded today" keys off this (d9s7).
-      updated.cancel = { ...(updated.cancel ?? { on: "", by: "" }), refundVia: moved.via, refundedAt: new Date().toISOString(), refundError: undefined, refundCash: Math.round(Math.max(0, moved.owed - moved.walletPart) * 100) / 100 };
+      updated.cancel = { ...(updated.cancel ?? { on: "", by: "" }), refundVia: moved.via, refundedAt: new Date().toISOString(), refundError: undefined, refundCash: cashPart };
       // An OFFLINE refund (bank transfer / cash / voucher) is only RECORDED: the app cannot send it. It stays "awaiting your transfer" until the
       // provider confirms they sent it (action "refund-sent"), unless they say they already did.
       const alreadySent = "alreadySent" in action && action.alreadySent === true;
@@ -979,17 +992,25 @@ bookings.post("/:ref/actions", async (req, res) => {
       // but no refundLog entry, so it never showed there (only per-day
       // releases, my.ts partialCancel, did). Add one here too.
       const refundLabel = moved.partial ? "Refund approved (partial)" : "Refund approved";
-      // One entry per approved refund: what the provider still has to send is the sum of the offline ones not yet sent (see unsentRefunds()).
-      const cashPart = Math.round(Math.max(0, moved.owed - moved.walletPart) * 100) / 100;
+      // One entry per approved refund PER METHOD: what the provider still has to send is the sum of the offline ones not yet sent (see unsentRefunds()).
       const sentNow = moved.via !== "offline" || alreadySent;
       const nowIso = new Date().toISOString();
-      // A booking part-paid by card AND offline money: the card share (already sent through Stripe) and the OFFLINE share are separate entries, so the
-      // offline money stays "awaiting your transfer" (Finance, Refunds to send, the reminder, reconcile) until the provider marks it sent.
+      // The wallet part is its OWN entry (credited at once: status sent); the card share (already sent through Stripe) and the OFFLINE share are
+      // separate entries too, so the offline money stays "awaiting your transfer" (Finance, Refunds to send, the reminder, reconcile) until the provider
+      // marks it sent.
       type Entry = NonNullable<typeof updated.refundEntries>[number];
-      const mkEntry = (amount: number, cash: number, via: "wallet" | "card" | "offline", sent: boolean): Entry =>
-        ({ id: randomUUID(), amount, cash, via, status: sent ? "sent" : "approved", approvedAt: nowIso, ...(sent ? { sentAt: nowIso } : {}) }) as Entry;
+      // An OFFLINE entry also records what each way of paying gets back (bank transfer / cash / voucher), penny-correct: the provider's prompts, the
+      // reminder and the family's messages name those methods (features/bookings/refundMethod.ts).
+      const paidParts = paidOfflineParts(updated);
+      const mkEntry = (amount: number, cash: number, via: "wallet" | "card" | "offline", sent: boolean): Entry => {
+        const parts = via === "offline" ? splitOverParts(cash, paidParts) : [];
+        return ({ id: randomUUID(), amount, cash, via, status: sent ? "sent" : "approved", approvedAt: nowIso, ...(sent ? { sentAt: nowIso } : {}), ...(parts.length ? { parts } : {}) }) as Entry;
+      };
       const offlineShare = moved.offlinePart;
-      (updated.refundEntries = updated.refundEntries ?? []).push(mkEntry(Math.round((moved.owed - offlineShare) * 100) / 100, Math.round((cashPart - offlineShare) * 100) / 100, moved.via, sentNow));
+      updated.refundEntries = updated.refundEntries ?? [];
+      if (moved.walletCredit > 0) updated.refundEntries.push(mkEntry(moved.walletCredit, 0, "wallet", true));
+      const mainAmount = Math.round((cashPart - offlineShare) * 100) / 100;
+      if (mainAmount > 0.004) updated.refundEntries.push(mkEntry(mainAmount, mainAmount, moved.via === "wallet" ? "offline" : moved.via, sentNow));
       if (offlineShare > 0) updated.refundEntries.push(mkEntry(offlineShare, offlineShare, "offline", alreadySent));
       const lastSent = (moved.via === "offline" || offlineShare > 0) && alreadySent ? { amount: offlineShare > 0 ? offlineShare : cashPart, at: nowIso } : null;
       if (lastSent) updated.lastRefundSent = lastSent;
@@ -1006,6 +1027,10 @@ bookings.post("/:ref/actions", async (req, res) => {
       // dashboard while this one was in flight has added its own 'Refunded in Stripe' line, and the old whole-field write erased it.
       await db.runTransaction(async (tx) => {
         const snap = await tx.get(ref);
+        // (all reads before the writes) the wallet balance and the idempotency entry of this approval's credit.
+        const [walletSnap, entrySnap] = moved.walletCredit > 0 && updated.tenantId
+          ? await Promise.all([tx.get(walletRef(updated.tenantId, updated.email)), tx.get(walletEntryRef(walletKey))])
+          : [null, null];
         const cur = snap.exists ? fromDoc(snap.data() as BookingDoc) : updated;
         cur.cancel = { ...(cur.cancel ?? {}), ...(updated.cancel ?? {}) } as typeof cur.cancel;
         delete (cur.cancel as { refundError?: string } | null)?.refundError;
@@ -1016,8 +1041,17 @@ bookings.post("/:ref/actions", async (req, res) => {
         const have = new Set((cur.refundEntries ?? []).map((e) => e.id));
         cur.refundEntries = [...(cur.refundEntries ?? []), ...(updated.refundEntries ?? []).filter((e) => !have.has(e.id))];
         if (lastSent) cur.lastRefundSent = lastSent;
+        rememberCashHeld(cur);
         cur.pay = refundableSoFar(cur) <= 0.005 ? "Refunded" : moved.partial ? "Partially refunded" : updated.pay;
         tx.set(ref, toDoc(cur));
+        // The wallet credit, once, together with the record. (On the payments ledger too, like card and offline refunds, so Reconciliation matches.)
+        if (walletSnap && entrySnap && updated.tenantId) {
+          const credited = creditWalletOnceInTx(tx, updated.tenantId, updated.email, walletSnap.exists ? Number(walletSnap.get("balance") ?? 0) : 0, entrySnap.exists, walletKey, moved.walletCredit, `Credit from ${updated.listing}`, updated.ref);
+          if (credited) tx.set(db.collection("payments").doc(`wallet-${walletKey}`.slice(0, 1400)), {
+            tenantId: updated.tenantId, refs: [updated.ref], email: updated.email, type: "refund", amount: moved.walletCredit, currency: "gbp",
+            method: "wallet", via: "wallet", status: "credited", createdAt: new Date().toISOString(),
+          });
+        }
       });
     }
 
@@ -1103,13 +1137,14 @@ bookings.post("/:ref/actions", async (req, res) => {
           category: "billing",
           bellOnly: true,
           title: parentBell("refund-sent", { ref: updated.ref }).title, i18n: { tk: parentBell("refund-sent", { ref: updated.ref }).i18n.tk, tv: { ref: updated.ref } },
-          body: `£${sentAmt.toFixed(2)} for ${updated.listing} has been sent${updated.voucherScheme ? ` through ${updated.voucherScheme}` : " by bank transfer"}${updated.cancel?.refundSentAt ? ` on ${ukDateLabel(updated.cancel.refundSentAt)}` : ""}.`,
+          body: `£${sentAmt.toFixed(2)} for ${updated.listing} has been sent${(() => { const ks = unsentKinds(updated); return ks.length ? ` ${methodHow(ks, enTr, enJoin)}${updated.voucherScheme && ks.includes("voucher") ? ` (${updated.voucherScheme})` : ""}` : updated.voucherScheme ? ` through ${updated.voucherScheme}` : ""; })()}${updated.cancel?.refundSentAt ? ` on ${ukDateLabel(updated.cancel.refundSentAt)}` : ""}.`,
           href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
           ref: updated.ref,
         });
       }
       else if (action.type === "refund-approve") {
-        emailRefundApproved(updated, await tenantName());
+        const providerLabel = await tenantName();
+        emailRefundApproved(updated, providerLabel);
         // …and raise the family's in-app bell (email-only before, so it never
         // showed in their notifications). bellOnly — the email above is the mail.
         const toWallet = updated.cancel?.refundTo === "wallet";
@@ -1120,11 +1155,16 @@ bookings.post("/:ref/actions", async (req, res) => {
           category: "billing",
           bellOnly: true,
           ...(() => {
+            // An offline refund names the method(s) actually paid (cash / bank transfer / voucher, a mix included): features/bookings/refundMethod.ts.
+            const ks = updated.cancel?.refundVia === "offline" ? unsentKinds(updated) : [];
             const kind = toWallet ? "wallet-added" as const
               : updated.cancel?.refundVia === "offline"
-                ? (updated.voucherScheme ? "refund-approved-scheme" as const : /bank|transfer|bacs/i.test(updated.method ?? "") ? "refund-approved-bank" as const : "refund-approved-plain" as const)
+                ? (ks.length ? "refund-approved-offline" as const : updated.voucherScheme ? "refund-approved-scheme" as const : /bank|transfer|bacs/i.test(updated.method ?? "") ? "refund-approved-bank" as const : "refund-approved-plain" as const)
                 : "refund-approved-card" as const;
-            const b = parentBell(kind, { ref: updated.ref, amt: `£${amt.toFixed(2)}`, listing: updated.listing, scheme: updated.voucherScheme ?? "" });
+            const b = parentBell(kind, {
+              ref: updated.ref, amt: `£${amt.toFixed(2)}`, listing: updated.listing, scheme: updated.voucherScheme ?? "",
+              ...(ks.length ? { kinds: ks.join(","), methods: methodNames(ks, enTr, enJoin), provider: providerLabel } : {}),
+            });
             return { title: b.title, body: b.body!, i18n: b.i18n };
           })(),
           href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
@@ -1144,8 +1184,8 @@ bookings.post("/:ref/actions", async (req, res) => {
           to: { kind: "parent", email: updated.email },
           category: "booking",
           bellOnly: true,
-          ...(() => { const b = parentBell(r.status === "approved" ? "extra-approved" : "extra-declined", { ref: updated.ref }); return { title: b.title, i18n: b.i18n }; })(),
-          body: `${updated.listing} — ${requestWhat(r)}.${r.status === "approved" && r.money && r.money.amount > 0 ? ` £${r.money.amount.toFixed(2)} ${r.money.resolution === "charge" ? "to pay" : r.money.resolution === "wallet" ? "added to your wallet" : "to be refunded"}.` : ""}${r.status === "declined" && r.declineReason ? ` ${r.declineReason}` : ""}`,
+          // Plain sentences in the family's own language (key + data), e.g. "Your tshirty change was approved" / "...changed from size xl to size m".
+          ...(() => { const t = bellText(decisionWording(r, { ref: updated.ref, listing: updated.listing, awaitingTransfer: refundNeedsProviderTransfer(updated), provider: providerName, ...recordedKinds(updated) })); return { title: t.title, body: t.body, i18n: t.i18n }; })(),
           href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
           ref: updated.ref,
         });
@@ -1328,6 +1368,9 @@ bookings.post("/:ref/record-payment", async (req, res) => {
       }
       b.amountPaid = paid;
       b.pay = paid >= (b.amount ?? 0) ? "Paid" : "Partially paid";
+      // How THIS money came in (bank transfer / cash / voucher), so a later refund names the methods actually paid, a mix included.
+      const paidKind = kindOfMethod(parsed.data.method ?? b.method, b.voucherScheme);
+      if (paidKind) b.paidVia = { ...(b.paidVia ?? {}), [paidKind]: Math.round(((b.paidVia?.[paidKind] ?? 0) + parsed.data.amount) * 100) / 100 };
       if (b.status === "Cancelled" || b.status === "Declined")
         b.receivedAfterCancel = Math.round(((b.receivedAfterCancel ?? 0) + parsed.data.amount) * 100) / 100;
       tx.set(ref, toDoc(b));
@@ -1351,7 +1394,7 @@ bookings.post("/:ref/record-payment", async (req, res) => {
     });
     // Money has arrived another way: any card payment still open for this booking was sized for a balance that no longer exists.
     await (await import("../lib/checkoutIntent")).cancelOpenIntents(tenantId, [updated.ref]).catch(() => {});
-    const overpaid = Math.round(Math.max(0, (updated.amountPaid ?? 0) - (updated.amount ?? 0)) * 100) / 100;
+    const overpaid = overpaidOf(updated);
     res.json({ ...updated, ...(overpaid > 0 ? { overpaid } : {}) });
   } catch (e) {
     if (e instanceof NotFound) res.status(404).json({ error: "Booking not found" });
@@ -1409,7 +1452,12 @@ bookings.post("/:ref/reconcile", async (req, res) => {
         b.amountPaid = 0;
         b.pay = (b.amount ?? 0) <= 0 ? "Funded" : b.voucherScheme ? "Awaiting voucher payment" : "Unpaid";
         b.reconciledBy = null;
+        delete b.paidVia;
       } else {
+        // The balance that arrives now came in by the method given here (the booking's own method otherwise).
+        const rk = kindOfMethod(parsed.data.method ?? b.method, b.voucherScheme);
+        const newMoney = Math.round(Math.max(0, (b.amount ?? 0) - receivedBefore) * 100) / 100;
+        if (rk && newMoney > 0) b.paidVia = { ...(b.paidVia ?? {}), [rk]: Math.round(((b.paidVia?.[rk] ?? 0) + newMoney) * 100) / 100 };
         b.amountPaid = b.amount ?? 0;
         b.pay = (b.amount ?? 0) <= 0 ? "Funded" : "Paid";
         // Stamped by hand here. A machine match (HMRC EPP) sets auto: true.
@@ -1744,25 +1792,27 @@ const ukDateLabel = (iso: string) => new Date(iso).toLocaleDateString("en-GB", {
 /**
  * Move the money for an approved refund. Returns once it has actually moved.
  *
- *  - Wallet credit spent on the booking always goes back to the wallet — it
- *    came from there (and used to be lost: `amount` is net of it).
+ *  - The refund TOTAL is already decided (policy / the provider's own figure). Where it goes is PROPORTIONAL to what each source paid
+ *    (features/bookings/refundSplit.ts): the wallet credit spent on the booking goes BACK TO THE WALLET in its share (gross 100 = wallet 30 + card
+ *    70, refund 50 -> 15 to the wallet, 35 to the card). This function only works the split out and moves the CARD / offline money; the wallet
+ *    credit is credited by the caller, in the same transaction that writes the refund record, once (idempotent ledger id).
  *  - The rest goes where the family asked. If the provider has turned card
  *    refunds off (Setup → allowCardRefund) it's wallet credit regardless — the
  *    screen enforced that, the server took "card" from anyone who asked.
  *  - A card booking is refunded through Stripe (awaited; the one step that
- *    can fail, so it runs FIRST and nothing is credited if it does).
+ *    can fail, so it runs FIRST and nothing is credited if it does) - for the
+ *    CARD part only, never more than the card still holds.
  *  - A voucher/TFC/cash booking can't be refunded by the app. It's recorded as
  *    owed back offline, and the family is told it comes back the way they paid
  *    — not "to your card", which it never touched.
  */
 async function settleApprovedRefund(b: Booking, tenantId: string, refundable: number, attempt: number): Promise<
-  { ok: true; via: "wallet" | "card" | "offline"; partial: boolean; owed: number; walletPart: number; offlinePart: number } | { ok: false; error: string }
+  { ok: true; via: "wallet" | "card" | "offline"; partial: boolean; owed: number; walletPart: number; walletCredit: number; offlinePart: number } | { ok: false; error: string }
 > {
   // Never more than is still refundable (taken before pay flipped to Refunded).
   const owed = Math.max(0, Math.min(b.cancel?.amount ?? refundable, refundable));
-  // Only the wallet credit not already returned goes back to the wallet.
-  const walletLeft = Math.max(0, (b.walletApplied ?? 0) - (b.walletRefunded ?? 0));
-  const walletPart = Math.min(owed, walletLeft);
+  // The wallet's proportional share of it (what the wallet paid that has not already been returned, over everything still refundable).
+  const walletPart = walletShareFor(b, owed);
   const rest = Math.round((owed - walletPart) * 100) / 100;
   const s = await loadSettings(b.tenantId ?? tenantId, b.franchiseId ?? null);
   const cardAllowed = (s as { allowCardRefund?: boolean }).allowCardRefund !== false;
@@ -1804,20 +1854,11 @@ async function settleApprovedRefund(b: Booking, tenantId: string, refundable: nu
       via = "offline";
     }
   }
-  const toWallet = walletPart + (rest > 0 && restToWallet ? rest : 0);
-  if (toWallet > 0) {
-    await creditWallet(b.tenantId ?? tenantId, b.email, Math.round(toWallet * 100) / 100, `Credit from ${b.listing}`, b.ref);
-    // On the payments ledger too, like card and offline refunds — a wallet
-    // refund used to leave no record, so the ledger and Reconciliation came
-    // up short of the bookings list by every wallet refund (d9s7).
-    await db.collection("payments").add({
-      tenantId: b.tenantId ?? tenantId, refs: [b.ref], email: b.email, type: "refund", amount: Math.round(toWallet * 100) / 100, currency: "gbp",
-      method: "wallet", via: "wallet", status: "credited", createdAt: new Date().toISOString(),
-    }).catch((e) => console.error(`[refunds] wallet refund ledger write failed for ${b.ref}:`, (e as Error).message));
-    if (rest <= 0 || restToWallet) via = "wallet";
-  }
+  // Credited by the CALLER (same transaction as the refund record): the proportional wallet share, plus the whole rest when it was resolved as wallet credit.
+  const walletCredit = Math.round((walletPart + (rest > 0 && restToWallet ? rest : 0)) * 100) / 100;
+  if (walletCredit > 0 && (rest <= 0 || restToWallet)) via = "wallet";
   if (restToWallet && b.cancel) b.cancel.refundTo = "wallet";
-  return { ok: true, via, partial: owed > 0 && owed < refundable - 0.005, owed, walletPart, offlinePart: via === "card" ? offlineOut : 0 };
+  return { ok: true, via, partial: owed > 0 && owed < refundable - 0.005, owed, walletPart, walletCredit, offlinePart: via === "card" ? offlineOut : 0 };
 }
 
 /** What Stripe actually took on the booking's card payment, and what's left to refund of it (less card refunds already made, including ones made in

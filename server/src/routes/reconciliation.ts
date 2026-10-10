@@ -5,7 +5,7 @@ import { managerScope, canWrite, type Role } from "../middleware/role";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import type { Booking } from "../../../features/bookings/types";
 import { ukToday } from "../lib/ukDate";
-import { realPhone, refundableSoFar } from "../../../features/bookings/helpers";
+import { realPhone, refundableSoFar, overpaidOf, refundAwaitingTransfer } from "../../../features/bookings/helpers";
 import { bookingDocId } from "./bookings";
 import { refundsOf, refundSummaryOf } from "../lib/refundRows";
 import {
@@ -32,7 +32,7 @@ export const reconciliation = Router();
 const OWES = new Set(["Unpaid", "Invoice sent", "Awaiting voucher payment", "Partially paid"]);
 const outstandingOf = (b: Booking) => Math.max(0, (b.amount ?? 0) - (b.amountPaid ?? 0));
 // Reconciled = the money is in and fully accounted for.
-const isReconciled = (b: Booking) => (b.pay === "Paid" || b.pay === "Funded") && outstandingOf(b) <= 0;
+const isReconciled = (b: Booking) => (b.pay === "Paid" || b.pay === "Funded" || b.pay === "Partially refunded") && outstandingOf(b) <= 0 && !(b.pay === "Partially refunded" && refundAwaitingTransfer(b));
 // Card settles automatically through Stripe — it isn't reconciled here (a failed
 // card is handled in the booking area instead), so it's kept off this ledger.
 const isCardMethod = (b: Booking) => /card/i.test(b.method || "") && !b.voucherScheme;
@@ -48,7 +48,6 @@ const relevant = (b: Booking) => b.status !== "Cancelled" && b.status !== "Decli
 //  • needsRefund — logged AFTER the booking was cancelled/declined, not yet
 //    refunded. It used to vanish: cancelled bookings drop off the ledger.
 // Both stay on the ledger (unreconciled) until someone deals with them.
-const overpaidOf = (b: Booking) => round2(Math.max(0, (b.amountPaid ?? 0) - (b.amount ?? 0)));
 const cancelledish = (b: Booking) => b.status === "Cancelled" || b.status === "Declined";
 const needsRefundOf = (b: Booking) => (cancelledish(b) && (b.receivedAfterCancel ?? 0) > 0 ? round2(Math.min(b.receivedAfterCancel ?? 0, refundableSoFar(b))) : 0);
 // The booking's date for the date-range filter — first session day, else booked date.

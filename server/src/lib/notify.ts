@@ -70,7 +70,7 @@ export interface NotificationDoc {
   title: string;
   body: string;
   /** A key + data for the title / body, so the bell can show them in the viewer's language (the English above stays as the fallback). */
-  i18n?: { tk: string; tv: Record<string, string>; bk?: string; bv?: Record<string, string> };
+  i18n?: { tk: string; tv: Record<string, string>; bk?: string; bv?: Record<string, string>; more?: { k: string; v: Record<string, string> }[] };
   /** Deep link into the app, relative ("/custdash/accidents"). */
   href?: string;
   /** The record this is about, so a client can jump straight to it. */
@@ -210,7 +210,7 @@ export interface NotifyInput {
   /** Bell body, and the email's opening line unless `emailHtml` overrides it. */
   body: string;
   /** See NotificationDoc.i18n. */
-  i18n?: { tk: string; tv: Record<string, string>; bk?: string; bv?: Record<string, string> };
+  i18n?: { tk: string; tv: Record<string, string>; bk?: string; bv?: Record<string, string>; more?: { k: string; v: Record<string, string> }[] };
   href?: string;
   ref?: string;
   /** Defaults to `title`. */

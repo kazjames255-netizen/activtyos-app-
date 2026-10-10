@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { isRealTime } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
+import { staffNoMoney } from "../lib/rosterRules";
 import { canWrite } from "../middleware/role";
 import { franchiseStamp, scopeRows, visibleToFranchise } from "../lib/franchiseScope";
 import {
@@ -24,6 +25,8 @@ import {
 export const periods = Router();
 export const passes = Router();
 export const blockBundles = Router();
+// STAFF see no money: priced configuration (bundle / pass / period prices) is stripped from their responses.
+for (const r of [periods, passes, blockBundles]) r.use(staffNoMoney);
 
 const periodsCol = db.collection("periods");
 const passesCol = db.collection("passes");

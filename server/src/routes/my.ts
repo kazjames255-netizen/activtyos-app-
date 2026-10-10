@@ -1,4 +1,5 @@
 import { mergeGroupKey } from "../lib/bookingMergeKey";
+import { isFranchise } from "../lib/franchiseScope";
 import { stopOpenPayments } from "../lib/checkoutIntent";
 import { ageCapGroup } from "../lib/childAge";
 import { randomUUID } from "node:crypto";
@@ -10,6 +11,7 @@ import { librarySnap, loadSettings } from "../lib/tenantLibrary";
 import { checkCode, normaliseCode, reservedEmails, type DiscountCodeDoc } from "../lib/discountCodes";
 import { redeemCodesInTx, releaseDiscountCodes, type CodeToRedeem } from "../lib/discountRedemptions";
 import { creditWallet, creditWalletOnceInTx, spendWalletInTx, walletEntryRef, walletRef, walletsForFamily } from "../lib/wallet";
+import { noteInstantWalletCredit } from "../lib/refundSplit";
 import { notify } from "../lib/notify";
 import { notifyFamilyCancelledFor } from "../lib/familyCancelNotice";
 import { shouldNotifyCancelled, shouldReleaseDiscountCodes, voucherEmailAnnouncesBasket } from "../lib/bookingGuards";
@@ -42,6 +44,8 @@ import { mergeBookings } from "../lib/mergeBookings";
 import { ageRangeFor, isOutOfRange, passHidden, addonRefusal, isQueuedOn, cardUnpaid } from "../lib/bookingRules";
 import { wantsCardHold, releaseHolds, deadlineLabel, deadlineWarningHtml } from "../lib/cardHold";
 import { bellTitle, bellBody, bellMoney, bellDay, paymentType, plainParagraph } from "../lib/bellText";
+import { bellText, requestEmail } from "../lib/extraWording";
+import { newRequestWording, withdrawnWording } from "../../../features/bookings/addonWording";
 import { addonCount, addonWithDays, bookingAddonLines, mergeAddonLines } from "../../../features/bookings/addons";
 import {
   resolveBundlePricing,
@@ -101,6 +105,8 @@ import { TFC_SCHEME, canonicalMethod, isTfcMethod, methodAllowed, methodKey, spl
 import { attachChildcareRefs, childcareOf, childcareRoute, type ChildcareBooking } from "../lib/childcare";
 import { autoEnrolFromBooking } from "../lib/hubAutoEnrol";
 import { BRAND } from "../lib/brand";
+import { consentObtained as tripConsentObtained, reopenedSignoff } from "../lib/tripRules";
+import { notifySignoffReopened } from "./trips";
 
 // Parent ("my") endpoints. Identity comes exclusively from the verified
 // Firebase token — the booker email is stamped server-side and every read
@@ -196,10 +202,10 @@ const basketSchema = z.object({
   // Refused (403) from anyone who isn't an operator booking for a family.
   overrideTotal: z.number().nonnegative().max(100000).optional(),
   overrideReason: z.string().trim().max(200).optional(),
-  // How much of their wallet the family chose to spend on this basket. Absent =
-  // spend it all (the default). Capped server-side at the real balance, so a
-  // stale/oversized value can never overdraw the wallet.
-  walletCap: z.number().nonnegative().optional(),
+  // How much of their wallet credit the family CHOSE to spend on this basket (checkout asks; 9 Oct 2026). Absent/null = do NOT use any:
+  // credit is never applied silently. Capped server-side at the real balance and at each booking's amount, so a stale/oversized
+  // value can never overdraw the wallet.
+  walletCap: z.number().nonnegative().nullish(),
   // The booker's phone, captured at checkout (required client-side when they
   // have none on file). Lands on the family record if it hasn't got one yet.
   phone: z.string().trim().max(40).optional(),
@@ -794,6 +800,17 @@ my.post("/bookings", async (req, res) => {
     if (!canWrite(authCtx.role) || !authCtx.tenantId) {
       res.status(403).json({ error: "Booking for a family requires an operator account" });
       return;
+    }
+    // Scope guard FIRST, before any customer lookup or account creation: a refusal must create nothing (no Auth user, no users doc).
+    // A franchise books on behalf of families ONLY on its own listings: a head-office or sibling listing would create a booking stamped to that
+    // listing's owner, which the franchise then could not see (same ownership rule as POST /api/bookings). Franchise STAFF are read-only
+    // (canWrite above refuses them), so in practice this is hit by role "franchise"; isFranchise also covers staff for safety.
+    if (isFranchise(authCtx)) {
+      const scopeListing = await db.collection("listings").doc(input.listingId).get();
+      if (scopeListing.exists && ((scopeListing.data() as { franchiseId?: string | null }).franchiseId ?? null) !== authCtx.franchiseId) {
+        res.status(403).json({ error: "You can only book on your own listings. This listing belongs to head office or another franchise." });
+        return;
+      }
     }
     let target = { name: onBehalf.name ?? "", email: onBehalf.email ?? "", phone: onBehalf.phone ?? "" };
     if (onBehalf.customerId) {
@@ -1727,10 +1744,10 @@ my.post("/bookings", async (req, res) => {
       const checkoutId = randomUUID();
       const created: Booking[] = [];
       // Credit is drawn down as the bookings are built, so it lands on the
-      // earliest places taken and never on a waitlisted one. The family may cap
-      // how much they spend (keep some for another time) — honoured here, but
-      // never above what they actually hold.
-      const walletCap = "walletCap" in input && typeof input.walletCap === "number" ? input.walletCap : walletHeld;
+      // earliest places taken and never on a waitlisted one. Only what the family
+      // explicitly chose to spend (walletCap) is used - an omitted/null walletCap
+      // means none - and never above what they actually hold.
+      const walletCap = "walletCap" in input && typeof input.walletCap === "number" ? input.walletCap : 0;
       let walletLeft = round2(Math.max(0, Math.min(walletHeld, walletCap)));
       const walletSpends: { ref: string; amount: number; reason: string }[] = [];
       priced.forEach((p, i) => {
@@ -2636,7 +2653,7 @@ async function partialCancel(
     if (record.log) (b.refundLog = b.refundLog ?? []).push(record.log);
     if (resolution === "wallet") {
       // Instant and final - nothing for the provider to approve.
-      if (value > 0) b.pay = "Partially refunded";
+      if (value > 0) { b.pay = "Partially refunded"; noteInstantWalletCredit(b, value); }
     } else {
       // A request: the money only moves when the provider approves it, exactly like a whole-booking cancel.
       // A second release while the first is still awaiting approval ADDS to it (CN-022) - overwriting lost the earlier day's pending refund.
@@ -3015,18 +3032,23 @@ my.post("/bookings/:ref/addon-requests", async (req, res) => {
     const b = after as Booking | null;
     const r = created as AddonRequest | null;
     if (b?.tenantId && r) {
-      const what = describeRequest(r);
+      // Plain sentences: what is asked, for whom, which day; a price only where it matters (a cancel that can be refunded), never for a size/colour change.
+      const paid = refundableSoFar(b);
+      const w = newRequestWording(r, { ref: b.ref, refundable: paid });
+      const text = bellText(w);
+      const mail = requestEmail(r, b, w, r.kind === "cancel" && paid > 0.004);
       void notify({
         tenantId: b.tenantId,
         to: { kind: "tenant" },
         category: "booking",
         key: "addon-request",
-        title: bellTitle("addon-request", b.ref),
-        body: bellBody([r.kind === "cancel" ? (requestKeys(r).length > 1 ? "Cancel extras" : "Cancel extra") : "Change extra", bellMoney(r.price ?? 0)]),
-        subject: `${what} (${b.ref})`,
+        title: text.title,
+        body: text.body,
+        i18n: text.i18n,
+        subject: mail.subject,
         href: `/company/bookings?ref=${encodeURIComponent(b.ref)}`,
         ref: b.ref,
-        emailHtml: `<p>${what.replace(/&/g, "&amp;").replace(/</g, "&lt;")}.</p>${requestTargets(r).length > 1 || requestTargets(r)[0].days?.length ? `<ul>${requestTargets(r).map((t) => `<li>${t.label.replace(/&/g, "&amp;").replace(/</g, "&lt;")}${t.days?.length ? ` · ${t.days.length} day${t.days.length === 1 ? "" : "s"} (${t.days.join(", ")})` : ""} · ${money(t.price)}</li>`).join("")}</ul>` : ""}<p>${(b.listing ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")} · booking ${b.ref}${r.note ? ` · note: ${r.note.replace(/&/g, "&amp;").replace(/</g, "&lt;")}` : ""}</p><p>Nothing changes until you approve or decline it. It is separate from cancelling the booking.</p>`,
+        emailHtml: mail.html,
       });
     }
     res.status(201).json(r);
@@ -3044,13 +3066,22 @@ my.post("/bookings/:ref/addon-requests/:id/withdraw", async (req, res) => {
   if ("error" in found) { res.status(found.status).json({ error: found.error }); return; }
   try {
     let out: AddonRequest | null = null;
+    let after: Booking | null = null;
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(found.snap.ref);
       const b = fromDoc(snap.data() as BookingDoc);
       if (b.email !== email) throw new AddonRequestError(403, "Not your booking");
       out = withdrawAddonRequest(b, String(req.params.id));
       tx.set(found.snap.ref, toDoc(b));
+      after = b;
     });
+    const wb = after as Booking | null;
+    const wr = out as AddonRequest | null;
+    // The provider hears the family took the request back (their bell would otherwise keep asking them to decide it).
+    if (wb?.tenantId && wr) {
+      const text = bellText(withdrawnWording(wr, { ref: wb.ref }));
+      void notify({ tenantId: wb.tenantId, to: { kind: "tenant" }, category: "booking", key: "addon-request", title: text.title, body: text.body, i18n: text.i18n, href: `/company/bookings?ref=${encodeURIComponent(wb.ref)}`, ref: wb.ref, bellOnly: true });
+    }
     res.json(out);
   } catch (e) {
     if (e instanceof AddonRequestError) res.status(e.status).json({ error: e.message });
@@ -3155,6 +3186,11 @@ my.post("/trips/:id/consent", async (req, res) => {
     res.status(404).json({ error: "Child not found" });
     return;
   }
+  // A child removed from the family's account can't be given consent for (they may be on an old trip list).
+  if (child.data()!.archived === true) {
+    res.status(409).json({ error: "This child has been removed from your account, so consent can't be given for them." });
+    return;
+  }
   const by = req.user?.email ?? "parent";
   const ref = tripsCol.doc(req.params.id);
   // Not once the provider has switched Trips off (their planner is off too).
@@ -3170,22 +3206,29 @@ my.post("/trips/:id/consent", async (req, res) => {
     // The parent screen only offers Give/Decline on an upcoming planned trip; enforce it here too, or a stale
     // tab / direct call flips consent (and pings the provider "consent given") on a cancelled or finished trip.
     if (t.status === "cancelled" || t.status === "completed" || String(t.date ?? "") < ukToday()) return "closed" as const;
-    const attendees = (t.attendees as { childId?: string; consent?: string; consentAt?: string; consentBy?: string; n: string }[] | undefined) ?? [];
+    const attendees = (t.attendees as { childId?: string; consent?: "granted" | "pending" | "declined"; consentAt?: string; consentBy?: string; consentSource?: string; n: string }[] | undefined) ?? [];
     const mine = attendees.find((a) => a.childId === parsed.data.childId);
     if (!mine) return null;
+    // The same answer again (a double tap, a stale tab): nothing changes, nobody is pinged twice, a sign-off is not reopened.
+    if (mine.consent === parsed.data.decision && mine.consentSource === "parent") return "same" as const;
     mine.consent = parsed.data.decision;
     mine.consentAt = new Date().toISOString();
     mine.consentBy = by;
     // Marks the decision as the parent's own, so the provider can't overwrite
     // it from the trip planner (routes/trips.ts).
-    (mine as { consentSource?: string }).consentSource = "parent";
+    mine.consentSource = "parent";
     const allAnswered = attendees.every((a) => (a.consent ?? "pending") !== "pending");
-    const allGranted = attendees.every((a) => a.consent === "granted");
-    tx.set(ref, { attendees, consentObtained: allGranted, updatedAt: mine.consentAt }, { merge: true });
-    return { tenantId: String(t.tenantId), destination: String(t.destination ?? "the trip"), childName: mine.n, allAnswered };
+    // Owned by the server, same rule as the planner: everyone still going has said yes (a decline is simply not going).
+    const patch: Record<string, unknown> = { attendees, consentObtained: tripConsentObtained(attendees), updatedAt: mine.consentAt };
+    // The provider already signed this trip off on the old answers. A changed answer reopens the sign-off.
+    const signed = (t.signoff as { submitted?: boolean } | undefined)?.submitted === true;
+    if (signed) patch.signoff = reopenedSignoff(t.signoff, "a family changed its answer", mine.consentAt);
+    tx.set(ref, patch, { merge: true });
+    return { tenantId: String(t.tenantId), destination: String(t.destination ?? "the trip"), childName: mine.n, allAnswered, reopened: signed, date: String(t.date ?? "") };
   });
   if (result === "closed") { res.status(409).json({ error: "This trip is no longer open for consent — it has been cancelled or has already taken place." }); return; }
   if (!result) { res.status(404).json({ error: "That child isn't on this trip" }); return; }
+  if (result === "same") { res.json({ ok: true, decision: parsed.data.decision, unchanged: true }); return; }
 
   // Tell the team — and shout when the last answer lands.
   void notify({
@@ -3198,6 +3241,9 @@ my.post("/trips/:id/consent", async (req, res) => {
     href: "/company/trips",
     ref: req.params.id,
   }).catch(() => {});
+  if (result.reopened) {
+    void notifySignoffReopened(req.params.id, { tenantId: result.tenantId, destination: result.destination, date: result.date }, "a family changed its answer").catch(() => {});
+  }
   res.json({ ok: true, decision: parsed.data.decision });
 });
 

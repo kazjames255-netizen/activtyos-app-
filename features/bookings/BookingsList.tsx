@@ -1,5 +1,6 @@
 "use client";
 
+import { useRefundMethod } from "./useRefundMethod";
 import { fixYear } from "@/features/listings/wizardRules";
 import { formatDay, uiDateTime } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
@@ -96,6 +97,7 @@ const TAB_TONE: Record<string, string> = {
 
 export function BookingsList({ compact = false }: { compact?: boolean }) {
   const t = useT();
+  const rmw = useRefundMethod();
   const w = useWord();
   const { locale } = useI18n();
   const bookings = useBookingsStore((s) => s.bookings);
@@ -490,7 +492,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                       "truncate text-[10.5px] " + (on ? "text-white/75" : "text-[var(--ink-3)]")
                     }
                   >
-                    {b.listing} · {refundAwaitingTransfer(b) ? t("p8lst.rfaChip") : w(waitingForPlace(b.status) ? payLabelFor(b) : payLabel(shownPay(b)))}
+                    {b.listing} · {refundAwaitingTransfer(b) ? rmw.chip(b) : w(waitingForPlace(b.status) ? payLabelFor(b) : payLabel(shownPay(b)))}
                   </div>
                 </button>
               );
@@ -576,7 +578,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                     <span className="inline-flex whitespace-nowrap rounded-full bg-[#eef3ff] px-2.5 py-[3px] text-[11px] font-extrabold text-[#1d3a8f]" data-testid="addon-chip" title={bookingAddonLines(b).map((l) => `${l.child ? l.child + ": " : ""}${addonShort(l)}`).join("\n")}>{ADDON_ICON} {t("p8lst.extrasChip", { n: String(addonCount(b)) })}</span>
                   )}
                   <span className="inline-flex items-center gap-1.5">
-                    <span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={awaitingTransfer ? { background: "#fdf3d8", color: "#9a5a00" } : { background: payTone(shownPay(b), b.status).bg, color: payTone(shownPay(b), b.status).fg }}>{awaitingTransfer ? t("p8lst.rfaChipAmt", { amt: money(refundTransferAmount(b)) }) : b.status === "Approval needed" && b.cardHold?.state === "held" ? t("p8lst.holdBadge") : b.status === "Approval needed" && b.cardHold?.state === "awaiting" ? t("p8lst.holdWaitBadge") : w(payLabelFor(b))}</span>
+                    <span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={awaitingTransfer ? { background: "#fdf3d8", color: "#9a5a00" } : { background: payTone(shownPay(b), b.status).bg, color: payTone(shownPay(b), b.status).fg }}>{awaitingTransfer ? rmw.chip(b, money(refundTransferAmount(b))) : b.status === "Approval needed" && b.cardHold?.state === "held" ? t("p8lst.holdBadge") : b.status === "Approval needed" && b.cardHold?.state === "awaiting" ? t("p8lst.holdWaitBadge") : w(payLabelFor(b))}</span>
                     <span className="text-[11px] font-semibold text-[var(--ink-3)]">{w(payMethodLabel(b))}</span>
                     {b.invoiceResends?.count ? (
                       <span className="whitespace-nowrap rounded-full bg-[#e8f0ff] px-2 py-[2px] text-[10.5px] font-bold text-[#1d3a8f]">{t("p7bd.invResent", { n: String(b.invoiceResends.count), when: uiDateTime(new Date(b.invoiceResends.lastAt), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })}</span>

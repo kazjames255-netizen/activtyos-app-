@@ -1,5 +1,5 @@
 import { Router, type Request } from "express";
-import { isRealDay, isBlankOrRealTime } from "../lib/ukDate";
+import { isRealDay, isBlankOrRealTime, ukToday } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
 import { esc } from "../lib/html";
@@ -8,6 +8,11 @@ import { notify, parentEmailForChild } from "../lib/notify";
 import { franchiseChildIds, isFranchise } from "../lib/franchiseScope";
 import { loadSettings } from "../lib/tenantLibrary";
 import { bookingInSite, siteRecordFilter, staffSiteScope, type SiteScope } from "../lib/siteScope";
+import { parentBell } from "../lib/parentBells";
+import { bellBody, bellDay } from "../lib/bellText";
+import {
+  consentObtained, consentPending as pendingOf, headCountRecorded, materialSnapshot, parseCost, reopenedSignoff, signoffProblems, unlinkedChildren, viewForReader,
+} from "../lib/tripRules";
 
 // Trips & visits (Run the day) — the record for an off-site trip: where, when,
 // who's going (children + staff), transport, the risk-assessment note and
@@ -72,7 +77,7 @@ const tripSchema = z.object({
   parentMsgSentAt: z.string().max(60).optional(),
   askPay: z.boolean().optional(),
   askConsent: z.boolean().optional(),
-  consentObtained: z.boolean().default(false),
+  // consentObtained is NOT accepted from the client: the server works it out from the children's answers (consentObtained in lib/tripRules).
   notes: z.string().trim().max(2_000).optional(),
   status: z.enum(["planned", "completed", "cancelled"]).default("planned"),
 });
@@ -108,12 +113,47 @@ async function canSendTripMessage(req: Request, trip: Record<string, unknown>): 
   const tenantId = String(trip.tenantId);
   const { whoCanSend } = await tripSettings(tenantId, (trip.franchiseId as string | null | undefined) ?? auth.franchiseId);
   if (whoCanSend !== "lead") return true;
+  return isTripLead(req, trip);
+}
+
+/** The signed-in person's account name, as the manager put it on the account - never the token's display name, which the user can change to
+ *  the trip lead's. Read once per request. */
+const nameCache = new WeakMap<Request, Promise<string>>();
+function accountName(req: Request): Promise<string> {
+  let p = nameCache.get(req);
+  if (!p) {
+    p = req.user?.uid ? db.collection("users").doc(req.user.uid).get().then((d) => String(d.get("name") ?? "").trim()) : Promise.resolve("");
+    nameCache.set(req, p);
+  }
+  return p;
+}
+
+/** The trip's organiser (the account that planned it) or its named trip lead. */
+async function isTripLead(req: Request, trip: Record<string, unknown>): Promise<boolean> {
   const email = req.user?.email;
   if (email && trip.createdBy === email) return true;
-  // The name the manager put on the account — never the token's display name, which the user can change to the trip lead's.
-  const name = req.user?.uid ? String((await db.collection("users").doc(req.user.uid).get()).get("name") ?? "").trim() : "";
-  if (name && typeof trip.lead === "string" && trip.lead.trim().toLowerCase() === name.trim().toLowerCase()) return true;
-  return false;
+  const name = await accountName(req);
+  return !!name && typeof trip.lead === "string" && trip.lead.trim().toLowerCase() === name.toLowerCase();
+}
+
+/** Who may CHANGE a trip: the owner roles, or the trip's organiser / named lead. Not any member of staff. */
+async function canEditTrip(req: Request, trip: Record<string, unknown>): Promise<boolean> {
+  return canManage(req.auth!.role) || (await isTripLead(req, trip));
+}
+
+/** Who may READ children's medical text on a trip: those who may change it, and team leads. Other staff see a flag. */
+async function canSeeTripMedical(req: Request, trip: Record<string, unknown>): Promise<boolean> {
+  return (await canEditTrip(req, trip)) || req.auth!.lead === true;
+}
+
+/** The trip as this reader may see it: medical text only for leads, and the children nobody can be asked about, named. */
+async function present(req: Request, trip: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const attendees = (trip.attendees as Attendee[] | undefined) ?? [];
+  return {
+    ...trip,
+    attendees: viewForReader(attendees, await canSeeTripMedical(req, trip)),
+    unlinked: unlinkedChildren(attendees).map((a) => a.n),
+  };
 }
 
 /** A decision the PARENT made. Since 12 Sept it's marked; before that the
@@ -127,7 +167,9 @@ const parentOwned = (a: Attendee) =>
  *  parent message all leave them out, and the decline stays on the record —
  *  so a decline doesn't block; what mattered was that nobody but the parent
  *  can turn it into a yes (see parentOwned above). */
-const consentPending = (list: Attendee[]) => list.filter((a) => (a.consent ?? "pending") === "pending");
+const consentPending = pendingOf;
+
+class TripRefusal extends Error { constructor(public code: number, msg: string) { super(msg); } }
 
 // ── Server-side enrichment (the handoff's #2) ────────────────────────────
 // The front-end picks booked children by NAME; parents are reached by
@@ -140,6 +182,8 @@ async function enrichTrip(
   attendees: Attendee[] | undefined,
   site?: SiteScope | null,
   franchiseId?: string | null,
+  /** childIds already on this trip (a save must keep working for them). Any OTHER childId the client sends must be one of this tenant's booked children. */
+  known: Set<string> = new Set(),
 ): Promise<{ attendees: Attendee[]; childIds: string[] }> {
   const list: Attendee[] = (attendees ?? []).map((a) => ({ ...a }));
   for (const n of childNames) {
@@ -166,6 +210,11 @@ async function enrichTrip(
     for (const k of b.kids ?? []) if (k.childId) allowedIds.add(k.childId);
     if (b.childId && b.child && !b.kids?.length) note(b.child, b.childId);
     for (const k of b.kids ?? []) if (k.childId && k.name) note(k.name, k.childId);
+  }
+  // A childId is only ever taken from this provider's own bookings. A client naming another provider's child would otherwise pull that child's
+  // medical text onto this trip and send their parent a consent request.
+  for (const a of list) {
+    if (a.childId && !allowedIds.has(a.childId) && !known.has(a.childId)) throw new TripRefusal(400, `${a.n} isn't one of your booked children, so they can't be added to a trip.`);
   }
   if (franchiseId || site) for (const a of list) if (a.childId && !allowedIds.has(a.childId)) delete a.childId;
   // Only an UNAMBIGUOUS name links. With two children of the same name, the
@@ -239,6 +288,74 @@ async function requestConsents(tripId: string, trip: Record<string, unknown>): P
   });
 }
 
+/** A cancelled trip: every family still in it (consent given, or still waiting) is told by bell (in their language) and email. A family that
+ *  declined already said no. Always sent, whatever Setup says about consent requests: a family must never turn up for a trip that is off.
+ *  Nothing is collected or refunded through the app for trips, and the message says so. */
+export async function notifyTripCancelled(tripId: string, trip: Record<string, unknown>): Promise<void> {
+  const tenantId = String(trip.tenantId);
+  const dest = String(trip.destination ?? "your trip");
+  const date = String(trip.date ?? "");
+  const bell = parentBell("trip-cancelled", { dest, date: bellDay(date) || date });
+  const told = new Set<string>();
+  for (const a of (trip.attendees as Attendee[] | undefined) ?? []) {
+    if (!a.childId || (a.consent ?? "pending") === "declined") continue;
+    const email = await parentEmailForChild(a.childId);
+    if (!email) continue;
+    const mark = `${email}|${a.childId}`;
+    if (told.has(mark)) continue;
+    told.add(mark);
+    await notify({
+      tenantId,
+      to: { kind: "parent", email },
+      category: "trip",
+      title: bell.title,
+      body: bell.body ?? "",
+      i18n: bell.i18n,
+      subject: `${a.n}: the trip to ${dest} on ${date} is cancelled`,
+      emailHtml:
+        `<p>The trip to <b>${esc(dest)}</b> on <b>${esc(date)}</b> that <b>${esc(a.n)}</b> was down for has been <b>cancelled</b>.</p>` +
+        `<p>No payment was taken through the app. If you paid your provider directly, please ask them about it.</p>`,
+      href: "/custdash/trips",
+      ref: tripId,
+    });
+  }
+}
+
+/** The sign-off no longer covers the trip as it now stands: ring the provider (the planner and the lead) so it is signed off again. */
+export async function notifySignoffReopened(tripId: string, trip: Record<string, unknown>, why: string): Promise<void> {
+  await notify({
+    tenantId: String(trip.tenantId),
+    to: { kind: "tenant" },
+    category: "trip",
+    title: "Trip sign-off reopened",
+    body: bellBody([String(trip.destination ?? "").slice(0, 24), why]),
+    subject: `Trip sign-off reopened: ${String(trip.destination ?? "")}`,
+    emailHtml: `<p>The sign-off for the trip to <b>${esc(String(trip.destination ?? ""))}</b> on <b>${esc(String(trip.date ?? ""))}</b> no longer stands because ${esc(why)}. Check the trip and sign it off again.</p>`,
+    href: "/company/trips",
+    ref: tripId,
+  });
+}
+
+/** Attendees on a NEW trip, as the server will keep them. The client may name children and, as the provider, record a decision it holds on paper -
+ *  stamped with who recorded it and when. It can never claim to be the parent, backdate, or mark a family as already asked. */
+function newAttendees(list: Attendee[] | undefined, who: string): Attendee[] | undefined {
+  if (!list) return undefined;
+  const now = new Date().toISOString();
+  return list.map((a) => {
+    const out: Attendee = { n: a.n, ...(a.childId ? { childId: a.childId } : {}), ...(a.age !== undefined ? { age: a.age } : {}), ...(a.paid !== undefined ? { paid: a.paid } : {}), ...(a.em !== undefined ? { em: a.em } : {}), ...(a.med ? { med: a.med } : {}), consent: "pending" };
+    if (a.consent === "granted" || a.consent === "declined") Object.assign(out, { consent: a.consent, consentAt: now, consentBy: who, consentSource: "provider" });
+    return out;
+  });
+}
+
+/** Staff named on this trip's roster (by account name). */
+async function isRostered(req: Request, trip: Record<string, unknown>): Promise<boolean> {
+  const name = (await accountName(req)).toLowerCase();
+  if (!name) return false;
+  const names = [...((trip.roster as { n?: string }[] | undefined) ?? []).map((r) => r.n ?? ""), ...((trip.staff as string[] | undefined) ?? [])];
+  return names.some((n) => n.trim().toLowerCase() === name);
+}
+
 /** Does this trip belong to the franchise? Trips created since 12 Sept carry
  *  the franchiseId they were made under. Older ones carry none, so they're
  *  derived from who is on them: a trip taking any of the franchise's children
@@ -269,8 +386,10 @@ trips.get("/", async (req, res) => {
   const inSite = await siteTripFilter(req);
   if (inSite) list = list.filter(inSite);
   list.sort((a, b) => (`${b.date}` < `${a.date}` ? -1 : 1));
-  res.json(list);
+  res.json(await Promise.all(list.map((t) => present(req, t))));
 });
+
+const COST_REFUSAL = (e: string) => [{ path: ["cost"], message: e }];
 
 trips.post("/", async (req, res) => {
   const auth = req.auth!;
@@ -285,16 +404,29 @@ trips.post("/", async (req, res) => {
   }
   const parsed = tripSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const cost = parseCost(parsed.data.cost);
+  if (!cost.ok) { res.status(400).json({ error: cost.error, issues: COST_REFUSAL(cost.error) }); return; }
   const site = await staffSiteScope(auth);
   if (site && parsed.data.listingId && !site.listings.has(parsed.data.listingId)) {
     res.status(403).json({ error: "You can only plan trips for the sites you're assigned to" });
     return;
   }
-  const enriched = await enrichTrip(auth.tenantId, parsed.data.childNames, parsed.data.attendees as Attendee[] | undefined, site, isFranchise(auth) ? auth.franchiseId : null);
+  let enriched: Awaited<ReturnType<typeof enrichTrip>>;
+  try {
+    enriched = await enrichTrip(auth.tenantId, parsed.data.childNames, newAttendees(parsed.data.attendees as Attendee[] | undefined, req.user?.email ?? req.user?.uid ?? "provider"), site, isFranchise(auth) ? auth.franchiseId : null);
+  } catch (e) {
+    if (e instanceof TripRefusal) { res.status(e.code).json({ error: e.message }); return; }
+    throw e;
+  }
+  const { cost: _rawCost, ...rest } = parsed.data;
+  void _rawCost;
   const doc = {
-    ...parsed.data,
+    ...rest,
+    ...(cost.value !== undefined ? { cost: cost.value } : {}),
     attendees: enriched.attendees,
     childIds: enriched.childIds,
+    // Worked out here from the children's answers - never taken from the browser.
+    consentObtained: consentObtained(enriched.attendees),
     headcount: parsed.data.headcount ?? parsed.data.childNames.length,
     tenantId: auth.tenantId,
     franchiseId: auth.franchiseId ?? null,
@@ -304,7 +436,7 @@ trips.post("/", async (req, res) => {
   };
   const ref = await col.add(doc);
   void requestConsents(ref.id, doc).catch((e) => console.error("[trips] consent notify:", (e as Error).message));
-  res.status(201).json({ id: ref.id, ...doc });
+  res.status(201).json(await present(req, { id: ref.id, ...doc }));
 });
 
 async function own(req: Request, id: string) {
@@ -319,23 +451,40 @@ async function own(req: Request, id: string) {
   return { status: 200 as const, snap };
 }
 
-class TripRefusal extends Error { constructor(public code: number, msg: string) { super(msg); } }
 
 trips.put("/:id", async (req, res) => {
   const o = await own(req, req.params.id);
   if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Forbidden" : "Trip not found" }); return; }
+  // Only the owner roles and the trip's own organiser / named lead change a trip - not any member of staff.
+  if (!(await canEditTrip(req, o.snap.data()!))) {
+    // The one exception: staff on the trip's roster can record the day (head counts / returned) and nothing else, still behind the consent gate.
+    const keys = Object.keys((req.body ?? {}) as object);
+    const dayOnly = keys.length > 0 && keys.every((k) => k === "checkpoints" || k === "returned");
+    if (!(dayOnly && (await isRostered(req, o.snap.data()!)))) {
+      res.status(403).json({ error: "Only the trip lead or the person who planned this trip can change it. Ask them, or a manager." });
+      return;
+    }
+  }
   const parsed = tripSchema.partial().safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  if (parsed.data.cost !== undefined && parsed.data.cost !== o.snap.data()!.cost) {
+    const cost = parseCost(parsed.data.cost);
+    if (!cost.ok) { res.status(400).json({ error: cost.error, issues: COST_REFUSAL(cost.error) }); return; }
+    parsed.data.cost = cost.value ?? "";
+  }
   const site = await staffSiteScope(req.auth!);
   if (site && parsed.data.listingId && !site.listings.has(parsed.data.listingId)) {
     res.status(403).json({ error: "You can only plan trips for the sites you're assigned to" });
     return;
   }
+  let cancelledNow = false;
+  let reopenedWhy: string | null = null;
   // Read-merge-write in ONE transaction: a parent answering consent while the
   // planner is open used to have their answer overwritten by the stale
   // "pending" this screen was holding.
   try {
     await db.runTransaction(async (tx) => {
+      cancelledNow = false; reopenedWhy = null; // a retried transaction starts clean
       const fresh = await tx.get(o.snap.ref);
       const before = fresh.data()!;
       const tenantId = String(before.tenantId);
@@ -348,7 +497,7 @@ trips.put("/:id", async (req, res) => {
         const prev = (before.attendees as Attendee[] | undefined) ?? [];
         const incoming = (parsed.data.attendees as Attendee[] | undefined) ?? prev;
         const names = parsed.data.childNames ?? (before.childNames as string[] | undefined) ?? [];
-        const enriched = await enrichTrip(tenantId, names, incoming, site, isFranchise(req.auth!) ? req.auth!.franchiseId : null);
+        const enriched = await enrichTrip(tenantId, names, incoming, site, isFranchise(req.auth!) ? req.auth!.franchiseId : null, new Set(prev.map((p) => p.childId).filter(Boolean) as string[]));
         const who = req.user?.email ?? req.user?.uid ?? "provider";
         const now = new Date().toISOString();
         for (const a of enriched.attendees) {
@@ -381,18 +530,51 @@ trips.put("/:id", async (req, res) => {
       // with the Setup gate on, a trip can't be waved through by turning consent
       // off for that one trip. askConsent now only means "don't chase parents in
       // the app" — consent collected on paper still has to be recorded per child.
-      const submitting = parsed.data.signoff?.submitted === true && (before.signoff as { submitted?: boolean } | undefined)?.submitted !== true;
-      if (parsed.data.status === "completed" || submitting) {
+      //
+      // The same gate now also bites on the DAY: a head count with a number in it, or "returned", is refused while anyone is still pending.
+      const wasSigned = (before.signoff as { submitted?: boolean } | undefined)?.submitted === true;
+      // Approval fields count as a sign-off even without "submitted": the same gate applies, and it is stored as submitted.
+      const approvalGiven = !!parsed.data.signoff?.approvedBy?.trim();
+      const submitting = (parsed.data.signoff?.submitted === true || (approvalGiven && parsed.data.signoff?.submitted !== false)) && !wasSigned;
+      const list = (patch.attendees as Attendee[] | undefined) ?? ((before.attendees as Attendee[] | undefined) ?? []);
+      const dayAction =
+        (parsed.data.returned === true && before.returned !== true) ||
+        headCountRecorded(before.checkpoints as { n: string; counted?: number | null }[] | undefined, parsed.data.checkpoints);
+      if (parsed.data.status === "completed" || submitting || dayAction) {
         const { requireConsent } = await tripSettings(tenantId, (before.franchiseId as string | null | undefined) ?? req.auth!.franchiseId);
         if (requireConsent) {
-          const list = (patch.attendees as Attendee[] | undefined) ?? ((before.attendees as Attendee[] | undefined) ?? []);
           const pending = consentPending(list);
           const names = (xs: Attendee[]) => `${xs.map((a) => a.n).slice(0, 4).join(", ")}${xs.length > 4 ? "…" : ""}`;
           if (pending.length) {
-            throw new TripRefusal(409, `${pending.length} ${pending.length === 1 ? "child still needs" : "children still need"} consent before this trip can ${submitting ? "be signed off" : "be completed"} (${names(pending)}).`);
+            const unlinked = unlinkedChildren(pending);
+            const what = submitting ? "be signed off" : dayAction && parsed.data.status !== "completed" ? "go ahead (no head count or return can be recorded)" : "be completed";
+            // A child with no booking or a clashing name has nobody to ask, so the family never gets a request: say so, and say how to fix it.
+            const fix = unlinked.length
+              ? ` ${names(unlinked)} ${unlinked.length === 1 ? "isn't" : "aren't"} linked to a booking, so no family can be asked. Pick the booked child in the list (a same-name clash needs the right child chosen), or record the consent you hold on paper.`
+              : "";
+            throw new TripRefusal(409, `${pending.length} ${pending.length === 1 ? "child still needs" : "children still need"} consent before this trip can ${what} (${names(pending)}).${fix}`);
           }
         }
       }
+      // Sign-off is a server rule too, not just a disabled button: ratio, a finished risk assessment, the roster.
+      if (submitting) {
+        const problems = signoffProblems({ ...(before as object), ...(patch as object), attendees: list } as Parameters<typeof signoffProblems>[0]);
+        if (problems.length) throw new TripRefusal(409, `This trip can't be signed off yet: ${problems.join("; ")}.`);
+        patch.signoff = { ...(parsed.data.signoff ?? {}), submitted: true };
+      }
+      // The consent flag is the server's: worked out from the answers, whatever the browser sent.
+      patch.consentObtained = consentObtained(list);
+      // A change to what the sign-off covered (who is going, who looks after them, where, when) means it no longer stands.
+      if (wasSigned && parsed.data.signoff?.submitted !== false) {
+        const merged = { ...(before as object), ...(patch as object), attendees: list } as Parameters<typeof materialSnapshot>[0];
+        if (materialSnapshot(before as Parameters<typeof materialSnapshot>[0]) !== materialSnapshot(merged)) {
+          reopenedWhy = "the trip changed";
+          patch.signoff = reopenedSignoff({ ...(before.signoff as object), ...(parsed.data.signoff ?? {}) }, reopenedWhy, new Date().toISOString());
+        }
+      }
+      // Families are told once: putting a cancelled trip back and cancelling it again does not message them again.
+      cancelledNow = parsed.data.status === "cancelled" && before.status !== "cancelled" && !before.cancelNotifiedAt;
+      if (cancelledNow) patch.cancelNotifiedAt = new Date().toISOString();
       // Turning in-app consent requests off for a trip is the provider's call.
       // (Compared as "on unless false" — the planner always sends the flag, and
       // older trips never stored it.)
@@ -409,7 +591,10 @@ trips.put("/:id", async (req, res) => {
   }
   const after = await o.snap.ref.get();
   void requestConsents(after.id, after.data()!).catch((e) => console.error("[trips] consent notify:", (e as Error).message));
-  res.json({ id: after.id, ...after.data() });
+  // Told after the save, never able to fail it. Families first: they must not turn up for a trip that is off.
+  if (cancelledNow) await notifyTripCancelled(after.id, after.data()!).catch((e) => console.error("[trips] cancel notify:", (e as Error).message));
+  if (reopenedWhy) void notifySignoffReopened(after.id, after.data()!, reopenedWhy).catch((e) => console.error("[trips] reopen notify:", (e as Error).message));
+  res.json(await present(req, { id: after.id, ...after.data() }));
 });
 
 // POST /:id/send-message — the planner's Step 8: send the operator's message
@@ -482,6 +667,9 @@ trips.delete("/:id", async (req, res) => {
   const o = await own(req, req.params.id);
   if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Forbidden" : "Trip not found" }); return; }
   if (!canManage(req.auth!.role)) { res.status(403).json({ error: "Only the provider can delete a trip" }); return; }
+  // Deleting an upcoming trip families were told about is a cancellation too: tell them.
+  const gone = o.snap.data()!;
+  if (gone.status === "planned" && !gone.cancelNotifiedAt && String(gone.date ?? "") >= ukToday()) await notifyTripCancelled(o.snap.id, gone).catch((e) => console.error("[trips] cancel notify:", (e as Error).message));
   await o.snap.ref.delete();
   res.json({ ok: true });
 });
