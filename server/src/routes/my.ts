@@ -1,4 +1,5 @@
 import { mergeGroupKey } from "../lib/bookingMergeKey";
+import { isFranchise } from "../lib/franchiseScope";
 import { stopOpenPayments } from "../lib/checkoutIntent";
 import { ageCapGroup } from "../lib/childAge";
 import { randomUUID } from "node:crypto";
@@ -43,6 +44,8 @@ import { mergeBookings } from "../lib/mergeBookings";
 import { ageRangeFor, isOutOfRange, passHidden, addonRefusal, isQueuedOn, cardUnpaid } from "../lib/bookingRules";
 import { wantsCardHold, releaseHolds, deadlineLabel, deadlineWarningHtml } from "../lib/cardHold";
 import { bellTitle, bellBody, bellMoney, bellDay, paymentType, plainParagraph } from "../lib/bellText";
+import { bellText, requestEmail } from "../lib/extraWording";
+import { newRequestWording, withdrawnWording } from "../../../features/bookings/addonWording";
 import { addonCount, addonWithDays, bookingAddonLines, mergeAddonLines } from "../../../features/bookings/addons";
 import {
   resolveBundlePricing,
@@ -795,6 +798,17 @@ my.post("/bookings", async (req, res) => {
     if (!canWrite(authCtx.role) || !authCtx.tenantId) {
       res.status(403).json({ error: "Booking for a family requires an operator account" });
       return;
+    }
+    // Scope guard FIRST, before any customer lookup or account creation: a refusal must create nothing (no Auth user, no users doc).
+    // A franchise books on behalf of families ONLY on its own listings: a head-office or sibling listing would create a booking stamped to that
+    // listing's owner, which the franchise then could not see (same ownership rule as POST /api/bookings). Franchise STAFF are read-only
+    // (canWrite above refuses them), so in practice this is hit by role "franchise"; isFranchise also covers staff for safety.
+    if (isFranchise(authCtx)) {
+      const scopeListing = await db.collection("listings").doc(input.listingId).get();
+      if (scopeListing.exists && ((scopeListing.data() as { franchiseId?: string | null }).franchiseId ?? null) !== authCtx.franchiseId) {
+        res.status(403).json({ error: "You can only book on your own listings. This listing belongs to head office or another franchise." });
+        return;
+      }
     }
     let target = { name: onBehalf.name ?? "", email: onBehalf.email ?? "", phone: onBehalf.phone ?? "" };
     if (onBehalf.customerId) {
@@ -3016,18 +3030,23 @@ my.post("/bookings/:ref/addon-requests", async (req, res) => {
     const b = after as Booking | null;
     const r = created as AddonRequest | null;
     if (b?.tenantId && r) {
-      const what = describeRequest(r);
+      // Plain sentences: what is asked, for whom, which day; a price only where it matters (a cancel that can be refunded), never for a size/colour change.
+      const paid = refundableSoFar(b);
+      const w = newRequestWording(r, { ref: b.ref, refundable: paid });
+      const text = bellText(w);
+      const mail = requestEmail(r, b, w, r.kind === "cancel" && paid > 0.004);
       void notify({
         tenantId: b.tenantId,
         to: { kind: "tenant" },
         category: "booking",
         key: "addon-request",
-        title: bellTitle("addon-request", b.ref),
-        body: bellBody([r.kind === "cancel" ? (requestKeys(r).length > 1 ? "Cancel extras" : "Cancel extra") : "Change extra", bellMoney(r.price ?? 0)]),
-        subject: `${what} (${b.ref})`,
+        title: text.title,
+        body: text.body,
+        i18n: text.i18n,
+        subject: mail.subject,
         href: `/company/bookings?ref=${encodeURIComponent(b.ref)}`,
         ref: b.ref,
-        emailHtml: `<p>${what.replace(/&/g, "&amp;").replace(/</g, "&lt;")}.</p>${requestTargets(r).length > 1 || requestTargets(r)[0].days?.length ? `<ul>${requestTargets(r).map((t) => `<li>${t.label.replace(/&/g, "&amp;").replace(/</g, "&lt;")}${t.days?.length ? ` · ${t.days.length} day${t.days.length === 1 ? "" : "s"} (${t.days.join(", ")})` : ""} · ${money(t.price)}</li>`).join("")}</ul>` : ""}<p>${(b.listing ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")} · booking ${b.ref}${r.note ? ` · note: ${r.note.replace(/&/g, "&amp;").replace(/</g, "&lt;")}` : ""}</p><p>Nothing changes until you approve or decline it. It is separate from cancelling the booking.</p>`,
+        emailHtml: mail.html,
       });
     }
     res.status(201).json(r);
@@ -3045,13 +3064,22 @@ my.post("/bookings/:ref/addon-requests/:id/withdraw", async (req, res) => {
   if ("error" in found) { res.status(found.status).json({ error: found.error }); return; }
   try {
     let out: AddonRequest | null = null;
+    let after: Booking | null = null;
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(found.snap.ref);
       const b = fromDoc(snap.data() as BookingDoc);
       if (b.email !== email) throw new AddonRequestError(403, "Not your booking");
       out = withdrawAddonRequest(b, String(req.params.id));
       tx.set(found.snap.ref, toDoc(b));
+      after = b;
     });
+    const wb = after as Booking | null;
+    const wr = out as AddonRequest | null;
+    // The provider hears the family took the request back (their bell would otherwise keep asking them to decide it).
+    if (wb?.tenantId && wr) {
+      const text = bellText(withdrawnWording(wr, { ref: wb.ref }));
+      void notify({ tenantId: wb.tenantId, to: { kind: "tenant" }, category: "booking", key: "addon-request", title: text.title, body: text.body, i18n: text.i18n, href: `/company/bookings?ref=${encodeURIComponent(wb.ref)}`, ref: wb.ref, bellOnly: true });
+    }
     res.json(out);
   } catch (e) {
     if (e instanceof AddonRequestError) res.status(e.status).json({ error: e.message });

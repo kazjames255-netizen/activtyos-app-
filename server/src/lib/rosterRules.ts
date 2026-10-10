@@ -89,6 +89,35 @@ export function staffBookingView<T extends Record<string, unknown>>(b: T): Parti
   return out as Partial<T>;
 }
 
+/** The Add-on orders / register label a STAFF token gets: "Awaiting approval" stays, "Not paid yet" is payment state and is never sent to staff. */
+export const staffAddonFlag = <F extends string>(flag: F | undefined): Exclude<F, "not-paid"> | undefined => (flag === "not-paid" ? undefined : (flag as Exclude<F, "not-paid"> | undefined));
+
+/** Express middleware for routers whose rows are priced configuration (block bundles, passes, periods): a STAFF token's JSON loses every money-named key. */
+export function staffNoMoney(req: { auth?: { role?: string } }, res: { json: (b: unknown) => unknown }, next: () => void): void {
+  if (req.auth?.role === "staff") { const json = res.json.bind(res); res.json = (body: unknown) => json(withoutMoneyKeys(body)); }
+  next();
+}
+
+/** WHAT STAFF MAY SEE OF A LISTING: an allow-list (same idea as staffBookingView). Anything not named is never sent to a staff token, so a price,
+ *  discount, deposit, pass price or payment-method field added to a listing later stays hidden until someone decides it is safe. Nested objects
+ *  that are kept (blocks, venue) also lose any money-named key; passes keep only their id / name / label. */
+export const STAFF_LISTING_SHOWN = [
+  "id", "name", "title", "tenantId", "tenantName", "franchiseId", "seasonId", "venueId", "venue", "venueName", "location", "venueKind", "address", "city", "lat", "lng",
+  "deliveryMode", "blockId", "blockMode", "ageFrom", "ageTo", "categoryIds", "categoryNames", "categories", "heroCategoryId", "capacity", "capacityScope", "maxAttendees",
+  "status", "archived", "hidden", "visibility", "blocks", "days", "datesOff", "runFrom", "runTo", "sitePhone", "passFullDates", "timings", "season",
+] as const;
+const STAFF_LISTING_SET = new Set<string>(STAFF_LISTING_SHOWN);
+export function staffListingView(l: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(l)) if (STAFF_LISTING_SET.has(k)) out[k] = withoutMoneyKeys(v);
+  if (Array.isArray(l.passes)) out.passes = (l.passes as unknown[]).map((p) => {
+    if (!p || typeof p !== "object") return typeof p === "string" ? withoutPriceText(p) : p;
+    const o = p as Record<string, unknown>;
+    return Object.fromEntries(["id", "name", "label", "title"].filter((k) => typeof o[k] === "string").map((k) => [k, o[k]]));
+  });
+  return out;
+}
+
 /** What a STAFF token gets of a booking's add-ons: the choices, quantities and answers, never a price. The one place that removes add-on money
  *  for staff: the booking, the booking list and the register all use it. Owner / franchise / freelancer views do not call it. */
 export function stripAddonMoney<T extends Record<string, unknown>>(b: T): T {
