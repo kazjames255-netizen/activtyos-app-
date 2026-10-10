@@ -27,7 +27,7 @@ const post = (ref: string, body: unknown) => as("A", "POST", `/api/my/bookings/$
 
 async function mk(wallet: number) {
   await setWallet(wallet);
-  const b = await bookWithAddons({ parent: "A", listing: "LK", children: [{ name: `wrx ${uniq()}`, days: "all", addons: [{ id: "AW", answers: { Colour: "Blue" } }] }] });
+  const b = await bookWithAddons({ parent: "A", listing: "LK", children: [{ name: `wrx ${uniq()}`, days: "all", addons: [{ id: "AW", answers: { Colour: "Blue" } }] }], walletCap: 1e6 });
   assert.equal(b.status, 201, JSON.stringify(b.json));
   const ref = b.refs[0] as string;
   assert.equal((await operatorAction(ref, "paid")).status, 200);

@@ -86,7 +86,7 @@ async function mk(o: { wallet: number; cash?: number; card?: boolean; at?: strin
   const l = L[o.at ?? "far"];
   const parent = await makeParent("VR", P);
   if (o.wallet > 0) await setWallet(parent.email, o.wallet);
-  const r = await call("POST", "/api/my/bookings", parent.token, { listingId: l.id, blockId: l.blockId, method: o.card ? "card" : "Bank transfer", items: [{ pass: "Week pass", child: `Kid ${++seq}${uniq()}`, age: 8, dates: l.dates }] });
+  const r = await call("POST", "/api/my/bookings", parent.token, { listingId: l.id, blockId: l.blockId, walletCap: 1e6, method: o.card ? "card" : "Bank transfer", items: [{ pass: "Week pass", child: `Kid ${++seq}${uniq()}`, age: 8, dates: l.dates }] });
   assert.ok(r.status < 300, `book -> ${r.status} ${JSON.stringify(r.json).slice(0, 300)}`);
   const list = Array.isArray(r.json) ? r.json : (r.json?.bookings ?? [r.json]);
   const ref = (list[0]?.ref ?? list[0]?.booking?.ref) as string;
@@ -390,7 +390,7 @@ describe("V: several references / hold", () => {
     const R = new Rec("V21", "wallet spread over refs; refunding each in full returns wallet total 50 exactly once each, offline = rest");
     const parent = await makeParent("VR", P); await setWallet(parent.email, 50);
     const l = L.far;
-    const r = await call("POST", "/api/my/bookings", parent.token, { listingId: l.id, blockId: l.blockId, method: "Bank transfer", items: [
+    const r = await call("POST", "/api/my/bookings", parent.token, { listingId: l.id, blockId: l.blockId, walletCap: 1e6, method: "Bank transfer", items: [
       { pass: "Week pass", child: `KidA${uniq()}`, age: 8, dates: l.dates }, { pass: "Week pass", child: `KidB${uniq()}`, age: 9, dates: l.dates }] });
     R.eq("book", r.status < 300, true);
     const list: any[] = Array.isArray(r.json) ? r.json : (r.json?.bookings ?? [r.json]);

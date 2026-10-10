@@ -86,7 +86,7 @@ async function mk(o: { wallet: number; cash?: number; card?: boolean; at?: strin
   const l = L[o.at ?? "far"];
   const parent = await makeParent("VR", P);
   if (o.wallet > 0) await setWallet(parent.email, o.wallet);
-  const r = await call("POST", "/api/my/bookings", parent.token, { listingId: l.id, blockId: l.blockId, method: o.card ? "card" : "Bank transfer", items: [{ pass: "Week pass", child: `Kid ${++seq}${uniq()}`, age: 8, dates: l.dates }] });
+  const r = await call("POST", "/api/my/bookings", parent.token, { listingId: l.id, blockId: l.blockId, walletCap: 1e6, method: o.card ? "card" : "Bank transfer", items: [{ pass: "Week pass", child: `Kid ${++seq}${uniq()}`, age: 8, dates: l.dates }] });
   assert.ok(r.status < 300, `book -> ${r.status} ${JSON.stringify(r.json).slice(0, 300)}`);
   const list = Array.isArray(r.json) ? r.json : (r.json?.bookings ?? [r.json]);
   const ref = (list[0]?.ref ?? list[0]?.booking?.ref) as string;
@@ -176,7 +176,7 @@ describe("W: new attacks on cashHeld", () => {
     const l = L.far;
     const refs: string[] = [];
     for (const nm of ["KA", "KB"]) {
-      const r = await call("POST", "/api/my/bookings", parent.token, { listingId: l.id, blockId: l.blockId, method: "card", items: [{ pass: "Week pass", child: `${nm}${uniq()}`, age: 8, dates: l.dates }] });
+      const r = await call("POST", "/api/my/bookings", parent.token, { listingId: l.id, blockId: l.blockId, walletCap: 1e6, method: "card", items: [{ pass: "Week pass", child: `${nm}${uniq()}`, age: 8, dates: l.dates }] });
       const list: any[] = Array.isArray(r.json) ? r.json : (r.json?.bookings ?? [r.json]); refs.push((list[0].ref ?? list[0].booking?.ref) as string);
     }
     R.eq("two", refs.length, 2);
@@ -243,7 +243,7 @@ describe("W: real captured card hold", () => {
     if (!stripe) return t.skip("no stripe"); const R = new Rec("V20real", "gross 20, wallet 8, card 12: partial 10 -> wallet 4, Stripe 6; then full of remaining 10 -> wallet 4, Stripe 6");
     const M = await makeListing(P, `VR manual ${uniq()}`, true);
     const parent = await makeParent("VR", P); await setWallet(parent.email, 8);
-    const r = await call("POST", "/api/my/bookings", parent.token, { listingId: M.id, blockId: M.blockId, method: "card", items: [{ pass: "Day pass", child: `KH${uniq()}`, age: 8 }] });
+    const r = await call("POST", "/api/my/bookings", parent.token, { listingId: M.id, blockId: M.blockId, walletCap: 1e6, method: "card", items: [{ pass: "Day pass", child: `KH${uniq()}`, age: 8 }] });
     R.eq("book", r.status < 300, true);
     const list: any[] = Array.isArray(r.json) ? r.json : (r.json?.bookings ?? [r.json]);
     const ref = (list[0].ref ?? list[0].booking?.ref) as string;
@@ -264,7 +264,7 @@ describe("W: real captured card hold", () => {
     if (!stripe) return t.skip("no stripe"); const R = new Rec("V20real-full", "wallet 8, Stripe 12");
     const M = await makeListing(P, `VR manual ${uniq()}`, true);
     const parent = await makeParent("VR", P); await setWallet(parent.email, 8);
-    const r = await call("POST", "/api/my/bookings", parent.token, { listingId: M.id, blockId: M.blockId, method: "card", items: [{ pass: "Day pass", child: `KH${uniq()}`, age: 8 }] });
+    const r = await call("POST", "/api/my/bookings", parent.token, { listingId: M.id, blockId: M.blockId, walletCap: 1e6, method: "card", items: [{ pass: "Day pass", child: `KH${uniq()}`, age: 8 }] });
     const list: any[] = Array.isArray(r.json) ? r.json : (r.json?.bookings ?? [r.json]); const ref = (list[0].ref ?? list[0].booking?.ref) as string;
     const co = await call("POST", "/api/payments/checkout", parent.token, { refs: [ref], tenantId: P.tenantId });
     const pi = String(co.json.clientSecret).split("_secret_")[0]; await payIntent(pi);
@@ -277,7 +277,7 @@ describe("W: real captured card hold", () => {
     if (!stripe) return t.skip("no stripe"); const R = new Rec("V20decline", "RECORD: hold released, no Stripe refund (nothing captured), wallet?");
     const M = await makeListing(P, `VR manual ${uniq()}`, true);
     const parent = await makeParent("VR", P); await setWallet(parent.email, 8);
-    const r = await call("POST", "/api/my/bookings", parent.token, { listingId: M.id, blockId: M.blockId, method: "card", items: [{ pass: "Day pass", child: `KH${uniq()}`, age: 8 }] });
+    const r = await call("POST", "/api/my/bookings", parent.token, { listingId: M.id, blockId: M.blockId, walletCap: 1e6, method: "card", items: [{ pass: "Day pass", child: `KH${uniq()}`, age: 8 }] });
     const list: any[] = Array.isArray(r.json) ? r.json : (r.json?.bookings ?? [r.json]); const ref = (list[0].ref ?? list[0].booking?.ref) as string;
     const co = await call("POST", "/api/payments/checkout", parent.token, { refs: [ref], tenantId: P.tenantId });
     const pi = String(co.json.clientSecret).split("_secret_")[0]; await payIntent(pi);

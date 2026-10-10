@@ -68,7 +68,7 @@ async function mk(o: { wallet: number; pay?: "cash" | "card" | "none"; at?: keyo
   const l = L[o.at ?? "far"];
   const parent = await makeParent("WR", P);
   if (o.wallet > 0) await setWallet(parent.email, o.wallet);
-  const r = await call("POST", "/api/my/bookings", parent.token, { listingId: l.id, blockId: l.blockId, method: o.pay === "card" ? "card" : "Bank transfer", items: [{ pass: "Week pass", child: `Kid ${++seq}${uniq()}`, age: 8, dates: l.dates }] });
+  const r = await call("POST", "/api/my/bookings", parent.token, { listingId: l.id, blockId: l.blockId, walletCap: 1e6, method: o.pay === "card" ? "card" : "Bank transfer", items: [{ pass: "Week pass", child: `Kid ${++seq}${uniq()}`, age: 8, dates: l.dates }] });
   assert.ok(r.status < 300, `book -> ${r.status} ${JSON.stringify(r.json).slice(0, 300)}`);
   const list = Array.isArray(r.json) ? r.json : (r.json?.bookings ?? [r.json]);
   const ref = (list[0]?.ref ?? list[0]?.booking?.ref) as string;
