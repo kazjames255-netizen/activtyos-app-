@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useT } from "@/lib/i18n/provider";
+import { useI18n, useT } from "@/lib/i18n/provider";
+import { joinList } from "@/lib/i18n/listFormat";
+import { methodNames, type OfflineKind } from "@/features/bookings/refundMethod";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import type { PortalKey } from "@/lib/nav/config";
@@ -48,6 +50,9 @@ const CATEGORY_GLYPH: Record<string, string> = {
 export function Bell({ portal }: { portal: PortalKey }) {
   const router = useRouter();
   const t = useT();
+  const { locale } = useI18n();
+  // A refund bell that names the offline method(s) ("cash", "bank transfer and cash") carries the kinds; the names are written in the reader's language here.
+  const bodyVars = (v?: Record<string, string>) => (v?.kinds ? { ...v, methods: methodNames(v.kinds.split(",") as OfflineKind[], t, (x) => joinList(x, locale)) } : v);
   const [items, setItems] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
@@ -137,7 +142,7 @@ export function Bell({ portal }: { portal: PortalKey }) {
                     <span className="flex-none text-[10.5px] text-[var(--ink-3)]">{agoLabel(t, n.at)}</span>
                   </span>
                   <span className="mt-0.5 line-clamp-2 block text-[12px] leading-snug text-[var(--ink-2)]">
-                    {n.i18n?.bk ? t(n.i18n.bk, n.i18n.bv) : n.body}
+                    {n.i18n?.bk ? t(n.i18n.bk, bodyVars(n.i18n.bv)) : n.body}
                   </span>
                 </span>
                 {!n.readAt && (

@@ -4,6 +4,8 @@
 // whole place, "Mark paid" and "Mark refund sent" each open THIS inline panel first, which says in plain words
 // what will happen (with the amount) and only then acts. Not window.confirm: it sits in the booking, in the theme.
 
+import { useRefundMethod } from "./useRefundMethod";
+import { refundMethodInfo, unsentKinds } from "./refundMethod";
 import { useEffect, useRef, useState } from "react";
 import { useT, useI18n } from "@/lib/i18n/provider";
 import { localizeDateLabels } from "@/lib/i18n/format";
@@ -78,6 +80,7 @@ function RefundSentConfirm({ booking: b }: { booking: Booking }) {
   const act = useBookingsStore((s) => s.act);
   const clear = useBookingsStore((s) => s.clearConfirm);
   const kind = refundButtonKind(b);
+  const rmw = useRefundMethod();
   const amt = money(refundOwedOf(b) || b.cancel?.amount || 0);
   const stripe = kind === "stripe";
   // A booking paid partly with wallet credit: that share of the refund goes back to the family's wallet at once (one rule, refundSplit.ts); the rest goes the way they paid.
@@ -86,11 +89,12 @@ function RefundSentConfirm({ booking: b }: { booking: Booking }) {
   const splitNote = walletBack > 0.004 ? <div className="mb-3 text-[12px] font-semibold text-[var(--ink)]" data-ui="refund-split">{t("p7bd.cfSplit", { wallet: money(walletBack), rest: money(round2(owedNow - walletBack)) })}</div> : null;
   // A bank transfer / cash / voucher refund cannot be sent by the app: approving only RECORDS it ("awaiting your transfer"); the provider confirms
   // the transfer afterwards with "I've sent the refund" (or says up front that they already sent it).
+  const mi = refundMethodInfo(b);
   if (kind !== "stripe" && kind !== "wallet") {
     return (
       <div className={shell} data-ui="money-confirm" data-kind="refund-record">
         <div className={head}>{t("p8lst.rfaApproveHead", { amt })}</div>
-        <div className="mb-3 text-[12px] text-[var(--ink-2)]">{t("p8lst.rfaApproveBody", { amt, name: b.booker })}</div>
+        <div className="mb-3 text-[12px] text-[var(--ink-2)]">{mi.kinds.length && !mi.hasCard ? t("rfm.apprBody", { amt: money(round2(Math.max(0, owedNow - walletBack))), name: b.booker, how: rmw.how(mi.kinds), methods: rmw.names(mi.kinds) }) : t("p8lst.rfaApproveBody", { amt, name: b.booker })}</div>
         {splitNote}
         <div className="flex flex-wrap gap-[7px]">
           <Button variant="primary" onClick={() => act(b.ref, "refund-approve")}>{t("p8lst.rfaApproveYes")}</Button>
@@ -137,11 +141,13 @@ function RefundTransferConfirm({ booking: b }: { booking: Booking }) {
   const t = useT();
   const act = useBookingsStore((s) => s.act);
   const clear = useBookingsStore((s) => s.clearConfirm);
+  const rmw = useRefundMethod();
   const amt = money(refundTransferAmount(b));
+  const kinds = unsentKinds(b);
   return (
     <div className={shell} data-ui="money-confirm" data-kind="refund-transfer-sent">
-      <div className={head}>{t("p8lst.rfaConfirmHead", { amt })}</div>
-      <div className="mb-3 text-[12px] text-[var(--ink-2)]">{t("p8lst.rfaConfirmBody", { amt, name: b.booker })}</div>
+      <div className={head}>{kinds.length ? t("rfm.confHead", { amt, how: rmw.how(kinds) }) : t("p8lst.rfaConfirmHead", { amt })}</div>
+      <div className="mb-3 text-[12px] text-[var(--ink-2)]">{kinds.length ? t("rfm.confBody", { amt, name: b.booker, methods: rmw.names(kinds) }) : t("p8lst.rfaConfirmBody", { amt, name: b.booker })}</div>
       <div className="flex gap-[7px]">
         <Button variant="primary" onClick={() => act(b.ref, "refund-sent")}>{t("p8lst.rfaConfirmYes")}</Button>
         <Button onClick={clear}>{t("p7bd.cfNotYet")}</Button>

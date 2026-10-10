@@ -22,6 +22,8 @@ import type { Booking } from "@/features/bookings/types";
 import { filledDetails, type VoucherProvider } from "@/lib/settings";
 import { refundFor, effectiveRefundDate, policyById, policyWordingT, adviceReasonT, aPct, type NamedPolicy } from "@/lib/cancellation";
 import { walletShareOfRefund } from "@/features/bookings/refundSplit";
+import { useRefundMethod } from "@/features/bookings/useRefundMethod";
+import type { OfflineKind } from "@/features/bookings/refundMethod";
 import { Badge, Button, Card, DefRow, SectionHead } from "@/components/ui";
 
 // Boy → blue, Girl → pink, unknown → house grey. Same convention as the
@@ -123,6 +125,7 @@ function AvailabilityCalendar({ available, taken, value, onPick }: { available: 
 function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: Booking; listing: AmendListing | null; hasPendingMove?: boolean; onDone: () => void }) {
   const t = useT();
   const { locale } = useI18n();
+  const rmw = useRefundMethod();
   const [reason, setReason] = useState("");
   const [otherReason, setOtherReason] = useState("");
   const [msg, setMsg] = useState("");
@@ -133,6 +136,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
     reasons: { id: string; label: string }[];
     askReason: boolean;
     letChoose: boolean;
+    provider: string;
     walletEnabled: boolean;
     noRefundCredit: boolean;
     allowPartial: boolean;
@@ -149,12 +153,12 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
   const [resolution, setResolution] = useState<"refund" | "wallet" | "changedate" | null>(null);
   const [moveTo, setMoveTo] = useState<Record<string, string>>({}); // slot key → replacement ISO date
   // The server's own figures for releasing the ticked days (see the preview effect below).
-  type Prev = { partPaid: boolean; priceBefore: number; priceAfter: number; drop: number; paid: number; refund: number; credit: number; owedAfter: number; toWallet: number; toOriginal: number };
+  type Prev = { partPaid: boolean; priceBefore: number; priceAfter: number; drop: number; paid: number; refund: number; credit: number; owedAfter: number; toWallet: number; toOriginal: number; method?: { kinds: OfflineKind[]; hasCard: boolean } };
   const [prevRes, setPrevRes] = useState<{ k: string; data: Prev } | null>(null);
 
   useEffect(() => {
     if (!booking.tenantId) return;
-    apiPublic<{ settings: { cancellationPolicies?: NamedPolicy[]; cancelReasons?: { id: string; label: string }[]; askReasonParent?: boolean; allowCardRefund?: boolean; refundLetCustomerChoose?: boolean; noRefundCredit?: boolean; allowPartialCancel?: boolean; partialAllowRefund?: boolean; partialAllowWallet?: boolean; partialAllowChangeDate?: boolean; customerArea?: { wallet?: boolean } } }>(`/api/public/library/${encodeURIComponent(booking.tenantId)}${booking.listingId ? `?listingId=${encodeURIComponent(booking.listingId)}` : ""}`)
+    apiPublic<{ settings: { cancellationPolicies?: NamedPolicy[]; cancelReasons?: { id: string; label: string }[]; askReasonParent?: boolean; allowCardRefund?: boolean; refundLetCustomerChoose?: boolean; noRefundCredit?: boolean; allowPartialCancel?: boolean; partialAllowRefund?: boolean; partialAllowWallet?: boolean; partialAllowChangeDate?: boolean; customerArea?: { wallet?: boolean }; providerName?: string } }>(`/api/public/library/${encodeURIComponent(booking.tenantId)}${booking.listingId ? `?listingId=${encodeURIComponent(booking.listingId)}` : ""}`)
       .then((r) => {
         const s = r.settings ?? {};
         const allowCard = s.allowCardRefund ?? true;
@@ -163,6 +167,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
           reasons: s.cancelReasons ?? [],
           askReason: !!s.askReasonParent,
           letChoose: allowCard && (s.refundLetCustomerChoose ?? true),
+          provider: (s.providerName ?? "").trim(),
           walletEnabled: s.customerArea?.wallet ?? true,
           noRefundCredit: !!s.noRefundCredit,
           allowPartial: s.allowPartialCancel ?? true,
@@ -240,15 +245,19 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
   const paidByBank = !noBankRefund && /bank|transfer/i.test(booking.method ?? "");
   const paidOffline = !noBankRefund && !paidByBank && /cash|other/i.test(booking.method ?? "") && !/card/i.test(booking.method ?? "");
   const walletOn = cfg?.walletEnabled ?? false;
+  // Money paid OFFLINE (cash / bank transfer / voucher, a mix included) cannot be moved by the app: the choice is wallet credit (pre-selected) or asking the
+  // provider to send it back, and that option names the method actually paid (server-worked out: booking.refundMethod). Card money keeps its own wording.
+  const offlineKinds = booking.refundMethod && !booking.refundMethod.hasCard ? booking.refundMethod.kinds : [];
   // A bank-transfer booking refunded to the bank (not wallet): we need the family's account details.
-  const needBank = paidByBank && refundDue && refundPref === "card";
+  const needBank = (paidByBank || offlineKinds.includes("bank")) && refundDue && refundPref === "card";
   const bankOk = bk.accountName.trim().length >= 2 && /^\d{2}[- ]?\d{2}[- ]?\d{2}$/.test(bk.sortCode.trim()) && /^\d{6,8}$/.test(bk.accountNumber.trim());
   // A voucher/TFC refund can only go to the wallet — force it there when the
   // provider offers store credit (otherwise the provider reimburses via the
   // scheme; there's nothing for the family to choose).
   useEffect(() => {
-    if (noBankRefund) setRefundPref(walletOn ? "wallet" : "card");
-  }, [noBankRefund, walletOn]);
+    if (noBankRefund || offlineKinds.length) setRefundPref(walletOn ? "wallet" : "card");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noBankRefund, walletOn, offlineKinds.join(",")]);
 
   const partialPayload = (): { days?: string[]; kids?: { name: string; childId?: string; days: string[] }[] } => {
     if (kidsList) {
@@ -393,6 +402,9 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
 
                   {prevText && (res === "refund" || res === "wallet") && (
                     <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-2 text-[11.5px] leading-[1.5] text-[var(--ink-2)]" data-ui="release-preview"><Rich text={prevText} bClass="text-[var(--ink)]" />
+                      {res === "refund" && prev && (prev.method?.kinds.length ?? 0) > 0 && prev.method && !prev.method.hasCard && prev.toOriginal > 0.004 && (
+                        <div className="mt-1" data-ui="refund-method">{t("rfm.willSend", { provider: cfg?.provider || t("rfm.yourProv"), amt: money(prev.toOriginal), methods: rmw.names(prev.method.kinds) })}</div>
+                      )}
                       {res === "refund" && prev && prev.toWallet > 0.004 && (
                         <div className="mt-1" data-ui="refund-split"><Rich text={prev.toOriginal > 0.004 ? t("p7bk.splitBoth", { wallet: money(prev.toWallet), rest: money(prev.toOriginal) }) : t("p7bk.splitAllWallet", { amt: money(prev.toWallet) })} bClass="text-[var(--ink)]" /></div>
                       )}
@@ -479,8 +491,15 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
           to a bank card, so those bookings are only ever offered the wallet (and
           only when the provider runs store credit). Everyone else may choose
           card vs wallet when the provider lets them. */}
-      {refundDue && (cfg?.letChoose || noBankRefund || paidByBank) && (() => {
-        const options: readonly (readonly ["wallet" | "card", string])[] = noBankRefund
+      {refundDue && (cfg?.letChoose || noBankRefund || paidByBank || offlineKinds.length > 0) && (() => {
+        // The part the provider would have to send by hand (the wallet's share always goes back to the wallet).
+        const askAmt = money(Math.max(0, effRefund - splitWallet));
+        const options: readonly (readonly ["wallet" | "card", string])[] = offlineKinds.length
+          ? [
+              ...(walletOn ? ([["wallet", t("parent.walletCreditBtn")]] as const) : []),
+              ["card", rmw.ask(offlineKinds, cfg?.provider ?? "", askAmt)],
+            ]
+          : noBankRefund
           ? (walletOn ? [["wallet", t("parent.walletCreditBtn")]] : [])
           : [
               ...(walletOn ? ([["wallet", t("parent.walletCreditBtn")]] as const) : []),
@@ -907,6 +926,7 @@ function BankTransferBox({ b }: { b: Booking }) {
 
 function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, clash, listingInfo, venue, mealOrders = [] }: { b: Booking; refresh: () => void; autoPay?: boolean; autoAmend?: boolean; autoCancel?: boolean; autoOpen?: boolean; clash?: boolean; listingInfo?: AmendListing | null; venue?: { location?: string | null; address?: string | null; city?: string | null; online?: boolean; joinInfo?: string | null }; mealOrders?: MealOrder[] }) {
   const t = useT();
+  const rmw = useRefundMethod();
   const walletMethod = useWalletMethodLabel();
   const w = useWord();
   const { locale } = useI18n();
@@ -1137,7 +1157,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
             <b className="text-[var(--ink)]">{b.status === "Declined" ? w("Declined") : w("Cancelled")}</b>{b.cancel?.on && b.status !== "Declined" ? " · " + t("p7bk.requestedOn", { date: b.cancel.on }) : ""}
             {refundAwaitingTransfer(b) ? (
               // An OFFLINE refund the provider has approved but not yet sent: don't claim it is back yet.
-              <> — <b className="text-[#9a5a00]">{/bank|transfer|bacs/i.test(b.method ?? "") ? t("p8lst.rfaParentApproved") : t("p8lst.rfaParentApprovedOther")}</b> ({money(refundAmt || b.amount)})</>
+              <> — <b className="text-[#9a5a00]">{b.refundMethod?.sending?.length ? rmw.recorded(b.refundMethod.sending, "", money(refundAmt || b.amount)) : /bank|transfer|bacs/i.test(b.method ?? "") ? t("p8lst.rfaParentApproved") : t("p8lst.rfaParentApprovedOther")}</b>{b.refundMethod?.sending?.length ? "" : <> ({money(refundAmt || b.amount)})</>}</>
             ) : refundIssued ? (
               <> — <b className="text-[var(--brand)]">{isVoucher ? t("p7bk.refundedVoucher", { amt: money(refundAmt || b.amount) }) : b.cancel?.refundTo === "wallet" ? t("p7bk.refundedWallet", { amt: money(refundAmt || b.amount) }) : t("p7bk.refundedCard", { amt: money(refundAmt || b.amount) })}</b>.{!isVoucher && b.cancel?.refundTo !== "wallet" && <> {t("p7bk.refundTiming")}</>}</>
             ) : refundOwed && refundAmt > 0 ? (

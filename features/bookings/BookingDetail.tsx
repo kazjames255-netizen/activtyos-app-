@@ -1,5 +1,8 @@
 "use client";
 
+import { useRefundMethod } from "./useRefundMethod";
+import { refundMethodInfo } from "./refundMethod";
+import { walletShareFor } from "./refundSplit";
 import { uiDate, uiTime, uiDateTime, localizeDateLabels } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 import { useT, useWord, useI18n } from "@/lib/i18n/provider";
@@ -577,6 +580,7 @@ function DateChangePanel({ booking }: { booking: Booking }) {
 
 export function BookingDetail({ booking }: { booking: Booking }) {
   const t = useT();
+  const rmw = useRefundMethod();
   const walletMethod = useWalletMethodLabel();
   const w = useWord();
   const close = useBookingsStore((s) => s.close);
@@ -646,6 +650,13 @@ export function BookingDetail({ booking }: { booking: Booking }) {
                 {b.cancel.msg && <span className="font-normal text-[var(--ink-2)]"> · {b.cancel.msg}</span>}
               </div>
             )}
+            {(() => {
+              // Money paid by cash / bank transfer / voucher cannot be moved by the app: say which, so the provider knows how it is to be sent.
+              const mi = refundMethodInfo(b);
+              const owedAmt = b.cancel?.amount ?? 0;
+              if (!mi.kinds.length || mi.hasCard || dest === "wallet" || owedAmt <= 0) return null;
+              return <div className="w-full text-[12px] font-bold leading-[1.5] text-[#7a5b06]" data-ui="refund-owed-method">{rmw.owed(mi.kinds, money(Math.max(0, owedAmt - walletShareFor(b, owedAmt))))}</div>;
+            })()}
             {b.cancel?.refundBank && <BankReveal bookingRef={b.ref} last4={b.cancel.refundBank.last4} />}
             {isVoucher && (
               <div className="w-full rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2 text-[11.5px] leading-[1.5] text-[#7a5b06]">
@@ -669,7 +680,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
       {refundAwaitingTransfer(b) && (
         <>
           <div className="w-full rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2 text-[12.5px] font-bold leading-[1.5] text-[#7a5b06]" data-ui="refund-awaiting">
-            ⏳ {t("p8lst.rfaChipAmt", { amt: money(refundTransferAmount(b)) })}
+            ⏳ {rmw.chip(b, money(refundTransferAmount(b)))}
           </div>
           {b.cancel?.refundBank && <BankReveal bookingRef={b.ref} last4={b.cancel.refundBank.last4} />}
           <Button variant="primary" onClick={() => askConfirm(b.ref, { kind: "refund-sent" })}>{t("p8lst.rfaBtnSent")}</Button>
@@ -677,7 +688,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
       )}
       {b.cancel?.refund === "approved" && b.cancel.refundVia === "offline" && b.cancel.refundTransfer === "sent" && b.cancel.refundSentAt && (
         <div className="w-full rounded-lg border border-[#bfe3cc] bg-[#e8f8ee] px-3 py-2 text-[12.5px] font-bold text-[#0f6b34]" data-ui="refund-sent">
-          ✓ {t(/bank|transfer|bacs/i.test(b.method ?? "") ? "p8lst.rfaSentChipBank" : "p8lst.rfaSentChip", { date: uiDate(new Date(b.cancel.refundSentAt), { day: "numeric", month: "short", year: "numeric" }) })}
+          ✓ {rmw.sentChip(b, uiDate(new Date(b.cancel.refundSentAt), { day: "numeric", month: "short", year: "numeric" }))}
         </div>
       )}
       {/* A cancelled booking with no refund waiting has nothing left to action: say so, and don't offer to chase a payment for it. */}
@@ -805,7 +816,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           {/* Once cancelled/declined the payment state is moot — a cancelled
               booking isn't "awaiting" anything. */}
           {b.status !== "Cancelled" && b.status !== "Declined" && (
-            <Badge tone={refundAwaitingTransfer(b) ? { bg: "#fdf3d8", fg: "#9a5a00" } : payTone(shownPay(b), b.status)}>{refundAwaitingTransfer(b) ? t("p8lst.rfaChip") : b.status === "Approval needed" && b.cardHold?.state === "held" ? t("p8lst.holdBadge") : w(payLabelFor(b))}</Badge>
+            <Badge tone={refundAwaitingTransfer(b) ? { bg: "#fdf3d8", fg: "#9a5a00" } : payTone(shownPay(b), b.status)}>{refundAwaitingTransfer(b) ? rmw.chip(b) : b.status === "Approval needed" && b.cardHold?.state === "held" ? t("p8lst.holdBadge") : w(payLabelFor(b))}</Badge>
           )}
           {b.status === "Waitlisted" && b.waitlist && b.waitlist.length > 0 && (
             <Badge tone={{ bg: "#fff1d6", fg: "#9a5a00" }}>{b.waitlist.map((x) => `${t("p9tx.wlPlace", { n: x.position })} · ${uiDate(new Date(`${x.date}T00:00:00`), { weekday: "short", day: "numeric", month: "short" })}`).join("  ")}</Badge>

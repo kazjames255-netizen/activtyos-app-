@@ -30,6 +30,8 @@ import { loadSettings } from "../lib/tenantLibrary";
 import { bookingInSite, staffSiteScope } from "../lib/siteScope";
 import { registerRows } from "../lib/registerRows";
 import { bookingKids, kidActiveDays, money, realPhone, refundableSoFar, overpaidOf, receivedOf, cashReceivedOf, refundTransferAmount, refundAwaitingTransfer } from "../../../features/bookings/helpers";
+import { kindOfMethod, paidOfflineParts, splitOverParts, unsentKinds, methodHow, methodNames } from "../../../features/bookings/refundMethod";
+import { enJoin, enTr } from "../lib/refundWords";
 import { notify } from "../lib/notify";
 import { notifyFamilyCancelled } from "../lib/familyCancelNotice";
 import { approveBlockedMessage, declineBlockedMessage, nudgeBlockedMessage, canMarkPaid, paidBlockedMessage, shouldEmailConfirmed, shouldNotifyCancelled, cardHeldBlocksPayment, CARD_HELD_MESSAGE, isFirstHeldApproval, shouldAskToPayAfterApproval, shouldReleaseDiscountCodes } from "../lib/bookingGuards";
@@ -994,8 +996,13 @@ bookings.post("/:ref/actions", async (req, res) => {
       // separate entries too, so the offline money stays "awaiting your transfer" (Finance, Refunds to send, the reminder, reconcile) until the provider
       // marks it sent.
       type Entry = NonNullable<typeof updated.refundEntries>[number];
-      const mkEntry = (amount: number, cash: number, via: "wallet" | "card" | "offline", sent: boolean): Entry =>
-        ({ id: randomUUID(), amount, cash, via, status: sent ? "sent" : "approved", approvedAt: nowIso, ...(sent ? { sentAt: nowIso } : {}) }) as Entry;
+      // An OFFLINE entry also records what each way of paying gets back (bank transfer / cash / voucher), penny-correct: the provider's prompts, the
+      // reminder and the family's messages name those methods (features/bookings/refundMethod.ts).
+      const paidParts = paidOfflineParts(updated);
+      const mkEntry = (amount: number, cash: number, via: "wallet" | "card" | "offline", sent: boolean): Entry => {
+        const parts = via === "offline" ? splitOverParts(cash, paidParts) : [];
+        return ({ id: randomUUID(), amount, cash, via, status: sent ? "sent" : "approved", approvedAt: nowIso, ...(sent ? { sentAt: nowIso } : {}), ...(parts.length ? { parts } : {}) }) as Entry;
+      };
       const offlineShare = moved.offlinePart;
       updated.refundEntries = updated.refundEntries ?? [];
       if (moved.walletCredit > 0) updated.refundEntries.push(mkEntry(moved.walletCredit, 0, "wallet", true));
@@ -1127,13 +1134,14 @@ bookings.post("/:ref/actions", async (req, res) => {
           category: "billing",
           bellOnly: true,
           title: parentBell("refund-sent", { ref: updated.ref }).title, i18n: { tk: parentBell("refund-sent", { ref: updated.ref }).i18n.tk, tv: { ref: updated.ref } },
-          body: `£${sentAmt.toFixed(2)} for ${updated.listing} has been sent${updated.voucherScheme ? ` through ${updated.voucherScheme}` : " by bank transfer"}${updated.cancel?.refundSentAt ? ` on ${ukDateLabel(updated.cancel.refundSentAt)}` : ""}.`,
+          body: `£${sentAmt.toFixed(2)} for ${updated.listing} has been sent${(() => { const ks = unsentKinds(updated); return ks.length ? ` ${methodHow(ks, enTr, enJoin)}${updated.voucherScheme && ks.includes("voucher") ? ` (${updated.voucherScheme})` : ""}` : updated.voucherScheme ? ` through ${updated.voucherScheme}` : ""; })()}${updated.cancel?.refundSentAt ? ` on ${ukDateLabel(updated.cancel.refundSentAt)}` : ""}.`,
           href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
           ref: updated.ref,
         });
       }
       else if (action.type === "refund-approve") {
-        emailRefundApproved(updated, await tenantName());
+        const providerLabel = await tenantName();
+        emailRefundApproved(updated, providerLabel);
         // …and raise the family's in-app bell (email-only before, so it never
         // showed in their notifications). bellOnly — the email above is the mail.
         const toWallet = updated.cancel?.refundTo === "wallet";
@@ -1144,11 +1152,16 @@ bookings.post("/:ref/actions", async (req, res) => {
           category: "billing",
           bellOnly: true,
           ...(() => {
+            // An offline refund names the method(s) actually paid (cash / bank transfer / voucher, a mix included): features/bookings/refundMethod.ts.
+            const ks = updated.cancel?.refundVia === "offline" ? unsentKinds(updated) : [];
             const kind = toWallet ? "wallet-added" as const
               : updated.cancel?.refundVia === "offline"
-                ? (updated.voucherScheme ? "refund-approved-scheme" as const : /bank|transfer|bacs/i.test(updated.method ?? "") ? "refund-approved-bank" as const : "refund-approved-plain" as const)
+                ? (ks.length ? "refund-approved-offline" as const : updated.voucherScheme ? "refund-approved-scheme" as const : /bank|transfer|bacs/i.test(updated.method ?? "") ? "refund-approved-bank" as const : "refund-approved-plain" as const)
                 : "refund-approved-card" as const;
-            const b = parentBell(kind, { ref: updated.ref, amt: `£${amt.toFixed(2)}`, listing: updated.listing, scheme: updated.voucherScheme ?? "" });
+            const b = parentBell(kind, {
+              ref: updated.ref, amt: `£${amt.toFixed(2)}`, listing: updated.listing, scheme: updated.voucherScheme ?? "",
+              ...(ks.length ? { kinds: ks.join(","), methods: methodNames(ks, enTr, enJoin), provider: providerLabel } : {}),
+            });
             return { title: b.title, body: b.body!, i18n: b.i18n };
           })(),
           href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
@@ -1352,6 +1365,9 @@ bookings.post("/:ref/record-payment", async (req, res) => {
       }
       b.amountPaid = paid;
       b.pay = paid >= (b.amount ?? 0) ? "Paid" : "Partially paid";
+      // How THIS money came in (bank transfer / cash / voucher), so a later refund names the methods actually paid, a mix included.
+      const paidKind = kindOfMethod(parsed.data.method ?? b.method, b.voucherScheme);
+      if (paidKind) b.paidVia = { ...(b.paidVia ?? {}), [paidKind]: Math.round(((b.paidVia?.[paidKind] ?? 0) + parsed.data.amount) * 100) / 100 };
       if (b.status === "Cancelled" || b.status === "Declined")
         b.receivedAfterCancel = Math.round(((b.receivedAfterCancel ?? 0) + parsed.data.amount) * 100) / 100;
       tx.set(ref, toDoc(b));
@@ -1433,7 +1449,12 @@ bookings.post("/:ref/reconcile", async (req, res) => {
         b.amountPaid = 0;
         b.pay = (b.amount ?? 0) <= 0 ? "Funded" : b.voucherScheme ? "Awaiting voucher payment" : "Unpaid";
         b.reconciledBy = null;
+        delete b.paidVia;
       } else {
+        // The balance that arrives now came in by the method given here (the booking's own method otherwise).
+        const rk = kindOfMethod(parsed.data.method ?? b.method, b.voucherScheme);
+        const newMoney = Math.round(Math.max(0, (b.amount ?? 0) - receivedBefore) * 100) / 100;
+        if (rk && newMoney > 0) b.paidVia = { ...(b.paidVia ?? {}), [rk]: Math.round(((b.paidVia?.[rk] ?? 0) + newMoney) * 100) / 100 };
         b.amountPaid = b.amount ?? 0;
         b.pay = (b.amount ?? 0) <= 0 ? "Funded" : "Paid";
         // Stamped by hand here. A machine match (HMRC EPP) sets auto: true.

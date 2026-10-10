@@ -1,5 +1,6 @@
 "use client";
 
+import { useRefundMethod } from "@/features/bookings/useRefundMethod";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { get as apiGet } from "@/lib/api";
@@ -75,6 +76,7 @@ function Row({ b, action, onPay, onPdf, selectable, selected, onToggleSelect }: 
 
 export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
   const tr = useT();
+  const rmw = useRefundMethod();
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [paying, setPaying] = useState<string[] | null>(null); // refs being paid
@@ -152,7 +154,7 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
     const paid = all.filter((b) => b.pay === "Paid" || b.pay === "Funded" || b.pay === "Partially refunded")
       .sort((a, b) => ((a.createdAt ?? "") < (b.createdAt ?? "") ? 1 : -1));
     // An offline refund that is only approved/recorded (not yet sent by the provider) must not read as money already back.
-    const refunds = all.flatMap((b) => (b.refundLog ?? []).map((r) => ({ ...r, ref: b.ref, listing: b.listing, awaiting: (b.refundAwaiting ?? refundAwaitingTransfer(b)) &&/^refund approved/i.test(r.label || ''), bank: /bank|transfer|bacs/i.test(b.method ?? '') })));
+    const refunds = all.flatMap((b) => (b.refundLog ?? []).map((r) => ({ ...r, ref: b.ref, listing: b.listing, awaiting: (b.refundAwaiting ?? refundAwaitingTransfer(b)) &&/^refund approved/i.test(r.label || ''), bank: /bank|transfer|bacs/i.test(b.method ?? ''), kinds: b.refundMethod?.sending ?? [] })));
     return {
       owed,
       paid,
@@ -288,7 +290,7 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
           {refunds.map((r, i) => (
             <div key={i} className="flex flex-wrap items-center gap-x-2.5 gap-y-1 border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[12.5px] font-bold">{r.awaiting ? (r.bank ? tr("p8lst.rfaParentApproved") : tr("p8lst.rfaParentApprovedOther")) : (r.kind === "reduced" ? tr("p7bd.logReduced", { amt: String(r.vars?.amt ?? "") }) : refundLogLabel(r, tr))}</div>
+                <div className="truncate text-[12.5px] font-bold">{r.awaiting ? (r.kinds.length ? rmw.recorded(r.kinds, "", money(r.amount || 0)) : r.bank ? tr("p8lst.rfaParentApproved") : tr("p8lst.rfaParentApprovedOther")) : (r.kind === "reduced" ? tr("p7bd.logReduced", { amt: String(r.vars?.amt ?? "") }) : refundLogLabel(r, tr))}</div>
                 <div className="text-[11.5px] text-[var(--ink-3)]">{r.listing} · {tr("p8par.mbRef", { ref: r.ref })} · {r.on}</div>
               </div>
               {r.kind !== "reduced" && <span className="text-[13px] font-extrabold text-[var(--brand-2)]">+{money(r.amount || 0)}</span>}
