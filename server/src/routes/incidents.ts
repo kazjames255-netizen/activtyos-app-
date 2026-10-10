@@ -205,6 +205,24 @@ async function tellRecordMade(id: string, rec: { kind?: string; subject?: string
   });
 }
 
+/** A confidential ACCIDENT that is later edited or gets a provider note: the same neutral line on every path (bell + email, no record text,
+ *  only "a record was updated, please contact <provider>"). Other confidential kinds tell nobody. */
+async function tellRecordUpdated(id: string, rec: { kind?: string; subject?: string; childId?: string | null; childName?: string; tenantId?: string }, gates: { notifyParentAccident: boolean }) {
+  if (rec.kind !== "accident" || rec.subject === "staff" || !gates.notifyParentAccident) return;
+  const email = await parentEmailForChild(rec.childId ?? undefined);
+  if (!email || !rec.tenantId) return;
+  const tenant = await db.collection("tenants").doc(rec.tenantId).get();
+  const provider = (tenant.get("name") as string) || "your activity provider";
+  await notify({
+    tenantId: rec.tenantId, to: { kind: "parent", email }, category: "accident",
+    title: `${rec.childName}: a record was updated`,
+    body: `Please contact ${provider}.`,
+    emailHtml: `<p>A record about <b>${esc(rec.childName)}</b> was updated. Please contact ${esc(provider)}.</p>`,
+    subject: `${rec.childName}: a record was updated`,
+    href: "/custdash/accidents", ref: id,
+  });
+}
+
 const kindWord = (kind: string) => (kind === "accident" ? "accident" : kind === "safeguarding" ? "safeguarding concern" : "incident");
 // "An accident" / "An incident" / "A safeguarding concern" (it used to say "An safeguarding concern").
 const anWord = (word: string) => `${/^[aeiou]/i.test(word) ? "An" : "A"} ${word}`;
@@ -614,6 +632,7 @@ incidents.put("/:id", async (req, res) => {
     const rec = after.data()!;
     const kind = String(rec.kind ?? "incident");
     const gates = await safeguardingSettings(String(rec.tenantId), rec.childId as string | undefined);
+    if (rec.confidential === true) { await tellRecordUpdated(after.id, rec as never, gates); return; }
     if (!sharesWithParent({ kind, shareWithParent: rec.shareWithParent === true, subject: rec.subject as string | undefined, confidential: rec.confidential === true }, gates)) return;
     const email = await parentEmailForChild(rec.childId as string | undefined);
     if (!email) return;
@@ -726,28 +745,13 @@ incidents.post("/:id/note", async (req, res) => {
         href: "/company/incidents", ref: snap.id,
       });
     } else {
-      // Only email the parent when the record is one they can see (never a confidential one).
-      if (data.confidential === true) return;
+      // A confidential record never puts its text in an email or bell: a confidential ACCIDENT sends the one neutral line, anything else nothing.
+      if (data.confidential === true) { await tellRecordUpdated(snap.id, data as never, await safeguardingSettings(tenantId, data.childId as string | undefined)); return; }
       if (data.kind === "safeguarding" && data.shareWithParent !== true) return;
       if (data.kind === "incident" && data.shareWithParent !== true) return;
       if (data.subject === "staff" && data.shareWithParent !== true) return;
       const email = await parentEmailForChild(data.childId as string | undefined);
       if (!email) return;
-      if (data.confidential === true) {
-        // A confidential record never puts its text in an email or bell (S24; a record the family cannot open gets nothing at all).
-        if (!parentMaySee(data)) return;
-        const tenant = await db.collection("tenants").doc(tenantId).get();
-        const provider = (tenant.get("name") as string) || "your activity provider";
-        await notify({
-          tenantId, to: { kind: "parent", email }, category: data.kind === "accident" ? "accident" : "incident",
-          title: `${data.childName}: a record was updated`,
-          body: `Please contact ${provider}.`,
-          emailHtml: `<p>A record about <b>${esc(data.childName)}</b> was updated. Please contact ${esc(provider)}.</p>`,
-          subject: `${data.childName}: a record was updated`,
-          href: "/custdash/accidents", ref: snap.id,
-        });
-        return;
-      }
       await notify({
         tenantId, to: { kind: "parent", email }, category: data.kind === "accident" ? "accident" : "incident",
         title: `${data.childName}: the provider replied to your message`,
