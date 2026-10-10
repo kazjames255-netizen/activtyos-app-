@@ -58,8 +58,8 @@ describe("(a) deleting a child: photos and moments go within 30 days, statutory 
     const days = (new Date(c.erasureDueAt).getTime() - new Date(c.archivedAt).getTime()) / DAY;
     assert.equal(Math.round(days), 30);
     assert.ok(await exists("moments", solo) && await exists("moments", group), "moments still there on day 0");
-    const early = await childPhotoErasure(new Date(Date.now() + 10 * DAY).toISOString());
-    assert.equal(early.children, 0, "nothing is erased before day 30");
+    await childPhotoErasure(new Date(Date.now() + 10 * DAY).toISOString()); // other tests' children in the shared emulator may be due; this one is not
+    assert.equal((await db.collection("children").doc(kid).get()).get("photosErasedAt"), undefined, "nothing is erased before day 30");
     assert.ok(await exists("moments", solo) && await exists("images", photoOnly));
   });
 

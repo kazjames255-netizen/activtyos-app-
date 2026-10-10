@@ -238,10 +238,13 @@ export async function readChildFile(
 export async function grantPlanAccess(fileIds: string[], tenantId: string) {
   await Promise.all(
     [...new Set(fileIds.filter(Boolean))].map((id) =>
-      filesCol
-        .doc(id)
-        .update({ tenantIds: FieldValue.arrayUnion(tenantId), ...planGrantFields(tenantId) })
-        .catch(() => {}),
+      db.runTransaction(async (tx) => {
+        const ref = filesCol.doc(id);
+        const snap = await tx.get(ref);
+        if (!snap.exists) return;
+        // A new grant must never push out the review a provider ALREADY has coming (lib/childRetention.ts): keep the earliest date.
+        tx.update(ref, { tenantIds: FieldValue.arrayUnion(tenantId), ...planGrantFields(tenantId, snap.get("accessReviewDue") as string | undefined) });
+      }).catch(() => {}),
     ),
   );
 }

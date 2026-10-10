@@ -3356,6 +3356,8 @@ my.delete("/children/:id", async (req, res) => {
     res.status(404).json({ error: "Child not found" });
     return;
   }
+  // Deleting twice (a retry, a double tap) changes nothing: the first deletion's dates stand, so the 30 days never restart.
+  if (snap.get("archived") === true) { res.json({ ok: true, archived: true }); return; }
   const today = ukToday();
   const email = (req.user?.email ?? "").trim();
   const [byId, ...byEmail] = await Promise.all([

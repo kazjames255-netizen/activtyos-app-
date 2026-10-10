@@ -5,7 +5,7 @@ import { familyBooking } from "../lib/familyView";
 import { exportChildLearning } from "../lib/hubPrivacy";
 import { ukTodayPlus } from "../lib/ukDate";
 import { decryptSensitive, ownName } from "./onboarding";
-import { parentIncidentView, parentMedicationView, parentDoseView, parentMomentView, parentCustomerView } from "../lib/parentViews";
+import { parentIncidentView, parentMedicationView, parentDoseView, parentMomentView, parentCustomerView, parentPaymentView } from "../lib/parentViews";
 import { forViewing } from "./moments";
 import { whereEmail } from "../lib/emailCase";
 
@@ -142,7 +142,7 @@ async function gather(req: import("express").Request) {
     register.sort((a, b) => String(a.date).localeCompare(String(b.date)));
     out.children = kids.docs.map(strip);
     out.bookings = bookings.docs.map((d) => familyBooking(strip(d) as never)); // the family's own view of its bookings (no internal refund bookkeeping)
-    out.payments = payments.docs.map(strip);
+    out.payments = payments.docs.map((d) => parentPaymentView(strip(d)));
     out.mealOrders = orders.docs.map(strip);
     out.medications = meds.map((d) => parentMedicationView(strip(d)));
     out.medicationDoses = doses.map((d) => parentDoseView(strip(d)));

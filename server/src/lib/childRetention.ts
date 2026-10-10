@@ -2,6 +2,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
 import { addDays, ukToday } from "./ukDate";
 import { whereEmail } from "./emailCase";
+import { skipTenant } from "./testTenant";
 
 // Two owner decisions of 10 Oct 2026 (UK GDPR Art 17 erasure, Art 5 storage limitation; solicitor to confirm):
 //
@@ -45,6 +46,7 @@ export async function erasePhotosAndMoments(childId: string): Promise<ErasureRes
 
   const moments = await db.collection("moments").where("childIds", "array-contains", childId).get();
   for (const m of moments.docs) {
+    if (await skipTenant(m.get("tenantId") as string | undefined)) continue; // a test tenant's data is left to its own cleanup (SWEEPS_SKIP_TEST_TENANTS)
     const d = m.data() as { childIds?: string[]; childNames?: string[]; photoUrl?: string; photoType?: string; comments?: { role?: string; by?: string }[] };
     const ids = d.childIds ?? [];
     const names = d.childNames ?? [];
@@ -69,7 +71,7 @@ export async function erasePhotosAndMoments(childId: string): Promise<ErasureRes
       patch.photoRemovedForErasure = true;
     }
     await dropBells();
-    await m.ref.set(patch, { merge: true });
+    await m.ref.update(patch).catch(() => undefined); // update, not set: a moment the provider deleted meanwhile must not be recreated
     res.momentsUntagged++;
   }
 
@@ -86,21 +88,24 @@ export async function erasePhotosAndMoments(childId: string): Promise<ErasureRes
   return res;
 }
 
-/** One-off: children deleted before this rule existed get a due date of (deleted at + 30 days). Marked done in `sweepState`. */
-async function backfillErasureDates(): Promise<void> {
-  const flag = db.collection("sweepState").doc("childErasureBackfill");
-  if ((await flag.get()).exists) return;
+/** ONE-OFF (server/src/childRetentionBackfill.ts, dry run by default): children deleted before this rule existed get a due date of
+ *  (deleted at + 30 days). Those already past 30 days lose their photos on the next sweep, so take the count first. */
+export async function backfillErasureDates(apply: boolean): Promise<{ candidates: number; alreadyPastDue: number }> {
   const old = await db.collection("children").where("archived", "==", true).get();
+  let candidates = 0, alreadyPastDue = 0;
+  const nowIso = new Date().toISOString();
   for (const d of old.docs) {
     if (d.get("erasureDueAt") || d.get("photosErasedAt") || !d.get("archivedAt")) continue;
-    await d.ref.set({ erasureDueAt: erasureDueFor(String(d.get("archivedAt"))) }, { merge: true });
+    const due = erasureDueFor(String(d.get("archivedAt")));
+    candidates++;
+    if (due <= nowIso) alreadyPastDue++;
+    if (apply) await d.ref.set({ erasureDueAt: due }, { merge: true });
   }
-  await flag.set({ at: new Date().toISOString() });
+  return { candidates, alreadyPastDue };
 }
 
 /** Daily sweep: every deleted child whose 30 days are up loses its photos and moments. Idempotent. */
 export async function childPhotoErasure(nowIso: string = new Date().toISOString()): Promise<ErasureResult & { children: number }> {
-  await backfillErasureDates();
   const total = { momentsDeleted: 0, momentsUntagged: 0, photosDeleted: 0, children: 0 };
   const due = await db.collection("children").where("erasureDueAt", "<=", nowIso).limit(200).get();
   for (const c of due.docs) {
@@ -115,31 +120,52 @@ export async function childPhotoErasure(nowIso: string = new Date().toISOString(
 // ── Plan access ───────────────────────────────────────────────────────────
 
 /** Record when a tenant was given a plan, and schedule its first review. Called by grantPlanAccess. */
-export const planGrantFields = (tenantId: string) => ({
-  [`tenantGrants.${tenantId}`]: new Date().toISOString(),
-  accessReviewDue: addDays(ukToday(), PLAN_ACCESS_DAYS),
-});
+export const planGrantFields = (tenantId: string, existingDue?: string | null) => {
+  const mine = addDays(ukToday(), PLAN_ACCESS_DAYS);
+  return {
+    [`tenantGrants.${tenantId}`]: new Date().toISOString(),
+    // The EARLIEST review stands: another provider's access that is already due must not be pushed out by this grant (the sweep works
+    // out each provider's real end date from its own last booking and reschedules).
+    accessReviewDue: existingDue && existingDue < mine ? existingDue : mine,
+  };
+};
 
-async function backfillAccessReviews(): Promise<void> {
-  const flag = db.collection("sweepState").doc("planAccessBackfill");
-  if ((await flag.get()).exists) return;
+/** ONE-OFF (server/src/childRetentionBackfill.ts, dry run by default): every plan file that already has provider grants becomes due for
+ *  review today, so a provider whose last booking is over 90 days old is removed on the next sweep. Take the count first. */
+export async function backfillAccessReviews(apply: boolean): Promise<{ candidates: number }> {
   const all = await db.collection("childFiles").get(); // top-level docs only (chunks are a subcollection)
+  let candidates = 0;
   for (const d of all.docs) {
     const t = d.get("tenantIds");
-    if (Array.isArray(t) && t.length && !d.get("accessReviewDue")) await d.ref.set({ accessReviewDue: ukToday() }, { merge: true });
+    if (!(Array.isArray(t) && t.length) || d.get("accessReviewDue")) continue;
+    candidates++;
+    if (apply) await d.ref.set({ accessReviewDue: ukToday() }, { merge: true });
   }
-  await flag.set({ at: new Date().toISOString() });
+  return { candidates };
 }
 
-/** The last day a family has a (not cancelled) booking with each provider, for the given children. */
-async function lastBookingDays(ownerEmail: string, childIds: Set<string>): Promise<Map<string, string>> {
+/** A booking that is a real place: Confirmed (paid, funded or still to pay) and not refunded. Waitlisted, Offered, Approval needed,
+ *  Cancelled and Declined are not, nor is a Confirmed one whose money has been given back. */
+export const isRealPlace = (b: { status?: string; pay?: string }): boolean => b.status === "Confirmed" && !["Refunded", "Refund pending"].includes(b.pay ?? "");
+
+/** The last day a family has a real place with each provider, for the given children. Found by the CHILD (any booker email that
+ *  booked it), by the file owner's account email, and by every other email those bookings were made under. */
+async function lastBookingDays(ownerEmails: string[], childIds: Set<string>): Promise<Map<string, string>> {
   const out = new Map<string, string>();
-  if (!ownerEmail || !childIds.size) return out;
-  const bs = await whereEmail(db, "bookings", "email", ownerEmail);
+  if (!childIds.size) return out;
+  const seen = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>();
+  const add = (q: { docs: FirebaseFirestore.QueryDocumentSnapshot[] }) => q.docs.forEach((d) => seen.set(d.id, d));
+  const emails = new Set(ownerEmails.map((e) => e.trim().toLowerCase()).filter(Boolean));
+  for (const id of childIds) {
+    const q = await db.collection("bookings").where("childId", "==", id).get();
+    add(q);
+    for (const d of q.docs) { const e = String(d.get("email") ?? "").trim().toLowerCase(); if (e) emails.add(e); }
+  }
+  for (const e of emails) add(await whereEmail(db, "bookings", "email", e));
   const blockEnd = new Map<string, string | null>();
-  for (const d of bs.docs) {
-    const b = d.data() as { tenantId?: string; childId?: string; kids?: { childId?: string; cancelled?: boolean }[]; status?: string; days?: string[]; blockId?: string; createdAt?: string };
-    if (!b.tenantId || ["Cancelled", "Declined"].includes(b.status ?? "")) continue;
+  for (const d of seen.values()) {
+    const b = d.data() as { tenantId?: string; childId?: string; kids?: { childId?: string; cancelled?: boolean }[]; status?: string; pay?: string; days?: string[]; blockId?: string; createdAt?: string };
+    if (!b.tenantId || !isRealPlace(b)) continue;
     if (!(b.childId && childIds.has(b.childId)) && !b.kids?.some((k) => k.childId && childIds.has(k.childId) && !k.cancelled)) continue;
     let last = [...(b.days ?? [])].sort().pop();
     if (!last && b.blockId) {
@@ -154,7 +180,6 @@ async function lastBookingDays(ownerEmail: string, childIds: Set<string>): Promi
 
 /** Daily sweep: a provider's access to a child's plan ends 90 days after the family's last booking with them. Idempotent. */
 export async function planAccessExpiry(today: string = ukToday()): Promise<{ checked: number; revoked: number }> {
-  await backfillAccessReviews();
   let checked = 0, revoked = 0;
   const due = await db.collection("childFiles").where("accessReviewDue", "<=", today).limit(300).get();
   for (const f of due.docs) {
@@ -163,12 +188,13 @@ export async function planAccessExpiry(today: string = ukToday()): Promise<{ che
     if (!tenants.length) { await f.ref.set({ accessReviewDue: FieldValue.delete() }, { merge: true }); continue; }
     const kids = await db.collection("children").where("sendPlanId", "==", f.id).get();
     const owner = String((await db.collection("users").doc(String(f.get("ownerUid"))).get()).get("email") ?? "");
-    const last = await lastBookingDays(owner, new Set(kids.docs.map((k) => k.id)));
+    const last = await lastBookingDays([owner], new Set(kids.docs.map((k) => k.id)));
     const grants = (f.get("tenantGrants") ?? {}) as Record<string, string>;
     const fallback = String(f.get("createdAt") ?? "").slice(0, 10) || today;
     const keep: string[] = [];
     let next: string | null = null;
     for (const t of tenants) {
+      if (await skipTenant(t)) { keep.push(t); continue; } // a test tenant's grant is left alone (SWEEPS_SKIP_TEST_TENANTS)
       const end = last.get(t) ?? (grants[t] ? grants[t].slice(0, 10) : fallback);
       const expires = addDays(end, PLAN_ACCESS_DAYS);
       if (expires <= today) { revoked++; continue; }

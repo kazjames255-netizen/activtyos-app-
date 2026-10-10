@@ -55,5 +55,15 @@ export function parentMomentView(m: Rec, myChildIds: readonly string[], myUid: s
  *  marketing consent. The provider's own `notes` ("never shown to the family") and anything else the provider keeps stay out. */
 const CUSTOMER_FIELDS = ["id", "tenantId", "name", "firstName", "lastName", "email", "phone", "postcode", "locationName", "children", "marketingOptIn", "marketingOptInAt", "marketingSource"] as const;
 export function parentCustomerView(x: Rec): Rec {
-  return pick(x, CUSTOMER_FIELDS);
+  const out = pick(x, CUSTOMER_FIELDS);
+  // The thin child list the provider keeps: a name, an age / date of birth and the link to the child's record, nothing the provider added.
+  if (Array.isArray(x.children)) out.children = x.children.map((k) => pick((k ?? {}) as Rec, ["name", "age", "dob", "childId"]));
+  return out;
+}
+
+/** A payment row as the family sees it: what, how much, when, how and its state against the booking ref(s). Not the Stripe intent,
+ *  the provider's connected account, refund ids, the Stripe error text, the provider's free-text note or who on the team recorded it. */
+const PAYMENT_FIELDS = ["id", "tenantId", "refs", "invoiceId", "mealOrderIds", "email", "type", "kind", "amount", "currency", "method", "via", "offline", "status", "createdAt", "paidAt"] as const;
+export function parentPaymentView(x: Rec): Rec {
+  return pick(x, PAYMENT_FIELDS);
 }
