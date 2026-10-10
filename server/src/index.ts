@@ -10,7 +10,7 @@ import express from "express";
 import swaggerUi from "swagger-ui-express";
 import { parse as parseYaml } from "yaml";
 import { optionalAuth, requireAuth } from "./middleware/auth";
-import { attachRole, attachRoleOptional } from "./middleware/role";
+import { attachRole, attachRoleOptional, refuseOrphanFranchise } from "./middleware/role";
 import { blockBundles, passes, periods } from "./routes/blockBundles";
 import { blocks } from "./routes/blocks";
 import { bookings } from "./routes/bookings";
@@ -248,7 +248,7 @@ app.use("/api/emails/inbound", rateLimit("email-inbound", 300), emailsInbound);
 // Signed-out callers are rate-limited (scraping the storefront); a signed-in
 // operator saving a listing isn't — a bad token is a 401 anyway.
 const anonOnly = (limit: express.RequestHandler): express.RequestHandler => (req, res, next) => (req.headers.authorization ? next() : limit(req, res, next));
-app.use("/api/listings", anonOnly(rateLimit("listings-public", 300)), optionalAuth, attachRoleOptional, enforceAccess, listings);
+app.use("/api/listings", anonOnly(rateLimit("listings-public", 300)), optionalAuth, attachRoleOptional, refuseOrphanFranchise, enforceAccess, listings);
 
 // Parent-facing settings for the signed-out booking page (see library.ts).
 app.use("/api/public/library", anonOnly(rateLimit("library-public", 300)), optionalAuth, libraryPublic);
@@ -302,7 +302,7 @@ app.use("/api/tfc/callback", rateLimit("tfc-callback", 30), tfcCallback);
 // Authorization header, the single-use `state` is the only proof (routes/accounting.ts).
 app.use("/api/accounting/callback", rateLimit("accounting-callback", 30), accountingCallback);
 
-app.use("/api", requireAuth, attachRole);
+app.use("/api", requireAuth, attachRole, refuseOrphanFranchise);
 // The subscription wall: a lapsed owner tenant (canceled / past_due / past
 // its cancel date) gets 402 on everything except the endpoints that let them
 // see and fix their subscription. See middleware/subscription.ts.
