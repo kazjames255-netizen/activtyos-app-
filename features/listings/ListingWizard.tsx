@@ -3,6 +3,7 @@
 import { walletRemaining } from "./walletChoice";
 import { deliveryLabel } from "./delivery";
 import { dateLocale as dl, joinListNow, uiDate } from "@/lib/i18n/format";
+import { cutoffBlur, cutoffFromSaved, cutoffToggle, cutoffType, cutoffValueToSave, type CutoffControl } from "./addonCutoffControl";
 import { addonLinesFor } from "@/features/bookings/helpers";
 import { addonSentences } from "@/features/bookings/addons";
 import { offeredCount, showNoneOnHint, extrasList } from "./addonOffer";
@@ -3184,9 +3185,13 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
   // validation, and no chance of the two drifting apart.
   const [editing, setEditing] = useState<string | null>(null);
   const [qs, setQs] = useState<AddonQuestion[]>([]);
+  // Per-add-on request cut-off: the tick (on/off) is its own state, the number box is free text while typing (see addonCutoffControl.ts).
+  const { settings: cutSettings } = useTenantSettings();
+  const setupDays = Number.isFinite(cutSettings.addonRequestDays) ? cutSettings.addonRequestDays : DEFAULT_SETTINGS.addonRequestDays;
+  const [cutCtl, setCutCtl] = useState<CutoffControl>(() => cutoffFromSaved(undefined, setupDays));
   const types: Record<string, string> = { perday: tr("p8lst.wbAddonPerDay"), once: tr("p8lst.wbAddonOnce") };
   const offer = offeredCount(local.addons, d.addonIds);
-  const clear = () => { setName(""); setPrice(""); setDesc(""); setType("perday"); setQs([]); setEditing(null); };
+  const clear = () => { setName(""); setPrice(""); setDesc(""); setType("perday"); setQs([]); setCutCtl(cutoffFromSaved(undefined, setupDays)); setEditing(null); };
   const startEdit = (a: AddonTemplate) => {
     setEditing(a.id);
     setName(a.name);
@@ -3194,6 +3199,7 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
     setPrice(String(a.price ?? ""));
     setDesc(a.description ?? "");
     setQs(a.questions ?? []);
+    setCutCtl(cutoffFromSaved(a.requestCutoffDays, setupDays));
   };
   const save = () => {
     if (name.trim().length < 2) return;
@@ -3207,6 +3213,7 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
       name: name.trim(), type, price: Math.max(0, parseFloat(price) || 0),
       description: desc.trim() || undefined,
       questions: keep.length ? keep : undefined,
+      requestCutoffDays: cutoffValueToSave(cutCtl),
     };
     if (editing) {
       // A price change has to reach anything already using it, so patch in
@@ -3301,6 +3308,14 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
             );
           })}
           <Button sm onClick={() => setQs([...qs, { id: uid(), label: "", type: "choice", options: [] }])}>{tr("p8lst.wbAddQuestion")}</Button>
+        </div>
+        <div className="w-full">
+          <label className="flex items-center gap-2 text-[12px] font-bold text-[var(--ink-2)]">
+            <input type="checkbox" checked={cutCtl.on} onChange={(e) => setCutCtl(cutoffToggle(cutCtl, e.target.checked))} />
+            {tr("p8lst.wbCutoffLabel")}
+            {cutCtl.on && <><Input type="text" inputMode="numeric" value={cutCtl.text} onChange={(e) => setCutCtl(cutoffType(cutCtl, e.target.value))} onBlur={() => setCutCtl(cutoffBlur(cutCtl))} className="w-[72px]" aria-label={tr("p8lst.wbCutoffLabel")} /> {tr("p8lst.wbCutoffDays")}</>}
+          </label>
+          {!cutCtl.on && <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">{tr("p8lst.wbCutoffOff", { n: String(setupDays) })}</p>}
         </div>
         <Button variant="primary" onClick={save}>{editing ? tr("p8lst.wbSaveChanges") : tr("p8lst.wbAddPlus")}</Button>
         {editing && <Button onClick={clear}>{tr("p8lst.wbCancel")}</Button>}

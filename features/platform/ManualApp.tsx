@@ -203,7 +203,7 @@ function Stage({ n, color, title, tag, facts, shots, visual }: {
   n: string; color: string; title: string; tag: string;
   facts: { k: string; v: ReactNode }[];
   shots?: ShotDef[];
-  /** A diagram shown in place of screenshots. */
+  /** A diagram shown above the screenshots. */
   visual?: ReactNode;
 }) {
   return (
@@ -217,7 +217,7 @@ function Stage({ n, color, title, tag, facts, shots, visual }: {
       </div>
       <div className="mt-4 grid grid-cols-1 gap-5 min-[900px]:grid-cols-[minmax(0,4fr)_minmax(0,7fr)]">
         <Facts color={color} rows={facts} />
-        <div className="min-w-0 min-[900px]:sticky min-[900px]:top-4 min-[900px]:self-start">{visual ?? (shots && shots.length > 0 ? <Gallery shots={shots} color={color} /> : null)}</div>
+        <div className="min-w-0 min-[900px]:sticky min-[900px]:top-4 min-[900px]:self-start">{visual}{visual && shots && shots.length > 0 ? <div className="mt-4" /> : null}{shots && shots.length > 0 ? <Gallery shots={shots} color={color} /> : null}</div>
       </div>
     </Section>
   );
@@ -710,6 +710,9 @@ function Page1() {
 
       <Stage n="7d" color={C.billing} title="Paying by bank transfer, end to end" tag="Parent books · provider marks paid"
         visual={<StatusLadder />}
+        shots={[
+          { src: "/manual/money/02-reconciliation-part-refunded", alt: "Reconciliation rows with a Part refunded chip", caption: "Reconciliation: a part-refunded booking shows a Part refunded chip with the amount." },
+        ]}
         facts={[
           { k: "1 · Parent books", v: "They pick Bank transfer. The booking is Confirmed straight away but Unpaid. They see the provider's bank details and their own reference, and get the Booking confirmed email with the same panel." },
           { k: "2 · Provider is told", v: "The new booking email and bell say \"awaiting bank transfer payment\". Inside the booking is a Pending payment box with the reference to look for on the bank statement." },
@@ -744,6 +747,11 @@ function Page1() {
         ]} />
 
       <Stage n="7f" color={C.billing} title="Home visits" tag="Travel area · who can see it · the family's address"
+        shots={[
+          { src: "/manual/addons/01-provider-booking-extras", alt: "Booking page with the Extras block and an extra request", caption: "Booking page: the Extras block, and a family's request to change an extra." },
+          { src: "/manual/addons/02-add-on-orders-day", alt: "Add-on orders day list", caption: "Add-on orders: one day, grouped by add-on, tick each when ready." },
+          { src: "/manual/money/01-franchise-payouts-statement", alt: "Franchise payouts statement", caption: "Franchise payouts: the one-line sum behind what is owed." },
+        ]}
         facts={[
           { k: "Setting it up", v: "On the listing's Where & when step choose Home visits (or Both). In Coverage area use a Postcode list (districts such as MK10, NW1) or a Radius from a base postcode and miles. The listing cannot be published without a travel area." },
           { k: "Recognised as you type", v: "Each postcode you type shows a line under it: a green tick and the place, for example Recognised: Camden, Westminster, or a red cross with We can't find that postcode, please check it. A comma now stays where you type it, so a list like MK10, NW1 works as expected." },
@@ -771,6 +779,12 @@ function Page1() {
 
       <Stage n="8b" color={C.cancel} title="Cancellations and refunds" tag="Parent cancels · provider approves"
         visual={<RefundRoutes />}
+        shots={[
+          { src: "/manual/money/05-checkout-wallet-credit-choice", alt: "Checkout asking whether to use wallet credit", caption: "Checkout: three choices for wallet credit." },
+          { src: "/manual/money/04-parent-cancel-refund-choice", alt: "Cancel panel with the refund destination choice", caption: "Cancelling: wallet credit, or the original payment method." },
+          { src: "/manual/money/03-refunds-to-send", alt: "Refunds to send list on Finance, Debts", caption: "Finance, Debts: Refunds to send, naming the method." },
+          { src: "/manual/addons/03-parent-change-extras", alt: "Family panel to change or cancel an extra", caption: "My bookings: a family asks to change or cancel an extra." },
+        ]}
         facts={[
           { k: "Parent's cancel screen", v: "It shows what they get back under the provider's policy: full, 50% or nothing, worked out by the server. They pick a reason, may add a note, and choose where a refund goes." },
           { k: "Wallet credit at checkout", v: "If a family has credit with a provider, checkout ASKS before using it: 'Use my credit', 'Don't use it, keep it for later' or 'Use part of it'. Nothing is applied until they choose and the Pay button stays off until then. A provider booking on behalf of a family never spends the family's credit." },
@@ -783,7 +797,7 @@ function Page1() {
           { k: "Bank transfer refunds", v: "The app cannot send bank, cash or voucher refunds. Approving only records it: the booking shows \"Refund recorded, awaiting your transfer\" and the family is told. Send the money, then press \"I've sent the refund\" (or choose \"I've already sent it\" when approving). A bell reminds you every 3 days. Card and wallet refunds are instant." },
           { k: "Cash, bank transfer and voucher refunds name the method", v: "The booking, Refunds to send, the reminder bell and the confirm panel say how to send it: \"Send £0.50 by bank transfer\", \"Refund £0.50 owed: paid in cash\". A mix names each method. It counts as refunded only after you press I've sent the refund. Card and wallet refunds never show this." },
           { k: "If it was a mistake", v: "A wrong Mark paid or reconcile can be undone with Undo. It puts the booking back to Unpaid." },
-          { k: "Changing or cancelling an extra", v: "A family asks from My bookings; you approve or decline, separate from cancelling the booking. Approving a cancel removes the extra and you choose refund, wallet credit or no refund. A size or colour change never changes the price. Requests close N days before the session (default 3, Setup > Cancellations & refunds > Amending dates). Both sides get a bell and email." },
+          { k: "Changing or cancelling an extra", v: "A family asks from My bookings; you approve or decline, separate from cancelling the booking. Approving a cancel removes the extra and you choose refund, wallet credit or no refund. A size or colour change never changes the price. Requests close N days before the session (default 3, Setup > Cancellations & refunds > Amending dates); give one extra its own number in the listing editor, Add-ons step (off follows Setup)." },
           { k: "Extras when a booking is cancelled", v: "Extras go back only with a full refund or one that covers the whole booking (a day cancel: only the last day). Otherwise they are kept. The cancel screen does not ask yes or no yet." },
           { k: "Bank details privacy", v: "Stored in a separate record, never on the booking or in an email; the booking carries only the last 4 digits. Press Reveal bank details: they show for 30 seconds, then are deleted. They are also deleted when the refund is declined or sent. Unopened ones go after 30 days; if missed, ask the parent again." },
           { k: "Money: Card payouts (Stripe)", v: "Finance, Card payouts (Stripe) shows Stripe card payments only. Tiles: on the way (last 7 days), in your bank, estimated fees (about 1.4% + 20p per payment, kept even on refund) and card money kept. Refunded payments are struck through and count as £0. All figures are estimates, not your Stripe balance." },
@@ -791,6 +805,9 @@ function Page1() {
         ]} />
 
       <Stage n="8c" color={C.cancel} title="Parents moving dates, and other notes" tag="Settings and small things"
+        shots={[
+          { src: "/manual/trips/01-trip-card-consent-warning", alt: "Trip card with consent pending and unlinked children", caption: "Trips: consent pending, and children not linked to a booking." },
+        ]}
         facts={[
           { k: "Let parents move their own dates", v: "Setup, Cancellations & refunds, Amending dates. It sits under Offer date changes at all and is ON by default. A move is only to another running date of the same listing with space. The provider gets a \"moved their dates\" notice. Switch it off and parents have to ask." },
           { k: "Payments go to the provider", v: "Card payments land in the provider's own Stripe account, not the platform's. Stripe takes the card, the platform never holds booking money." },

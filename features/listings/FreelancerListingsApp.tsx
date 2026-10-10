@@ -110,6 +110,8 @@ export interface AddonTemplate {
    *  a t-shirt size, a meal choice, a name to print. Asked at checkout, once
    *  per child who takes the add-on. */
   questions?: AddonQuestion[];
+  /** Optional "allow change / cancel requests until N days before the session" (whole days, 0-60) for THIS add-on. Absent = follows Setup. */
+  requestCutoffDays?: number;
 }
 export interface StaffMember {
   id: string;

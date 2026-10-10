@@ -33,7 +33,7 @@ import { dayIso, kidActiveDays, money, paidSoFar as totalPaid, realPhone, refund
 import type { Booking, AddonRequest } from "../../../features/bookings/types";
 import { AddonRequestError, addAddonRequest, addonCutoffDays, buildAddonRequest, currentAnswers, defForLine, withdrawAddonRequest } from "../lib/addonRequests";
 import { addonLineKey, parseAddonLabel } from "../../../features/bookings/addons";
-import { DEFAULT_ADDON_REQUEST_DAYS, addonRequestBlock, describeRequest, firstDayOf, lineDayStates, pendingForLine, requestDeadline, requestKeys, requestTargets, splittableLine, lineRequestBlock } from "../../../features/bookings/addonRequests";
+import { DEFAULT_ADDON_REQUEST_DAYS, lineCutoffDays, addonRequestBlock, describeRequest, firstDayOf, lineDayStates, pendingForLine, requestDeadline, requestKeys, requestTargets, splittableLine, lineRequestBlock } from "../../../features/bookings/addonRequests";
 import { stampAddonRefund, addonsGoBack, refundCoversWhole } from "../../../features/bookings/addonRefund";
 import { familyBooking } from "../lib/familyView";
 import { applyParentCancel, applyPartialCancel, archiveAwaitingRefund, buildBooking, markRefundPending } from "../../../features/bookings/mutations";
@@ -1852,7 +1852,7 @@ my.post("/bookings", async (req, res) => {
             addons: segAddons.map((a) => `${a.label} — £${a.price.toFixed(2)}`),
             // Who each extra is for, and on which days (the strings above say neither). Registers, kitchen and booking views read this so
             // one child's T-shirt size or lunch never shows against a sibling.
-            addonLines: segAddons.map((a) => ({ child: rc.name, label: a.label, price: a.price, days: a.onDays, perDay: a.perDay, ...(a.meal ? { meal: true } : {}), name: a.name, ...((a as { addonId?: string }).addonId ? { addonId: (a as { addonId?: string }).addonId } : {}), ...((a as { answers?: unknown[] }).answers?.length ? { answers: (a as { answers: { label: string; value: string }[] }).answers } : {}), qty: a.perDay && !a.meal ? a.onDays.length : 1 })),
+            addonLines: segAddons.map((a) => ({ child: rc.name, label: a.label, price: a.price, days: a.onDays, perDay: a.perDay, ...(a.meal ? { meal: true } : {}), name: a.name, ...((a as { addonId?: string }).addonId ? { addonId: (a as { addonId?: string }).addonId } : {}), ...(typeof (a as { requestCutoffDays?: number }).requestCutoffDays === "number" ? { requestCutoffDays: (a as { requestCutoffDays: number }).requestCutoffDays } : {}), ...((a as { answers?: unknown[] }).answers?.length ? { answers: (a as { answers: { label: string; value: string }[] }).answers } : {}), qty: a.perDay && !a.meal ? a.onDays.length : 1 })),
             // The ISO dates a meal was bought for on this segment — a clean
             // signal for the customer "what's being served" gate + read-out,
             // separate from the human-readable add-on strings.
@@ -2989,13 +2989,14 @@ my.get("/bookings/:ref/addon-options", async (req, res) => {
   for (const line of b.addonLines ?? []) {
     // (an older booking that only has the text lines has no addonLines: the family messages the provider instead)
     const l = { key: addonLineKey(line.child, line.label), name: line.name ?? parseAddonLabel(line.label).name };
-    const changeBlock = lineRequestBlock(b, { key: l.key, days: line.days, perDay: line.perDay, meal: line.meal }, today, cutoffDays);
+    const lineCutoff = lineCutoffDays(line, cutoffDays); // this extra's own rule (snapshotted at booking), else the Setup default
+    const changeBlock = lineRequestBlock(b, { key: l.key, days: line.days, perDay: line.perDay, meal: line.meal }, today, lineCutoff);
     const def = line.meal ? null : await defForLine(b, line);
     const questions = (def?.questions ?? []).filter((q) => q.type === "choice" && (q.options ?? []).length).map((q) => ({ id: q.id, label: q.label, options: q.options ?? [], required: !!q.required }));
     const first = firstDayOf({ days: line.days }, b.days);
     // A daily extra can be cancelled a day at a time: each day carries its own cut-off state. Otherwise the whole extra is judged on its first day.
     const splittable = splittableLine(line);
-    const days = splittable ? lineDayStates(line.days, today, cutoffDays) : [];
+    const days = splittable ? lineDayStates(line.days, today, lineCutoff) : [];
     const open = days.filter((d) => d.state === "none").length;
     const pending = pendingForLine(b, l.key) ?? null;
     const block = changeBlock;
@@ -3003,7 +3004,8 @@ my.get("/bookings/:ref/addon-options", async (req, res) => {
       key: l.key, child: line.child, label: line.label, name: l.name, meal: !!line.meal, price: line.price, block, splittable, days, changeDays: days.filter((d) => d.state === "none").map((d) => d.date),
       canCancel: block === "none", canChange: changeBlock === "none" && !line.meal && questions.length > 0,
       questions, current: currentAnswers(line), pending,
-      ...(block === "cutoff" && first ? { until: requestDeadline(first, cutoffDays) } : {}),
+      ...(block === "cutoff" && first ? { until: requestDeadline(first, lineCutoff) } : {}),
+      cutoffDays: lineCutoff,
     });
   }
   res.json({ cutoffDays, today, lines, history: (b.addonRequests ?? []).filter((r) => r.status !== "pending").slice(-10) });

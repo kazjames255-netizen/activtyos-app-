@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { librarySnap, loadSettings } from "./tenantLibrary";
 import type { LibAddonDef } from "./addonPricing";
 import { parseAddonLabel } from "../../../features/bookings/addons";
-import { addonRequestBlock, changeProblem, dayBlock, labelWithAnswers, lineRequestBlock, pendingForLine, splittableLine, DEFAULT_ADDON_REQUEST_DAYS } from "../../../features/bookings/addonRequests";
+import { lineCutoffDays, addonRequestBlock, changeProblem, dayBlock, labelWithAnswers, lineRequestBlock, pendingForLine, splittableLine, DEFAULT_ADDON_REQUEST_DAYS } from "../../../features/bookings/addonRequests";
 import { dayShare } from "../../../features/bookings/addonDays";
 import type { AddonRequest, AddonRequestTarget, Booking } from "../../../features/bookings/types";
 import { AddonRequestError, currentAnswers, findLine } from "./addonRequestsCore";
@@ -51,6 +51,7 @@ export async function buildAddonRequest(b: Booking, input: NewRequestInput, toda
   const key = input.key ?? input.targets?.[0]?.key;
   const line = key ? findLine(b, key) : undefined;
   if (!key || !line) throw new AddonRequestError(404, "That extra isn't on this booking.");
+  cutoffDays = lineCutoffDays(line, cutoffDays); // this extra's own snapshotted rule, else the Setup default passed in
   const block = lineRequestBlock(b, { key, days: line.days, perDay: line.perDay, meal: line.meal }, today, cutoffDays);
   if (block === "pending") throw new AddonRequestError(409, "There is already a request waiting for your provider on this extra.");
   if (block === "past") throw new AddonRequestError(409, "That session has already happened.");
@@ -73,7 +74,7 @@ export async function buildAddonRequest(b: Booking, input: NewRequestInput, toda
   return { ...base, key, child: line.child, label: line.label, price: round2(line.price), kind: "change", from: current, to: Object.fromEntries(merged.map((m) => [m.label, m.value])), toLabel, priceDiff: 0 };
 }
 
-function buildCancelRequest(b: Booking, input: NewRequestInput, base: { id: string; status: "pending"; createdAt: string; note?: string }, today: string, cutoffDays: number): AddonRequest {
+function buildCancelRequest(b: Booking, input: NewRequestInput, base: { id: string; status: "pending"; createdAt: string; note?: string }, today: string, setupDays: number): AddonRequest {
   const asked = input.targets?.length ? input.targets : input.key ? [{ key: input.key } as { key: string; days?: string[] }] : [];
   if (!asked.length) throw new AddonRequestError(400, "Pick what you would like to cancel.");
   if (new Set(asked.map((t) => t.key)).size !== asked.length) throw new AddonRequestError(400, "An extra is listed twice in this request.");
@@ -83,6 +84,7 @@ function buildCancelRequest(b: Booking, input: NewRequestInput, base: { id: stri
     if (!line) throw new AddonRequestError(404, "That extra isn't on this booking.");
     if (pendingForLine(b, t.key)) throw new AddonRequestError(409, "There is already a request waiting for your provider on this extra.");
     const name = line.name ?? parseAddonLabel(line.label).name;
+    const cutoffDays = lineCutoffDays(line, setupDays); // this extra's own rule, else the Setup default
     if (splittableLine(line)) {
       // A daily extra goes a day at a time. Each day is checked against the cut-off on ITS OWN date; leaving the days out means every day still open.
       const have = [...line.days].sort();
